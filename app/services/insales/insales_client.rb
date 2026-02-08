@@ -14,10 +14,12 @@ module Insales
 
     attr_reader :base_url, :login, :password, :connection
 
-    def initialize(base_url:, login:, password:)
-      @base_url = base_url
-      @login = login
-      @password = password
+    def initialize(base_url: nil, login: nil, password: nil)
+      setting = InsalesSetting.first
+
+      @base_url = base_url || setting&.base_url || ENV['INSALES_BASE_URL']
+      @login = login || setting&.login || ENV['INSALES_LOGIN']
+      @password = password || setting&.password || ENV['INSALES_PASSWORD']
       @connection = build_connection
     end
 
@@ -90,7 +92,6 @@ module Insales
     end
 
     def retry_delay(attempt)
-      # Exponential backoff: 0.5s, 1s, 2s
       0.5 * (2**(attempt - 1))
     end
 

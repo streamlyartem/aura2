@@ -8,11 +8,7 @@ module Insales
       new.call(product_id: product_id, dry_run: dry_run, limit: limit)
     end
 
-    def initialize(client = Insales::InsalesClient.new(
-      base_url: ENV.fetch('INSALES_BASE_URL'),
-      login: ENV.fetch('INSALES_LOGIN'),
-      password: ENV.fetch('INSALES_PASSWORD')
-    ))
+    def initialize(client = Insales::InsalesClient.new)
       @client = client
     end
 
@@ -82,7 +78,7 @@ module Insales
     attr_reader :client
 
     def image_src(image)
-      mode = ENV.fetch('INSALES_IMAGE_URL_MODE', 'service_url')
+      mode = InsalesSetting.first&.image_url_mode || ENV.fetch('INSALES_IMAGE_URL_MODE', 'service_url')
       mode == 'rails_url' ? image.url : image.service_url
     end
 

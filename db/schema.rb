@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_05_190010) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_08_201000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -99,6 +99,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_05_190010) do
     t.datetime "last_synced_at"
     t.index ["aura_product_id"], name: "index_insales_product_mappings_on_aura_product_id", unique: true
     t.index ["insales_product_id"], name: "index_insales_product_mappings_on_insales_product_id", unique: true
+  end
+
+  create_table "insales_settings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "login", null: false
+    t.string "password", null: false
+    t.string "base_url", null: false
+    t.string "category_id", null: false
+    t.string "image_url_mode", default: "service_url", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "product_stocks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

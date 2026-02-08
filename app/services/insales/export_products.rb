@@ -8,11 +8,7 @@ module Insales
       new.call(product_id: product_id, dry_run: dry_run)
     end
 
-    def initialize(client = Insales::InsalesClient.new(
-      base_url: ENV.fetch('INSALES_BASE_URL'),
-      login: ENV.fetch('INSALES_LOGIN'),
-      password: ENV.fetch('INSALES_PASSWORD')
-    ))
+    def initialize(client = Insales::InsalesClient.new)
       @client = client
     end
 
@@ -78,12 +74,12 @@ module Insales
       price = product.retail_price&.to_f
       quantity = total_stock(product)
 
-      category_id = ENV['INSALES_CATEGORY_ID'].presence
+      category_id = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
 
       {
         product: {
           title: product.name,
-          category_id: category_id&.to_i,
+          category_id: category_id.presence&.to_i,
           variants_attributes: [
             {
               sku: sku,
