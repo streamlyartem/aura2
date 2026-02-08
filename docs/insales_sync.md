@@ -24,7 +24,7 @@
 bundle exec rake insales:products
 
 # Images
-bundle exec rake insales:images
+bundle exec rake insales:images PRODUCT_ID=...
 
 # Smoke: one product + up to 2 images
 bundle exec rake insales:smoke PRODUCT_ID=... 
@@ -32,10 +32,7 @@ bundle exec rake insales:smoke PRODUCT_ID=...
 
 Optional env args for tasks:
 
-- `LIMIT` - max products; when `PRODUCT_ID` is set for `insales:images`, limits images count instead
-- `SINCE` - `updated_at >= SINCE` (e.g. `2025-01-01 00:00:00`)
 - `PRODUCT_ID` - UUID of the product
-- `ONLY_MISSING` - `true`/`false` for images
 - `DRY_RUN` - `true`/`false`
 
 ## Notes
