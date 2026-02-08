@@ -4,21 +4,21 @@ module Insales
   class ExportProducts
     Result = Struct.new(:processed, :created, :updated, :errors, keyword_init: true)
 
-    def self.call(product_id: nil, dry_run: false)
-      new.call(product_id: product_id, dry_run: dry_run)
+    def self.call(product_id: nil, dry_run: false, collection_id: nil)
+      new.call(product_id: product_id, dry_run: dry_run, collection_id: collection_id)
     end
 
     def initialize(client = Insales::InsalesClient.new)
       @client = client
     end
 
-    def call(product_id:, dry_run:)
+    def call(product_id:, dry_run:, collection_id:)
       scope = product_id.present? ? Product.where(id: product_id) : Product.all
       result = Result.new(processed: 0, created: 0, updated: 0, errors: 0)
 
       scope.find_each do |product|
         result.processed += 1
-        export_product(product, dry_run, result)
+        export_product(product, dry_run, result, collection_id)
       end
 
       Rails.logger.info(
@@ -33,9 +33,9 @@ module Insales
 
     attr_reader :client
 
-    def export_product(product, dry_run, result)
+    def export_product(product, dry_run, result, collection_id)
       mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
-      payload = build_payload(product)
+      payload = build_payload(product, collection_id: collection_id)
 
       if dry_run
         mapping ? result.updated += 1 : result.created += 1
@@ -43,9 +43,15 @@ module Insales
       end
 
       if mapping
-        update_response = client.put("/admin/products/#{mapping.insales_product_id}.json", update_payload(product))
+        update_response = client.put(
+          "/admin/products/#{mapping.insales_product_id}.json",
+          update_payload(product, collection_id: collection_id)
+        )
         if collection_ids_rejected?(update_response)
-          update_response = client.put("/admin/products/#{mapping.insales_product_id}.json", update_payload(product, include_collection: false))
+          update_response = client.put(
+            "/admin/products/#{mapping.insales_product_id}.json",
+            update_payload(product, include_collection: false, collection_id: collection_id)
+          )
         end
 
         unless response_success?(update_response)
@@ -67,12 +73,15 @@ module Insales
           return
         end
 
-        assign_to_collection(mapping.insales_product_id) if collection_id.present?
+        assign_to_collection(mapping.insales_product_id, collection_id)
         result.updated += 1
       else
         create_response = client.post('/admin/products.json', payload)
         if collection_ids_rejected?(create_response)
-          create_response = client.post('/admin/products.json', build_payload(product, include_collection: false))
+          create_response = client.post(
+            '/admin/products.json',
+            build_payload(product, include_collection: false, collection_id: collection_id)
+          )
         end
 
         if response_success?(create_response)
@@ -84,7 +93,7 @@ module Insales
               insales_product_id: insales_id,
               insales_variant_id: variant_id
             )
-            assign_to_collection(insales_id) if collection_id.present?
+            assign_to_collection(insales_id, collection_id)
             result.created += 1
           else
             result.errors += 1
@@ -98,13 +107,13 @@ module Insales
       Rails.logger.error("[InSales] Product export failed for #{product.id}: #{e.class} - #{e.message}")
     end
 
-    def build_payload(product, include_collection: true)
+    def build_payload(product, include_collection: true, collection_id: nil)
       sku = product.sku.presence || product.code
       price = product.retail_price&.to_f
       quantity = total_stock(product)
 
       category_id = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
-      collection_ids = include_collection ? collection_ids_array : nil
+      collection_ids = include_collection ? collection_ids_array(collection_id) : nil
 
       {
         product: {
@@ -123,9 +132,9 @@ module Insales
       }
     end
 
-    def update_payload(product, include_collection: true)
+    def update_payload(product, include_collection: true, collection_id: nil)
       category_id = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
-      collection_ids = include_collection ? collection_ids_array : nil
+      collection_ids = include_collection ? collection_ids_array(collection_id) : nil
 
       {
         product: {
@@ -137,12 +146,8 @@ module Insales
       }
     end
 
-    def collection_id
-      InsalesSetting.first&.default_collection_id
-    end
-
-    def collection_ids_array
-      id = collection_id
+    def collection_ids_array(override)
+      id = override.presence || InsalesSetting.first&.default_collection_id
       id.present? ? [id.to_i] : nil
     end
 
@@ -167,8 +172,8 @@ module Insales
       extract_variant_id(response.body)
     end
 
-    def assign_to_collection(insales_product_id)
-      id = collection_id
+    def assign_to_collection(insales_product_id, override)
+      id = override.presence || InsalesSetting.first&.default_collection_id
       return if id.blank?
 
       Rails.logger.info("[InSales] Assign product to collection #{id}")

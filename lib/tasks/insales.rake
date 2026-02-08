@@ -40,3 +40,22 @@ def env_truthy?(value)
 
   %w[1 true yes y].include?(value.to_s.downcase)
 end
+
+namespace :insales do
+  desc 'Sync store stock to InSales'
+  task sync_store: :environment do
+    store_name = ENV.fetch('STORE_NAME', 'Тест')
+    collection_id = ENV['COLLECTION_ID']
+    update_product_fields = env_truthy?(ENV['UPDATE_PRODUCT_FIELDS'])
+    sync_images = env_truthy?(ENV['SYNC_IMAGES'])
+
+    result = Insales::SyncStore.new.call(
+      store_name: store_name,
+      collection_id: collection_id,
+      update_product_fields: update_product_fields,
+      sync_images: sync_images
+    )
+
+    puts result.inspect
+  end
+end
