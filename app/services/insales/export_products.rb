@@ -43,8 +43,12 @@ module Insales
       end
 
       if mapping
-        response = client.put("/admin/products/#{mapping.insales_product_id}.json", update_payload(product))
-        unless response_success?(response)
+        update_response = client.put("/admin/products/#{mapping.insales_product_id}.json", update_payload(product))
+        if collection_ids_rejected?(update_response)
+          update_response = client.put("/admin/products/#{mapping.insales_product_id}.json", update_payload(product, include_collection: false))
+        end
+
+        unless response_success?(update_response)
           result.errors += 1
           return
         end
@@ -54,24 +58,33 @@ module Insales
           variant_response = client.put("/admin/variants/#{variant_id}.json", variant_payload(product))
           if response_success?(variant_response)
             mapping.update!(insales_variant_id: variant_id)
-            result.updated += 1
           else
             result.errors += 1
+            return
           end
         else
           result.errors += 1
+          return
         end
+
+        assign_to_collection(mapping.insales_product_id) if collection_id.present?
+        result.updated += 1
       else
-        response = client.post('/admin/products.json', payload)
-        if response_success?(response)
-          insales_id = extract_product_id(response.body)
-          variant_id = extract_variant_id(response.body)
+        create_response = client.post('/admin/products.json', payload)
+        if collection_ids_rejected?(create_response)
+          create_response = client.post('/admin/products.json', build_payload(product, include_collection: false))
+        end
+
+        if response_success?(create_response)
+          insales_id = extract_product_id(create_response.body)
+          variant_id = extract_variant_id(create_response.body)
           if insales_id
             InsalesProductMapping.create!(
               aura_product_id: product.id,
               insales_product_id: insales_id,
               insales_variant_id: variant_id
             )
+            assign_to_collection(insales_id) if collection_id.present?
             result.created += 1
           else
             result.errors += 1
@@ -85,12 +98,13 @@ module Insales
       Rails.logger.error("[InSales] Product export failed for #{product.id}: #{e.class} - #{e.message}")
     end
 
-    def build_payload(product)
+    def build_payload(product, include_collection: true)
       sku = product.sku.presence || product.code
       price = product.retail_price&.to_f
       quantity = total_stock(product)
 
       category_id = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
+      collection_ids = include_collection ? collection_ids_array : nil
 
       {
         product: {
@@ -103,19 +117,33 @@ module Insales
               quantity: quantity
             }
           ]
-        }
+        }.tap do |p|
+          p[:collection_ids] = collection_ids if collection_ids.present?
+        end
       }
     end
 
-    def update_payload(product)
+    def update_payload(product, include_collection: true)
       category_id = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
+      collection_ids = include_collection ? collection_ids_array : nil
 
       {
         product: {
           title: product.name,
           category_id: category_id.presence&.to_i
-        }
+        }.tap do |p|
+          p[:collection_ids] = collection_ids if collection_ids.present?
+        end
       }
+    end
+
+    def collection_id
+      InsalesSetting.first&.default_collection_id
+    end
+
+    def collection_ids_array
+      id = collection_id
+      id.present? ? [id.to_i] : nil
     end
 
     def variant_payload(product)
@@ -139,6 +167,14 @@ module Insales
       extract_variant_id(response.body)
     end
 
+    def assign_to_collection(insales_product_id)
+      id = collection_id
+      return if id.blank?
+
+      Rails.logger.info("[InSales] Assign product to collection #{id}")
+      client.post("/admin/collections/#{id}/products.json", { product_id: insales_product_id })
+    end
+
     def total_stock(product)
       ProductStock.where(product_id: product.id).sum(:stock).to_f
     end
@@ -158,6 +194,13 @@ module Insales
 
       variants = body['variants'] || body.dig('product', 'variants')
       variants&.first&.[]('id')
+    end
+
+    def collection_ids_rejected?(response)
+      return false unless response
+      return false unless [400, 422].include?(response.status)
+
+      response.body.to_s.include?('collection_ids')
     end
   end
 end
