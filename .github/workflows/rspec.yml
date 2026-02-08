@@ -33,7 +33,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v5
+      uses: actions/checkout@v6
     - name: Install Ruby version specified in `.ruby-version`
       uses: eregon/use-ruby-action@master
     - name: Setup cache key and directory for gems cache
