@@ -3,6 +3,18 @@
 ActiveAdmin.register_page 'Insales Sync' do
   menu priority: 5, label: 'InSales Sync'
 
+  page_action :sync_now, method: :post do
+    store_name = params[:store_name].presence || 'Тест'
+
+    Insales::SyncProductStocksJob.perform_later(store_name: store_name)
+
+    redirect_to admin_insales_sync_path, notice: 'Синхронизация запущена'
+  end
+
+  action_item :sync_now, only: :index do
+    link_to 'Sync now', sync_now_admin_insales_sync_path, method: :post
+  end
+
   content title: 'InSales Sync' do
     store_name = defined?(MoyskladClient::TEST_STORE_NAME) ? MoyskladClient::TEST_STORE_NAME : 'Тест'
 
@@ -17,14 +29,6 @@ ActiveAdmin.register_page 'Insales Sync' do
     settings = InsalesSetting.first
 
     panel "Test store sync status (#{store_name})" do
-      div do
-        form action: sync_now_admin_insales_sync_path, method: :post do
-          input type: 'hidden', name: 'store_name', value: store_name
-          input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-          input type: 'submit', value: 'Обновить магазин', class: 'button'
-        end
-      end
-
       table_for [
         ['InSales Base URL', settings&.base_url || '—'],
         ['InSales Category ID', settings&.category_id || '—'],
@@ -39,13 +43,5 @@ ActiveAdmin.register_page 'Insales Sync' do
         column('Value') { |row| row[1] }
       end
     end
-  end
-
-  page_action :sync_now, method: :post do
-    store_name = params[:store_name].presence || 'Тест'
-
-    Insales::SyncProductStocksJob.perform_later(store_name: store_name)
-
-    redirect_to admin_insales_sync_path, notice: 'Синхронизация запущена'
   end
 end
