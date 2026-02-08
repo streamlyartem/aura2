@@ -2,9 +2,12 @@
 
 require 'faraday'
 require 'json'
+require 'net/http'
+require 'securerandom'
 
 module Insales
   class InsalesClient
+    MultipartResponse = Struct.new(:status, :body, keyword_init: true)
     RETRY_STATUSES = [429].freeze
     RETRY_RANGE = (500..599).freeze
     DEFAULT_MAX_RETRIES = 3
@@ -35,6 +38,23 @@ module Insales
       request(:put, path, json_body)
     end
 
+    def post_multipart(path, fields:, file_field_name:, filename:, content_type:, file_bytes:)
+      uri = build_uri(path)
+      boundary = "----RubyMultipart#{SecureRandom.hex(12)}"
+      body = build_multipart_body(boundary, fields, file_field_name, filename, content_type, file_bytes)
+
+      request = Net::HTTP::Post.new(uri.request_uri)
+      request['Content-Type'] = "multipart/form-data; boundary=#{boundary}"
+      request.basic_auth(login, password)
+      request.body = body
+
+      response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
+        http.request(request)
+      end
+
+      MultipartResponse.new(status: response.code.to_i, body: response.body)
+    end
+
     private
 
     def build_connection
@@ -45,6 +65,31 @@ module Insales
         f.options.open_timeout = DEFAULT_OPEN_TIMEOUT
         f.options.timeout = DEFAULT_TIMEOUT
       end
+    end
+
+    def build_uri(path)
+      base = base_url.to_s
+      base = "https://#{base}" unless base.start_with?('http')
+      URI.join(base.end_with?('/') ? base : "#{base}/", path.sub(%r{^/}, ''))
+    end
+
+    def build_multipart_body(boundary, fields, file_field_name, filename, content_type, file_bytes)
+      body = +''
+
+      fields.each do |name, value|
+        body << "--#{boundary}\r\n"
+        body << "Content-Disposition: form-data; name=\"#{name}\"\r\n\r\n"
+        body << value.to_s
+        body << "\r\n"
+      end
+
+      body << "--#{boundary}\r\n"
+      body << "Content-Disposition: form-data; name=\"#{file_field_name}\"; filename=\"#{filename}\"\r\n"
+      body << "Content-Type: #{content_type}\r\n\r\n"
+      body << file_bytes
+      body << "\r\n"
+      body << "--#{boundary}--\r\n"
+      body
     end
 
     def request(method, path, payload)

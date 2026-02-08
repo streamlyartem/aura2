@@ -26,11 +26,12 @@ namespace :insales do
 
     dry_run = env_truthy?(ENV['DRY_RUN'])
 
-    Insales::ExportProducts.call(product_id: product_id, dry_run: dry_run)
-    Insales::ExportImages.call(product_id: product_id, dry_run: dry_run, limit: 2)
+    products_result = Insales::ExportProducts.call(product_id: product_id, dry_run: dry_run)
+    images_result = Insales::ExportImages.call(product_id: product_id, dry_run: dry_run)
 
     mapping = InsalesProductMapping.find_by(aura_product_id: product_id)
     puts "insales_product_id=#{mapping&.insales_product_id}"
+    puts "products=#{products_result.inspect} images=#{images_result.inspect}"
   end
 end
 

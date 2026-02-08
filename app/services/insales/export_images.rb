@@ -1,18 +1,20 @@
 # frozen_string_literal: true
 
+require 'json'
+
 module Insales
   class ExportImages
     Result = Struct.new(:processed, :uploaded, :skipped, :errors, keyword_init: true)
 
-    def self.call(product_id:, dry_run: false, limit: nil)
-      new.call(product_id: product_id, dry_run: dry_run, limit: limit)
+    def self.call(product_id:, dry_run: false)
+      new.call(product_id: product_id, dry_run: dry_run)
     end
 
     def initialize(client = Insales::InsalesClient.new)
       @client = client
     end
 
-    def call(product_id:, dry_run:, limit: nil)
+    def call(product_id:, dry_run:)
       raise ArgumentError, 'product_id is required' if product_id.blank?
 
       result = Result.new(processed: 0, uploaded: 0, skipped: 0, errors: 0)
@@ -25,8 +27,7 @@ module Insales
         return result
       end
 
-      images = product.images.order(:created_at)
-      images = images.limit(limit) if limit.present?
+      images = product.images.order(:created_at).limit(2)
 
       images.each do |image|
         result.processed += 1
@@ -36,31 +37,12 @@ module Insales
           next
         end
 
-        src = image_src(image)
-        if src.blank?
-          Rails.logger.warn "[InSales] Image #{image.id} has no public URL"
-          result.skipped += 1
-          next
-        end
-
         if dry_run
           result.uploaded += 1
           next
         end
 
-        response = client.post("/admin/products/#{mapping.insales_product_id}/images.json", { image: { src: src } })
-        Rails.logger.info("[InSales] Image upload src=#{src} status=#{response&.status}")
-        if response_success?(response)
-          insales_image_id = extract_image_id(response.body)
-          InsalesImageMapping.create!(
-            aura_image_id: image.id,
-            insales_product_id: mapping.insales_product_id,
-            insales_image_id: insales_image_id
-          )
-          result.uploaded += 1
-        else
-          result.errors += 1
-        end
+        upload_image(image, mapping.insales_product_id, result)
       rescue StandardError => e
         result.errors += 1
         Rails.logger.error("[InSales] Image export failed for #{image.id}: #{e.class} - #{e.message}")
@@ -78,29 +60,66 @@ module Insales
 
     attr_reader :client
 
-    def image_src(image)
-      base = public_base_url
-      return nil if base.blank?
-
-      "#{base}/public/images/#{image.id}"
-    end
-
-    def public_base_url
-      host = Rails.application.default_url_options[:host]
-      return nil if host.blank?
-
-      host = host.sub(%r{^https?://}, '')
-      "https://#{host}"
-    end
-
     def response_success?(response)
       response && (200..299).cover?(response.status)
     end
 
-    def extract_image_id(body)
-      return nil unless body.is_a?(Hash)
+    def upload_image(image, insales_product_id, result)
+      bytes = image.file.download
+      filename = image.file.filename.to_s
+      content_type = image.file.blob.content_type || 'application/octet-stream'
 
-      body['id'] || body.dig('image', 'id')
+      fields = { 'image[title]' => filename }
+      field_names = %w[image[attachment] image[file]]
+
+      field_names.each do |field_name|
+        Rails.logger.info("[InSales] Image upload attempt field=#{field_name} image_id=#{image.id}")
+        response = client.post_multipart(
+          "/admin/products/#{insales_product_id}/images.json",
+          fields: fields,
+          file_field_name: field_name,
+          filename: filename,
+          content_type: content_type,
+          file_bytes: bytes
+        )
+
+        if response_success?(response)
+          insales_image_id = extract_image_id(response.body)
+          InsalesImageMapping.create!(
+            aura_image_id: image.id,
+            insales_product_id: insales_product_id,
+            insales_image_id: insales_image_id
+          )
+          result.uploaded += 1
+          return
+        end
+
+        if response.status.to_i >= 400 && response.status.to_i < 500
+          Rails.logger.warn("[InSales] Image upload failed status=#{response.status} body=#{short_body(response.body)}")
+          break
+        end
+      end
+
+      result.errors += 1
+    end
+
+    def extract_image_id(body)
+      payload = parse_json(body)
+      return nil unless payload.is_a?(Hash)
+
+      payload['id'] || payload.dig('image', 'id')
+    end
+
+    def parse_json(body)
+      return body if body.is_a?(Hash)
+
+      JSON.parse(body.to_s)
+    rescue JSON::ParserError
+      nil
+    end
+
+    def short_body(body)
+      body.to_s.byteslice(0, 300)
     end
   end
 end
