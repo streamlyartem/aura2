@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require 'base64'
 require 'json'
 
 module Insales
@@ -67,21 +68,24 @@ module Insales
     def upload_image(image, insales_product_id, result)
       bytes = image.file.download
       filename = image.file.filename.to_s
-      content_type = image.file.blob.content_type || 'application/octet-stream'
+      encoded = Base64.strict_encode64(bytes)
 
-      fields = { 'image[title]' => filename }
-      field_names = %w[image[attachment] image[file]]
+      field_candidates = %w[attachment data file content]
+      tried = []
 
-      field_names.each do |field_name|
-        Rails.logger.info("[InSales] Image upload attempt field=#{field_name} image_id=#{image.id}")
-        response = client.post_multipart(
+      loop do
+        field = next_field(field_candidates, tried)
+        break unless field
+
+        tried << field
+        Rails.logger.info("[InSales] Image upload attempt field=#{field} image_id=#{image.id}")
+
+        response = client.post(
           "/admin/products/#{insales_product_id}/images.json",
-          fields: fields,
-          file_field_name: field_name,
-          filename: filename,
-          content_type: content_type,
-          file_bytes: bytes
+          build_payload(field, encoded, filename)
         )
+
+        Rails.logger.info("[InSales] Image upload status=#{response&.status} body=#{short_body(response&.body)}")
 
         if response_success?(response)
           insales_image_id = extract_image_id(response.body)
@@ -94,8 +98,13 @@ module Insales
           return
         end
 
-        if response.status.to_i >= 400 && response.status.to_i < 500
-          Rails.logger.warn("[InSales] Image upload failed status=#{response.status} body=#{short_body(response.body)}")
+        if response && response.status.to_i >= 400 && response.status.to_i < 500
+          hinted = hint_field(response.body, field_candidates)
+          if hinted && !tried.include?(hinted)
+            tried << field
+            field_candidates = [hinted] + (field_candidates - [hinted])
+            next
+          end
           break
         end
       end
@@ -108,6 +117,25 @@ module Insales
       return nil unless payload.is_a?(Hash)
 
       payload['id'] || payload.dig('image', 'id')
+    end
+
+    def build_payload(field, encoded, filename)
+      {
+        image: {
+          field => encoded,
+          filename: filename,
+          title: filename
+        }
+      }
+    end
+
+    def next_field(candidates, tried)
+      (candidates - tried).first
+    end
+
+    def hint_field(body, candidates)
+      text = body.to_s
+      candidates.find { |c| text.include?(c) }
     end
 
     def parse_json(body)
