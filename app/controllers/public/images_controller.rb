@@ -9,14 +9,15 @@ module Public
       return head :not_found unless image&.file&.attached?
 
       blob = image.file.blob
-      data = image.file.download
 
       response.headers['Cache-Control'] = 'public, max-age=3600'
       send_data(
-        data,
+        image.file.download,
         type: blob.content_type,
         disposition: "inline; filename=\"#{blob.filename}\""
       )
+    rescue ActiveStorage::FileNotFoundError, Aws::S3::Errors::NoSuchKey
+      head :not_found
     end
   end
 end
