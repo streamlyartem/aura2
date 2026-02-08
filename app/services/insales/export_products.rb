@@ -44,9 +44,20 @@ module Insales
 
       if mapping
         response = client.put("/admin/products/#{mapping.insales_product_id}.json", update_payload(product))
-        if response_success?(response)
-          mapping.touch
-          result.updated += 1
+        unless response_success?(response)
+          result.errors += 1
+          return
+        end
+
+        variant_id = mapping.insales_variant_id || fetch_variant_id(mapping.insales_product_id)
+        if variant_id
+          variant_response = client.put("/admin/variants/#{variant_id}.json", variant_payload(product))
+          if response_success?(variant_response)
+            mapping.update!(insales_variant_id: variant_id)
+            result.updated += 1
+          else
+            result.errors += 1
+          end
         else
           result.errors += 1
         end
@@ -54,8 +65,13 @@ module Insales
         response = client.post('/admin/products.json', payload)
         if response_success?(response)
           insales_id = extract_product_id(response.body)
+          variant_id = extract_variant_id(response.body)
           if insales_id
-            InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: insales_id)
+            InsalesProductMapping.create!(
+              aura_product_id: product.id,
+              insales_product_id: insales_id,
+              insales_variant_id: variant_id
+            )
             result.created += 1
           else
             result.errors += 1
@@ -102,6 +118,27 @@ module Insales
       }
     end
 
+    def variant_payload(product)
+      sku = product.sku.presence || product.code
+      price = product.retail_price&.to_f
+      quantity = total_stock(product)
+
+      {
+        variant: {
+          sku: sku,
+          price: price,
+          quantity: quantity
+        }
+      }
+    end
+
+    def fetch_variant_id(insales_product_id)
+      response = client.get("/admin/products/#{insales_product_id}.json")
+      return nil unless response_success?(response)
+
+      extract_variant_id(response.body)
+    end
+
     def total_stock(product)
       ProductStock.where(product_id: product.id).sum(:stock).to_f
     end
@@ -114,6 +151,13 @@ module Insales
       return nil unless body.is_a?(Hash)
 
       body['id'] || body.dig('product', 'id')
+    end
+
+    def extract_variant_id(body)
+      return nil unless body.is_a?(Hash)
+
+      variants = body['variants'] || body.dig('product', 'variants')
+      variants&.first&.[]('id')
     end
   end
 end
