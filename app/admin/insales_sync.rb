@@ -12,7 +12,7 @@ ActiveAdmin.register_page 'Insales Sync' do
   end
 
   action_item :sync_now, only: :index do
-    link_to 'Sync now', sync_now_admin_insales_sync_path, method: :post
+    link_to 'Sync now', url_for(action: :sync_now), method: :post
   end
 
   content title: 'InSales Sync' do
