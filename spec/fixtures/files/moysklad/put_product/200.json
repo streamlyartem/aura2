@@ -1,0 +1,83 @@
+{
+  "name": "Тестовый товар",
+  "article": "1905432616470",
+  "code": "777777",
+  "weight": 66.0,
+  "buyPrice": {
+    "value": 11835.0
+  },
+  "salePrices": [
+    {
+      "value": 19000.0,
+      "priceType": {
+        "meta": {
+          "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/pricetype/2745d5fc-7dfd-11ee-0a80-0e2a00051e12",
+          "type": "pricetype",
+          "mediaType": "application/json"
+        }
+      }
+    },
+    {
+      "value": 17100.0,
+      "priceType": {
+        "meta": {
+          "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/pricetype/4d26989a-7dff-11ee-0a80-06450005b782",
+          "type": "pricetype",
+          "mediaType": "application/json"
+        }
+      }
+    },
+    {
+      "value": 15200.0,
+      "priceType": {
+        "meta": {
+          "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/pricetype/4d269989-7dff-11ee-0a80-06450005b783",
+          "type": "pricetype",
+          "mediaType": "application/json"
+        }
+      }
+    },
+    {
+      "value": 13300.0,
+      "priceType": {
+        "meta": {
+          "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/pricetype/69c435e5-7f91-11ee-0a80-049b001d1090",
+          "type": "pricetype",
+          "mediaType": "application/json"
+        }
+      }
+    }
+  ],
+  "minPrice": {
+    "value": 13300.0
+  },
+  "attributes": [
+    {
+      "name": "Партия",
+      "value": "Партия 111",
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/964395ac-7e2f-11ee-0a80-02ec001152ee",
+        "type": "attributemetadata",
+        "mediaType": "application/json"
+      }
+    },
+    {
+      "name": "Длина",
+      "value": "55.0",
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/73c0437b-7dff-11ee-0a80-06450005bbbd",
+        "type": "attributemetadata",
+        "mediaType": "application/json"
+      }
+    },
+    {
+      "name": "Цвет",
+      "value": "2",
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/73c04775-7dff-11ee-0a80-06450005bbbf",
+        "type": "attributemetadata",
+        "mediaType": "application/json"
+      }
+    }
+  ]
+}

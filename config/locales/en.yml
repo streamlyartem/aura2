@@ -1,0 +1,24 @@
+en:
+  admin:
+    products:
+      show:
+        no_images: "No Images"
+      form:
+        basic_info: "Basic Information"
+        images_section: "Images"
+        add_image: "Add Image"
+      actions:
+        scan_barcode: "📷 Scan Barcode"
+    product_stocks:
+      errors:
+        invalid_quantity: "Invalid quantity for write-off"
+      notices:
+        demand_created: "Demand successfully created in MoySklad"
+        demand_failed: "Error creating demand (status: %{status})"
+      panel:
+        title: "Write-off Product"
+        product_label: "Product: %{name}"
+        current_stock: "Current stock: %{stock}"
+        stock_label: "Quantity to write off"
+        submit: "Write off"
+        cancel: "Cancel"

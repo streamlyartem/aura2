@@ -1,0 +1,742 @@
+{
+    "context": {
+        "employee": {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/context/employee",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/employee/metadata",
+                "type": "employee",
+                "mediaType": "application/json"
+            }
+        }
+    },
+    "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/report/stock/all?filter=store=https://api.moysklad.ru/api/remap/1.2/entity/store/d2a971ca-9164-11f0-0a80-19cb0021b994",
+        "type": "stock",
+        "mediaType": "application/json",
+        "size": 18,
+        "limit": 1000,
+        "offset": 0
+    },
+    "rows": [
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e91210f9-9166-11f0-0a80-0ef200165e2f?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e91203e4-9166-11f0-0a80-0ef200165e28"
+            },
+            "stock": 102.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 102.0,
+            "name": "Срезы Светлый 40/10 омбре",
+            "code": "1",
+            "article": "1",
+            "price": 7581.0,
+            "salePrice": 12000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/9887968f-7f33-11ee-0a80-0d1e00443e36",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=9887968f-7f33-11ee-0a80-0d1e00443e36"
+                },
+                "name": "40",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "k7irxBXchB8OH0DtJdL4H1",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/2fdc2bec-9166-11f0-0a80-0ef200164c50?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=2fdc14d3-9166-11f0-0a80-0ef200164c49"
+            },
+            "stock": 86.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 86.0,
+            "name": "Срезы Светлый 40/30 омбре",
+            "code": "7",
+            "article": "7",
+            "price": 7581.0,
+            "salePrice": 12000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/9887968f-7f33-11ee-0a80-0d1e00443e36",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=9887968f-7f33-11ee-0a80-0d1e00443e36"
+                },
+                "name": "40",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "Y33pOo5th5zzfLOLM4Nmx1",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e97601c6-9166-11f0-0a80-0ef200165f0a?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e975f7c2-9166-11f0-0a80-0ef200165f03"
+            },
+            "stock": 94.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 94.0,
+            "name": "Срезы Светлый 45/30",
+            "code": "9",
+            "article": "9",
+            "price": 7581.0,
+            "salePrice": 12000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/9785e5e5-7f33-11ee-0a80-0d1e00443cda",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=9785e5e5-7f33-11ee-0a80-0d1e00443cda"
+                },
+                "name": "45",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "4OQGJ8jXiESrMmFr0ygz43",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e96bc358-9166-11f0-0a80-0ef200165ef1?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e96bb993-9166-11f0-0a80-0ef200165eea"
+            },
+            "stock": 118.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 118.0,
+            "name": "Срезы Светлый 50/8",
+            "code": "8",
+            "article": "8",
+            "price": 9978.0,
+            "salePrice": 15000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/9767705f-7f33-11ee-0a80-0d1e00443caf",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=9767705f-7f33-11ee-0a80-0d1e00443caf"
+                },
+                "name": "50",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "5jFv8eMYgWlq6Amc4UBcX1",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e98b8b11-9166-11f0-0a80-0ef200165f3d?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e98b7e3d-9166-11f0-0a80-0ef200165f36"
+            },
+            "stock": 128.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 128.0,
+            "name": "Срезы Светлый 50/8",
+            "code": "11",
+            "article": "11",
+            "price": 9978.0,
+            "salePrice": 15000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/9767705f-7f33-11ee-0a80-0d1e00443caf",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=9767705f-7f33-11ee-0a80-0d1e00443caf"
+                },
+                "name": "50",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "n-FwnREli4KyBDVEpo3Ec3",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e9c86d58-9166-11f0-0a80-0ef200165fc1?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e9c8611d-9166-11f0-0a80-0ef200165fba"
+            },
+            "stock": 100.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 100.0,
+            "name": "Срезы Светлый 55/20",
+            "code": "17",
+            "article": "17",
+            "price": 9978.0,
+            "salePrice": 16000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96da0e2b-7f33-11ee-0a80-0d1e00443bc8",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96da0e2b-7f33-11ee-0a80-0d1e00443bc8"
+                },
+                "name": "55",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "yFPI1KePimdO4ynE-dezH1",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e9d42ea5-9166-11f0-0a80-0ef200165fda?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e9d4241f-9166-11f0-0a80-0ef200165fd3"
+            },
+            "stock": 82.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 82.0,
+            "name": "Срезы Светлый 55/20",
+            "code": "18",
+            "article": "18",
+            "price": 9978.0,
+            "salePrice": 16000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96da0e2b-7f33-11ee-0a80-0d1e00443bc8",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96da0e2b-7f33-11ee-0a80-0d1e00443bc8"
+                },
+                "name": "55",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "iSwL-A9XjKtEB08dHentf0",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/14969511-817c-11ee-0a80-064e001f1523?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=149689c3-817c-11ee-0a80-064e001f151c"
+            },
+            "stock": 114.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 114.0,
+            "name": "Срезы Светлый 55/20 омбре",
+            "code": "13",
+            "article": "13",
+            "price": 9978.0,
+            "salePrice": 16500.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96da0e2b-7f33-11ee-0a80-0d1e00443bc8",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96da0e2b-7f33-11ee-0a80-0d1e00443bc8"
+                },
+                "name": "55",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "iG69ywhFjyY39U01I1Q1N0",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/14743bfa-817c-11ee-0a80-064e001f14db?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=14742a9f-817c-11ee-0a80-064e001f14d4"
+            },
+            "stock": 104.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 104.0,
+            "name": "Срезы Светлый 60/20",
+            "code": "3",
+            "article": "3",
+            "price": 11969.0,
+            "salePrice": 18000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96fb3b6d-7f33-11ee-0a80-0d1e00443c02",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96fb3b6d-7f33-11ee-0a80-0d1e00443c02"
+                },
+                "name": "60",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "mPma5egWjvmS8dDzLHAdA3",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/148c1500-817c-11ee-0a80-064e001f1511?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=148c08ed-817c-11ee-0a80-064e001f150a"
+            },
+            "stock": 120.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 120.0,
+            "name": "Срезы Светлый 60/20",
+            "code": "12",
+            "article": "12",
+            "price": 11969.0,
+            "salePrice": 18000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96fb3b6d-7f33-11ee-0a80-0d1e00443c02",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96fb3b6d-7f33-11ee-0a80-0d1e00443c02"
+                },
+                "name": "60",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "nwsXgO7BiLiGVIfudlTSc1",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/149cb02a-817c-11ee-0a80-064e001f1535?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=149ca4e1-817c-11ee-0a80-064e001f152e"
+            },
+            "stock": 108.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 108.0,
+            "name": "Срезы Светлый 60/20",
+            "code": "14",
+            "article": "14",
+            "price": 11969.0,
+            "salePrice": 18000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96fb3b6d-7f33-11ee-0a80-0d1e00443c02",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96fb3b6d-7f33-11ee-0a80-0d1e00443c02"
+                },
+                "name": "60",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "TOGgdj5FjOYE96jLgpWwa3",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e92de940-9166-11f0-0a80-0ef200165e48?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e92ddca9-9166-11f0-0a80-0ef200165e41"
+            },
+            "stock": 110.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 110.0,
+            "name": "Срезы Светлый 60/20",
+            "code": "2",
+            "article": "2",
+            "price": 11969.0,
+            "salePrice": 18000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96fb3b6d-7f33-11ee-0a80-0d1e00443c02",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96fb3b6d-7f33-11ee-0a80-0d1e00443c02"
+                },
+                "name": "60",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "KHDz9BjqhgbmKrGadDz7x3",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e942b726-9166-11f0-0a80-0ef200165ec5?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e942a5e0-9166-11f0-0a80-0ef200165ebe"
+            },
+            "stock": 16.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 16.0,
+            "name": "Срезы Светлый 60/20 омбре",
+            "code": "4",
+            "article": "4",
+            "price": 11969.0,
+            "salePrice": 18500.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96fb3b6d-7f33-11ee-0a80-0d1e00443c02",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96fb3b6d-7f33-11ee-0a80-0d1e00443c02"
+                },
+                "name": "60",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "11mG0PlHgawMNV--SPF720",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e9b2a390-9166-11f0-0a80-0ef200165f59?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e9b298c2-9166-11f0-0a80-0ef200165f52"
+            },
+            "stock": 94.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 94.0,
+            "name": "Срезы Светлый 60/8",
+            "code": "15",
+            "article": "15",
+            "price": 11969.0,
+            "salePrice": 18000.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96fb3b6d-7f33-11ee-0a80-0d1e00443c02",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96fb3b6d-7f33-11ee-0a80-0d1e00443c02"
+                },
+                "name": "60",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "q1SfFIJMiV8h2ZqY7lEm33",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/147e465f-817c-11ee-0a80-064e001f14ed?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=147e3ae4-817c-11ee-0a80-064e001f14e6"
+            },
+            "stock": 112.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 112.0,
+            "name": "Срезы Светлый 65/20",
+            "code": "5",
+            "article": "5",
+            "price": 11969.0,
+            "salePrice": 18500.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96eae2e9-7f33-11ee-0a80-0d1e00443be5",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96eae2e9-7f33-11ee-0a80-0d1e00443be5"
+                },
+                "name": "65",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "55W17gpzhYLqlPiNRrNZE0",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/148501e0-817c-11ee-0a80-064e001f14ff?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=1484f625-817c-11ee-0a80-064e001f14f8"
+            },
+            "stock": 98.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 98.0,
+            "name": "Срезы Светлый 65/20",
+            "code": "6",
+            "article": "6",
+            "price": 11969.0,
+            "salePrice": 18500.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96eae2e9-7f33-11ee-0a80-0d1e00443be5",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96eae2e9-7f33-11ee-0a80-0d1e00443be5"
+                },
+                "name": "65",
+                "pathName": "Срезы/Светлый"
+            },
+            "externalCode": "LK5BHbhCgjtIjVkg99Ih13",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e980d428-9166-11f0-0a80-0ef200165f24?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e980c980-9166-11f0-0a80-0ef200165f1d"
+            },
+            "stock": 106.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 106.0,
+            "name": "Срезы Темный 60/1 омбре",
+            "code": "10",
+            "article": "10",
+            "price": 11969.0,
+            "salePrice": 17500.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96ce0ce5-7f33-11ee-0a80-0d1e00443bb8",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96ce0ce5-7f33-11ee-0a80-0d1e00443bb8"
+                },
+                "name": "60",
+                "pathName": "Срезы/Темный"
+            },
+            "externalCode": "DNkoNcfBgTC13KmIGw5fy0",
+            "stockDays": 24.87
+        },
+        {
+            "meta": {
+                "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/e9be8961-9166-11f0-0a80-0ef200165fa8?expand=supplier",
+                "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata",
+                "type": "product",
+                "mediaType": "application/json",
+                "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=e9be7e7c-9166-11f0-0a80-0ef200165fa1"
+            },
+            "stock": 90.0,
+            "inTransit": 0.0,
+            "reserve": 0.0,
+            "quantity": 90.0,
+            "name": "Срезы Темный 60/4 омбре",
+            "code": "16",
+            "article": "16",
+            "price": 11969.0,
+            "salePrice": 17500.0,
+            "uom": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/uom/8e2eb543-99e9-4077-bc31-93b1359de9c4",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/uom/metadata",
+                    "type": "uom",
+                    "mediaType": "application/json"
+                },
+                "name": "г"
+            },
+            "folder": {
+                "meta": {
+                    "href": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/96ce0ce5-7f33-11ee-0a80-0d1e00443bb8",
+                    "metadataHref": "https://api.moysklad.ru/api/remap/1.2/entity/productfolder/metadata",
+                    "type": "productfolder",
+                    "mediaType": "application/json",
+                    "uuidHref": "https://online.moysklad.ru/app/#good/edit?id=96ce0ce5-7f33-11ee-0a80-0d1e00443bb8"
+                },
+                "name": "60",
+                "pathName": "Срезы/Темный"
+            },
+            "externalCode": "fsMIseuOjBTcasRmeF7Lv1",
+            "stockDays": 24.87
+        }
+    ]
+}

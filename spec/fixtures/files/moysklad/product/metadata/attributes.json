@@ -1,0 +1,88 @@
+{
+  "meta": {
+    "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes",
+    "type": "attributemetadata",
+    "mediaType": "application/json",
+    "size": 6,
+    "limit": 1000,
+    "offset": 0
+  },
+  "rows": [
+    {
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/73c0437b-7dff-11ee-0a80-06450005bbbd",
+        "type": "attributemetadata",
+        "mediaType": "application/json"
+      },
+      "id": "73c0437b-7dff-11ee-0a80-06450005bbbd",
+      "name": "Длина",
+      "type": "string",
+      "required": false
+    },
+    {
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/73c04775-7dff-11ee-0a80-06450005bbbf",
+        "type": "attributemetadata",
+        "mediaType": "application/json"
+      },
+      "id": "73c04775-7dff-11ee-0a80-06450005bbbf",
+      "name": "Цвет",
+      "type": "string",
+      "required": false
+    },
+    {
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/a3e993e7-7e18-11ee-0a80-097b000bff46",
+        "type": "attributemetadata",
+        "mediaType": "application/json"
+      },
+      "customEntityMeta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/metadata/customEntities/9dd2ac89-7e18-11ee-0a80-0122000b3e00",
+        "type": "customentitymetadata",
+        "mediaType": "application/json"
+      },
+      "id": "a3e993e7-7e18-11ee-0a80-097b000bff46",
+      "name": "Тон",
+      "type": "customentity",
+      "required": false
+    },
+    {
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/53341ec7-7fb8-11ee-0a80-049b0025de50",
+        "type": "attributemetadata",
+        "mediaType": "application/json"
+      },
+      "id": "53341ec7-7fb8-11ee-0a80-049b0025de50",
+      "name": "Омбре",
+      "type": "boolean",
+      "required": false
+    },
+    {
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/964395ac-7e2f-11ee-0a80-02ec001152ee",
+        "type": "attributemetadata",
+        "mediaType": "application/json"
+      },
+      "id": "964395ac-7e2f-11ee-0a80-02ec001152ee",
+      "name": "Партия",
+      "type": "string",
+      "required": false
+    },
+    {
+      "meta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/98fd6cbb-9167-11f0-0a80-17cb002248b0",
+        "type": "attributemetadata",
+        "mediaType": "application/json"
+      },
+      "customEntityMeta": {
+        "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/metadata/customEntities/93d487be-9167-11f0-0a80-19cb0021eae3",
+        "type": "customentitymetadata",
+        "mediaType": "application/json"
+      },
+      "id": "98fd6cbb-9167-11f0-0a80-17cb002248b0",
+      "name": "Структура",
+      "type": "customentity",
+      "required": false
+    }
+  ]
+}

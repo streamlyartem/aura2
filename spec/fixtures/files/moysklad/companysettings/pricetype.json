@@ -1,0 +1,52 @@
+[
+  {
+    "meta": {
+      "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/pricetype/2745d5fc-7dfd-11ee-0a80-0e2a00051e12",
+      "type": "pricetype",
+      "mediaType": "application/json"
+    },
+    "id": "2745d5fc-7dfd-11ee-0a80-0e2a00051e12",
+    "name": "Цена продажи",
+    "externalCode": "cbcf493b-55bc-11d9-848a-00112f43529a"
+  },
+  {
+    "meta": {
+      "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/pricetype/4d26989a-7dff-11ee-0a80-06450005b782",
+      "type": "pricetype",
+      "mediaType": "application/json"
+    },
+    "id": "4d26989a-7dff-11ee-0a80-06450005b782",
+    "name": "мелкий опт",
+    "externalCode": "015dcffc-7bb8-43ff-a26a-d58b16dd107e"
+  },
+  {
+    "meta": {
+      "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/pricetype/4d269989-7dff-11ee-0a80-06450005b783",
+      "type": "pricetype",
+      "mediaType": "application/json"
+    },
+    "id": "4d269989-7dff-11ee-0a80-06450005b783",
+    "name": "крупный опт",
+    "externalCode": "fe878e81-fd11-4955-9fe9-c5cf8676f536"
+  },
+  {
+    "meta": {
+      "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/pricetype/69c435e5-7f91-11ee-0a80-049b001d1090",
+      "type": "pricetype",
+      "mediaType": "application/json"
+    },
+    "id": "69c435e5-7f91-11ee-0a80-049b001d1090",
+    "name": "Опт 500+",
+    "externalCode": "2c74a6bd-8be3-4937-90bc-ab1737438c37"
+  },
+  {
+    "meta": {
+      "href": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/pricetype/ba08e7d2-8751-11ef-0a80-09640036eeec",
+      "type": "pricetype",
+      "mediaType": "application/json"
+    },
+    "id": "ba08e7d2-8751-11ef-0a80-09640036eeec",
+    "name": "Выставка",
+    "externalCode": "9b43a6ec-6805-464c-8476-48aa061e8960"
+  }
+]

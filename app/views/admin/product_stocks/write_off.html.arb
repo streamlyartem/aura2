@@ -1,0 +1,16 @@
+panel I18n.t('admin.product_stocks.panel.title') do
+  para I18n.t('admin.product_stocks.panel.product_label', name: resource.product.name)
+  para I18n.t('admin.product_stocks.panel.current_stock', stock: resource.stock)
+
+  active_admin_form_for [:admin, resource], url: write_off_admin_product_stock_path(resource), method: :post do |f|
+    f.inputs do
+      f.input :stock,
+              label: I18n.t('admin.product_stocks.panel.stock_label'),
+              input_html: { max: resource.stock, min: 1, step: 1 }
+    end
+    f.actions do
+      f.action :submit, label: I18n.t('admin.product_stocks.panel.submit')
+      f.cancel_link(admin_product_stock_path(resource), label: I18n.t('admin.product_stocks.panel.cancel'))
+    end
+  end
+end

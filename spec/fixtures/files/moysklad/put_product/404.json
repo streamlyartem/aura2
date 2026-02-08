@@ -1,0 +1,11 @@
+{
+  "errors": [
+    {
+      "error": "Объект с типом 'product' и идентификатором 'ee7bbe81-a04f-11f0-0a80-163100000000' не найден",
+      "code": 1021,
+      "moreInfo": "https://dev.moysklad.ru/doc/api/remap/1.2/#error_1021",
+      "line": 1,
+      "column": 2
+    }
+  ]
+}

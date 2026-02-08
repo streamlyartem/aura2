@@ -1,0 +1,346 @@
+  [1m[35mSQL (0.1ms)[0m  [1m[35mSET search_path TO public[0m
+  [1m[35m (42.9ms)[0m  [1m[35mDROP DATABASE IF EXISTS "aura_test"[0m
+  [1m[35m (105.8ms)[0m  [1m[35mCREATE DATABASE "aura_test" ENCODING = 'unicode'[0m
+  [1m[35mSQL (7.7ms)[0m  [1m[35mCREATE EXTENSION IF NOT EXISTS "plpgsql" SCHEMA pg_catalog[0m
+  [1m[35mSQL (4.3ms)[0m  [1m[35mCREATE EXTENSION IF NOT EXISTS "pgcrypto"[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_admin_comments" CASCADE[0m
+  [1m[35m (2.5ms)[0m  [1m[35mCREATE TABLE "active_admin_comments" ("id" bigserial primary key, "namespace" character varying, "body" text, "resource_type" character varying, "resource_id" bigint, "author_type" character varying, "author_id" bigint, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE INDEX "index_active_admin_comments_on_author" ON "active_admin_comments" ("author_type", "author_id")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE INDEX "index_active_admin_comments_on_namespace" ON "active_admin_comments" ("namespace")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE INDEX "index_active_admin_comments_on_resource" ON "active_admin_comments" ("resource_type", "resource_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_storage_attachments" CASCADE[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE TABLE "active_storage_attachments" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "name" character varying NOT NULL, "record_type" character varying NOT NULL, "record_id" uuid NOT NULL, "blob_id" uuid NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_active_storage_attachments_on_blob_id" ON "active_storage_attachments" ("blob_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_active_storage_attachments_uniqueness" ON "active_storage_attachments" ("record_type", "record_id", "name", "blob_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_storage_blobs" CASCADE[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE TABLE "active_storage_blobs" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "key" character varying NOT NULL, "filename" character varying NOT NULL, "content_type" character varying, "metadata" text, "service_name" character varying NOT NULL, "byte_size" bigint NOT NULL, "checksum" character varying, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_active_storage_blobs_on_key" ON "active_storage_blobs" ("key")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_storage_variant_records" CASCADE[0m
+  [1m[35m (1.0ms)[0m  [1m[35mCREATE TABLE "active_storage_variant_records" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "blob_id" uuid NOT NULL, "variation_digest" character varying NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_active_storage_variant_records_uniqueness" ON "active_storage_variant_records" ("blob_id", "variation_digest")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "admin_users" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "admin_users" ("id" bigserial primary key, "email" character varying DEFAULT '' NOT NULL, "encrypted_password" character varying DEFAULT '' NOT NULL, "reset_password_token" character varying, "reset_password_sent_at" timestamp(6), "remember_created_at" timestamp(6), "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_admin_users_on_email" ON "admin_users" ("email")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_admin_users_on_reset_password_token" ON "admin_users" ("reset_password_token")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "images" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "images" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "object_type" character varying, "object_id" uuid, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE INDEX "index_images_on_object" ON "images" ("object_type", "object_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "insales_image_mappings" CASCADE[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE TABLE "insales_image_mappings" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "aura_image_id" uuid NOT NULL, "insales_image_id" character varying NOT NULL, "insales_product_id" character varying NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_insales_image_mappings_on_aura_image_id" ON "insales_image_mappings" ("aura_image_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_insales_image_mappings_on_insales_image_id" ON "insales_image_mappings" ("insales_image_id")[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_insales_image_mappings_on_insales_product_id" ON "insales_image_mappings" ("insales_product_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "insales_product_mappings" CASCADE[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE TABLE "insales_product_mappings" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "aura_product_id" uuid NOT NULL, "insales_product_id" character varying NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_insales_product_mappings_on_aura_product_id" ON "insales_product_mappings" ("aura_product_id")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_insales_product_mappings_on_insales_product_id" ON "insales_product_mappings" ("insales_product_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "product_stocks" CASCADE[0m
+  [1m[35m (1.6ms)[0m  [1m[35mCREATE TABLE "product_stocks" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "product_id" uuid NOT NULL, "store_name" character varying NOT NULL, "stock" decimal(10,2) DEFAULT 0.0, "free_stock" decimal(10,2) DEFAULT 0.0, "reserve" decimal(10,2) DEFAULT 0.0, "synced_at" timestamp(6), "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_product_stocks_on_product_id" ON "product_stocks" ("product_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "products" CASCADE[0m
+  [1m[35m (1.0ms)[0m  [1m[35mCREATE TABLE "products" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "name" character varying, "sku" character varying, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, "batch_number" character varying, "path_name" character varying, "weight" decimal(10,2), "length" decimal(10,2), "color" character varying, "tone" character varying, "ombre" boolean DEFAULT FALSE NOT NULL, "code" character varying, "barcodes" jsonb DEFAULT '[]', "purchase_price" decimal(10,2), "retail_price" decimal(10,2), "small_wholesale_price" decimal(10,2), "large_wholesale_price" decimal(10,2), "five_hundred_plus_wholesale_price" decimal(10,2), "min_price" decimal(10,2), "ms_id" uuid)[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_blocked_executions" CASCADE[0m
+  [1m[35m (1.0ms)[0m  [1m[35mCREATE TABLE "solid_queue_blocked_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "queue_name" character varying NOT NULL, "priority" integer DEFAULT 0 NOT NULL, "concurrency_key" character varying NOT NULL, "expires_at" timestamp(6) NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_blocked_executions_for_release" ON "solid_queue_blocked_executions" ("concurrency_key", "priority", "job_id")[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_blocked_executions_for_maintenance" ON "solid_queue_blocked_executions" ("expires_at", "concurrency_key")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_blocked_executions_on_job_id" ON "solid_queue_blocked_executions" ("job_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_claimed_executions" CASCADE[0m
+  [1m[35m (1.0ms)[0m  [1m[35mCREATE TABLE "solid_queue_claimed_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "process_id" bigint, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_claimed_executions_on_job_id" ON "solid_queue_claimed_executions" ("job_id")[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_claimed_executions_on_process_id_and_job_id" ON "solid_queue_claimed_executions" ("process_id", "job_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_failed_executions" CASCADE[0m
+  [1m[35m (1.7ms)[0m  [1m[35mCREATE TABLE "solid_queue_failed_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "error" text, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_failed_executions_on_job_id" ON "solid_queue_failed_executions" ("job_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_jobs" CASCADE[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE TABLE "solid_queue_jobs" ("id" bigserial primary key, "queue_name" character varying NOT NULL, "class_name" character varying NOT NULL, "arguments" text, "priority" integer DEFAULT 0 NOT NULL, "active_job_id" character varying, "scheduled_at" timestamp(6), "finished_at" timestamp(6), "concurrency_key" character varying, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_on_active_job_id" ON "solid_queue_jobs" ("active_job_id")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_on_class_name" ON "solid_queue_jobs" ("class_name")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_on_finished_at" ON "solid_queue_jobs" ("finished_at")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_for_filtering" ON "solid_queue_jobs" ("queue_name", "finished_at")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_for_alerting" ON "solid_queue_jobs" ("scheduled_at", "finished_at")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_pauses" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "solid_queue_pauses" ("id" bigserial primary key, "queue_name" character varying NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_pauses_on_queue_name" ON "solid_queue_pauses" ("queue_name")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_processes" CASCADE[0m
+  [1m[35m (2.1ms)[0m  [1m[35mCREATE TABLE "solid_queue_processes" ("id" bigserial primary key, "kind" character varying NOT NULL, "last_heartbeat_at" timestamp(6) NOT NULL, "supervisor_id" bigint, "pid" integer NOT NULL, "hostname" character varying, "metadata" text, "created_at" timestamp(6) NOT NULL, "name" character varying NOT NULL)[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_processes_on_last_heartbeat_at" ON "solid_queue_processes" ("last_heartbeat_at")[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_processes_on_name_and_supervisor_id" ON "solid_queue_processes" ("name", "supervisor_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_processes_on_supervisor_id" ON "solid_queue_processes" ("supervisor_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_ready_executions" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "solid_queue_ready_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "queue_name" character varying NOT NULL, "priority" integer DEFAULT 0 NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_ready_executions_on_job_id" ON "solid_queue_ready_executions" ("job_id")[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_poll_all" ON "solid_queue_ready_executions" ("priority", "job_id")[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_poll_by_queue" ON "solid_queue_ready_executions" ("queue_name", "priority", "job_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_recurring_executions" CASCADE[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE TABLE "solid_queue_recurring_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "task_key" character varying NOT NULL, "run_at" timestamp(6) NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_recurring_executions_on_job_id" ON "solid_queue_recurring_executions" ("job_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_recurring_executions_on_task_key_and_run_at" ON "solid_queue_recurring_executions" ("task_key", "run_at")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_recurring_tasks" CASCADE[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE TABLE "solid_queue_recurring_tasks" ("id" bigserial primary key, "key" character varying NOT NULL, "schedule" character varying NOT NULL, "command" character varying(2048), "class_name" character varying, "arguments" text, "queue_name" character varying, "priority" integer DEFAULT 0, "static" boolean DEFAULT TRUE NOT NULL, "description" text, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_recurring_tasks_on_key" ON "solid_queue_recurring_tasks" ("key")[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_recurring_tasks_on_static" ON "solid_queue_recurring_tasks" ("static")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_scheduled_executions" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "solid_queue_scheduled_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "queue_name" character varying NOT NULL, "priority" integer DEFAULT 0 NOT NULL, "scheduled_at" timestamp(6) NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_scheduled_executions_on_job_id" ON "solid_queue_scheduled_executions" ("job_id")[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_dispatch_all" ON "solid_queue_scheduled_executions" ("scheduled_at", "priority", "job_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_semaphores" CASCADE[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE TABLE "solid_queue_semaphores" ("id" bigserial primary key, "key" character varying NOT NULL, "value" integer DEFAULT 1 NOT NULL, "expires_at" timestamp(6) NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_semaphores_on_expires_at" ON "solid_queue_semaphores" ("expires_at")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_semaphores_on_key_and_value" ON "solid_queue_semaphores" ("key", "value")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_semaphores_on_key" ON "solid_queue_semaphores" ("key")[0m
+  [1m[35m (1.2ms)[0m  [1m[35mALTER TABLE "active_storage_attachments" ADD CONSTRAINT "fk_rails_c3b3935057"
+FOREIGN KEY ("blob_id")
+  REFERENCES "active_storage_blobs" ("id")
+[0m
+  [1m[35m (0.5ms)[0m  [1m[35mALTER TABLE "active_storage_variant_records" ADD CONSTRAINT "fk_rails_993965df05"
+FOREIGN KEY ("blob_id")
+  REFERENCES "active_storage_blobs" ("id")
+[0m
+  [1m[35m (0.5ms)[0m  [1m[35mALTER TABLE "insales_image_mappings" ADD CONSTRAINT "fk_rails_8d816e67cd"
+FOREIGN KEY ("aura_image_id")
+  REFERENCES "images" ("id")
+[0m
+  [1m[35m (0.6ms)[0m  [1m[35mALTER TABLE "insales_product_mappings" ADD CONSTRAINT "fk_rails_9f2375f0b4"
+FOREIGN KEY ("aura_product_id")
+  REFERENCES "products" ("id")
+[0m
+  [1m[35m (0.6ms)[0m  [1m[35mALTER TABLE "product_stocks" ADD CONSTRAINT "fk_rails_46d0154a97"
+FOREIGN KEY ("product_id")
+  REFERENCES "products" ("id")
+[0m
+  [1m[35m (1.0ms)[0m  [1m[35mALTER TABLE "solid_queue_blocked_executions" ADD CONSTRAINT "fk_rails_4cd34e2228"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.7ms)[0m  [1m[35mALTER TABLE "solid_queue_claimed_executions" ADD CONSTRAINT "fk_rails_9cfe4d4944"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.7ms)[0m  [1m[35mALTER TABLE "solid_queue_failed_executions" ADD CONSTRAINT "fk_rails_39bbc7a631"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.6ms)[0m  [1m[35mALTER TABLE "solid_queue_ready_executions" ADD CONSTRAINT "fk_rails_81fcbd66af"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.4ms)[0m  [1m[35mALTER TABLE "solid_queue_recurring_executions" ADD CONSTRAINT "fk_rails_318a5533ed"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.5ms)[0m  [1m[35mALTER TABLE "solid_queue_scheduled_executions" ADD CONSTRAINT "fk_rails_c4316f352d"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE TABLE "schema_migrations" ("version" character varying NOT NULL PRIMARY KEY)[0m
+  [1m[36mActiveRecord::SchemaMigration Load (0.2ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+  [1m[35m (0.3ms)[0m  [1m[32mINSERT INTO "schema_migrations" (version) VALUES (20260205184500)[0m
+  [1m[35m (0.2ms)[0m  [1m[32mINSERT INTO "schema_migrations" (version) VALUES
+(20260205183000),
+(20251007143447),
+(20251006103741),
+(20251005105809),
+(20251002063356),
+(20250827153612),
+(20250825135133),
+(20250825084230),
+(20250825084229),
+(20250819123408),
+(20250819123324);[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE TABLE "ar_internal_metadata" ("key" character varying NOT NULL PRIMARY KEY, "value" character varying, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.4ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "environment"]]
+  [1m[36mActiveRecord::InternalMetadata Create (0.2ms)[0m  [1m[32mINSERT INTO "ar_internal_metadata" ("key", "value", "created_at", "updated_at") VALUES ('environment', 'test', '2026-02-05 23:50:07.561542', '2026-02-05 23:50:07.561544') RETURNING "key"[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.1ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "environment"]]
+  [1m[36mActiveRecord::InternalMetadata Load (0.1ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "schema_sha1"]]
+  [1m[36mActiveRecord::InternalMetadata Create (0.1ms)[0m  [1m[32mINSERT INTO "ar_internal_metadata" ("key", "value", "created_at", "updated_at") VALUES ('schema_sha1', 'ceef02b86ac6b6842c5ef4531eda10252366055e', '2026-02-05 23:50:07.562516', '2026-02-05 23:50:07.562517') RETURNING "key"[0m
+  [1m[36mActiveRecord::SchemaMigration Load (0.4ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+  [1m[36mActiveRecord::InternalMetadata Load (2.9ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "schema_sha1"]]
+  [1m[36mActiveRecord::SchemaMigration Load (1.4ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+  [1m[36mActiveRecord::InternalMetadata Load (1.8ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "environment"]]
+  [1m[36mActiveRecord::SchemaMigration Load (1.6ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.6ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "environment"]]
+  [1m[36mActiveRecord::SchemaMigration Load (0.2ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.2ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "environment"]]
+  [1m[35mSQL (0.1ms)[0m  [1m[35mSET search_path TO public[0m
+  [1m[35m (62.9ms)[0m  [1m[35mDROP DATABASE IF EXISTS "aura_test"[0m
+  [1m[35m (56.5ms)[0m  [1m[35mCREATE DATABASE "aura_test" ENCODING = 'unicode'[0m
+  [1m[35mSQL (7.5ms)[0m  [1m[35mCREATE EXTENSION IF NOT EXISTS "plpgsql" SCHEMA pg_catalog[0m
+  [1m[35mSQL (3.4ms)[0m  [1m[35mCREATE EXTENSION IF NOT EXISTS "pgcrypto"[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_admin_comments" CASCADE[0m
+  [1m[35m (2.9ms)[0m  [1m[35mCREATE TABLE "active_admin_comments" ("id" bigserial primary key, "namespace" character varying, "body" text, "resource_type" character varying, "resource_id" bigint, "author_type" character varying, "author_id" bigint, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.9ms)[0m  [1m[35mCREATE INDEX "index_active_admin_comments_on_author" ON "active_admin_comments" ("author_type", "author_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_active_admin_comments_on_namespace" ON "active_admin_comments" ("namespace")[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_active_admin_comments_on_resource" ON "active_admin_comments" ("resource_type", "resource_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_storage_attachments" CASCADE[0m
+  [1m[35m (1.8ms)[0m  [1m[35mCREATE TABLE "active_storage_attachments" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "name" character varying NOT NULL, "record_type" character varying NOT NULL, "record_id" uuid NOT NULL, "blob_id" uuid NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE INDEX "index_active_storage_attachments_on_blob_id" ON "active_storage_attachments" ("blob_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_active_storage_attachments_uniqueness" ON "active_storage_attachments" ("record_type", "record_id", "name", "blob_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_storage_blobs" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "active_storage_blobs" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "key" character varying NOT NULL, "filename" character varying NOT NULL, "content_type" character varying, "metadata" text, "service_name" character varying NOT NULL, "byte_size" bigint NOT NULL, "checksum" character varying, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_active_storage_blobs_on_key" ON "active_storage_blobs" ("key")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "active_storage_variant_records" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "active_storage_variant_records" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "blob_id" uuid NOT NULL, "variation_digest" character varying NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_active_storage_variant_records_uniqueness" ON "active_storage_variant_records" ("blob_id", "variation_digest")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "admin_users" CASCADE[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE TABLE "admin_users" ("id" bigserial primary key, "email" character varying DEFAULT '' NOT NULL, "encrypted_password" character varying DEFAULT '' NOT NULL, "reset_password_token" character varying, "reset_password_sent_at" timestamp(6), "remember_created_at" timestamp(6), "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_admin_users_on_email" ON "admin_users" ("email")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_admin_users_on_reset_password_token" ON "admin_users" ("reset_password_token")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "images" CASCADE[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE TABLE "images" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "object_type" character varying, "object_id" uuid, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_images_on_object" ON "images" ("object_type", "object_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "insales_image_mappings" CASCADE[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE TABLE "insales_image_mappings" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "aura_image_id" uuid NOT NULL, "insales_image_id" bigint, "insales_product_id" bigint NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, "src_hash" character varying, "last_synced_at" timestamp(6))[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_insales_image_mappings_on_aura_image_id" ON "insales_image_mappings" ("aura_image_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_insales_image_mappings_on_insales_image_id" ON "insales_image_mappings" ("insales_image_id")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE INDEX "index_insales_image_mappings_on_insales_product_id" ON "insales_image_mappings" ("insales_product_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "insales_product_mappings" CASCADE[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE TABLE "insales_product_mappings" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "aura_product_id" uuid NOT NULL, "insales_product_id" bigint NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, "payload_hash" character varying, "last_synced_at" timestamp(6))[0m
+  [1m[35m (0.9ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_insales_product_mappings_on_aura_product_id" ON "insales_product_mappings" ("aura_product_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_insales_product_mappings_on_insales_product_id" ON "insales_product_mappings" ("insales_product_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "product_stocks" CASCADE[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE TABLE "product_stocks" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "product_id" uuid NOT NULL, "store_name" character varying NOT NULL, "stock" decimal(10,2) DEFAULT 0.0, "free_stock" decimal(10,2) DEFAULT 0.0, "reserve" decimal(10,2) DEFAULT 0.0, "synced_at" timestamp(6), "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_product_stocks_on_product_id" ON "product_stocks" ("product_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "products" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "products" ("id" uuid DEFAULT gen_random_uuid() NOT NULL PRIMARY KEY, "name" character varying, "sku" character varying, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL, "batch_number" character varying, "path_name" character varying, "weight" decimal(10,2), "length" decimal(10,2), "color" character varying, "tone" character varying, "ombre" boolean DEFAULT FALSE NOT NULL, "code" character varying, "barcodes" jsonb DEFAULT '[]', "purchase_price" decimal(10,2), "retail_price" decimal(10,2), "small_wholesale_price" decimal(10,2), "large_wholesale_price" decimal(10,2), "five_hundred_plus_wholesale_price" decimal(10,2), "min_price" decimal(10,2), "ms_id" uuid)[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_blocked_executions" CASCADE[0m
+  [1m[35m (1.7ms)[0m  [1m[35mCREATE TABLE "solid_queue_blocked_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "queue_name" character varying NOT NULL, "priority" integer DEFAULT 0 NOT NULL, "concurrency_key" character varying NOT NULL, "expires_at" timestamp(6) NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_blocked_executions_for_release" ON "solid_queue_blocked_executions" ("concurrency_key", "priority", "job_id")[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_blocked_executions_for_maintenance" ON "solid_queue_blocked_executions" ("expires_at", "concurrency_key")[0m
+  [1m[35m (0.3ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_blocked_executions_on_job_id" ON "solid_queue_blocked_executions" ("job_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_claimed_executions" CASCADE[0m
+  [1m[35m (1.1ms)[0m  [1m[35mCREATE TABLE "solid_queue_claimed_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "process_id" bigint, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_claimed_executions_on_job_id" ON "solid_queue_claimed_executions" ("job_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_claimed_executions_on_process_id_and_job_id" ON "solid_queue_claimed_executions" ("process_id", "job_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_failed_executions" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "solid_queue_failed_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "error" text, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_failed_executions_on_job_id" ON "solid_queue_failed_executions" ("job_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_jobs" CASCADE[0m
+  [1m[35m (2.0ms)[0m  [1m[35mCREATE TABLE "solid_queue_jobs" ("id" bigserial primary key, "queue_name" character varying NOT NULL, "class_name" character varying NOT NULL, "arguments" text, "priority" integer DEFAULT 0 NOT NULL, "active_job_id" character varying, "scheduled_at" timestamp(6), "finished_at" timestamp(6), "concurrency_key" character varying, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_on_active_job_id" ON "solid_queue_jobs" ("active_job_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_on_class_name" ON "solid_queue_jobs" ("class_name")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_on_finished_at" ON "solid_queue_jobs" ("finished_at")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_for_filtering" ON "solid_queue_jobs" ("queue_name", "finished_at")[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_jobs_for_alerting" ON "solid_queue_jobs" ("scheduled_at", "finished_at")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_pauses" CASCADE[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE TABLE "solid_queue_pauses" ("id" bigserial primary key, "queue_name" character varying NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_pauses_on_queue_name" ON "solid_queue_pauses" ("queue_name")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_processes" CASCADE[0m
+  [1m[35m (1.4ms)[0m  [1m[35mCREATE TABLE "solid_queue_processes" ("id" bigserial primary key, "kind" character varying NOT NULL, "last_heartbeat_at" timestamp(6) NOT NULL, "supervisor_id" bigint, "pid" integer NOT NULL, "hostname" character varying, "metadata" text, "created_at" timestamp(6) NOT NULL, "name" character varying NOT NULL)[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_processes_on_last_heartbeat_at" ON "solid_queue_processes" ("last_heartbeat_at")[0m
+  [1m[35m (0.9ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_processes_on_name_and_supervisor_id" ON "solid_queue_processes" ("name", "supervisor_id")[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_processes_on_supervisor_id" ON "solid_queue_processes" ("supervisor_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_ready_executions" CASCADE[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE TABLE "solid_queue_ready_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "queue_name" character varying NOT NULL, "priority" integer DEFAULT 0 NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.6ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_ready_executions_on_job_id" ON "solid_queue_ready_executions" ("job_id")[0m
+  [1m[35m (0.9ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_poll_all" ON "solid_queue_ready_executions" ("priority", "job_id")[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_poll_by_queue" ON "solid_queue_ready_executions" ("queue_name", "priority", "job_id")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_recurring_executions" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "solid_queue_recurring_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "task_key" character varying NOT NULL, "run_at" timestamp(6) NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (1.2ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_recurring_executions_on_job_id" ON "solid_queue_recurring_executions" ("job_id")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_recurring_executions_on_task_key_and_run_at" ON "solid_queue_recurring_executions" ("task_key", "run_at")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_recurring_tasks" CASCADE[0m
+  [1m[35m (1.6ms)[0m  [1m[35mCREATE TABLE "solid_queue_recurring_tasks" ("id" bigserial primary key, "key" character varying NOT NULL, "schedule" character varying NOT NULL, "command" character varying(2048), "class_name" character varying, "arguments" text, "queue_name" character varying, "priority" integer DEFAULT 0, "static" boolean DEFAULT TRUE NOT NULL, "description" text, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_recurring_tasks_on_key" ON "solid_queue_recurring_tasks" ("key")[0m
+  [1m[35m (0.5ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_recurring_tasks_on_static" ON "solid_queue_recurring_tasks" ("static")[0m
+  [1m[35m (0.0ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_scheduled_executions" CASCADE[0m
+  [1m[35m (1.7ms)[0m  [1m[35mCREATE TABLE "solid_queue_scheduled_executions" ("id" bigserial primary key, "job_id" bigint NOT NULL, "queue_name" character varying NOT NULL, "priority" integer DEFAULT 0 NOT NULL, "scheduled_at" timestamp(6) NOT NULL, "created_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_scheduled_executions_on_job_id" ON "solid_queue_scheduled_executions" ("job_id")[0m
+  [1m[35m (0.8ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_dispatch_all" ON "solid_queue_scheduled_executions" ("scheduled_at", "priority", "job_id")[0m
+  [1m[35m (0.1ms)[0m  [1m[35mDROP TABLE IF EXISTS "solid_queue_semaphores" CASCADE[0m
+  [1m[35m (1.3ms)[0m  [1m[35mCREATE TABLE "solid_queue_semaphores" ("id" bigserial primary key, "key" character varying NOT NULL, "value" integer DEFAULT 1 NOT NULL, "expires_at" timestamp(6) NOT NULL, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[35m (0.9ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_semaphores_on_expires_at" ON "solid_queue_semaphores" ("expires_at")[0m
+  [1m[35m (0.7ms)[0m  [1m[35mCREATE INDEX "index_solid_queue_semaphores_on_key_and_value" ON "solid_queue_semaphores" ("key", "value")[0m
+  [1m[35m (0.4ms)[0m  [1m[35mCREATE UNIQUE INDEX "index_solid_queue_semaphores_on_key" ON "solid_queue_semaphores" ("key")[0m
+  [1m[35m (1.1ms)[0m  [1m[35mALTER TABLE "active_storage_attachments" ADD CONSTRAINT "fk_rails_c3b3935057"
+FOREIGN KEY ("blob_id")
+  REFERENCES "active_storage_blobs" ("id")
+[0m
+  [1m[35m (0.6ms)[0m  [1m[35mALTER TABLE "active_storage_variant_records" ADD CONSTRAINT "fk_rails_993965df05"
+FOREIGN KEY ("blob_id")
+  REFERENCES "active_storage_blobs" ("id")
+[0m
+  [1m[35m (0.8ms)[0m  [1m[35mALTER TABLE "insales_image_mappings" ADD CONSTRAINT "fk_rails_8d816e67cd"
+FOREIGN KEY ("aura_image_id")
+  REFERENCES "images" ("id")
+[0m
+  [1m[35m (0.5ms)[0m  [1m[35mALTER TABLE "insales_product_mappings" ADD CONSTRAINT "fk_rails_9f2375f0b4"
+FOREIGN KEY ("aura_product_id")
+  REFERENCES "products" ("id")
+[0m
+  [1m[35m (0.7ms)[0m  [1m[35mALTER TABLE "product_stocks" ADD CONSTRAINT "fk_rails_46d0154a97"
+FOREIGN KEY ("product_id")
+  REFERENCES "products" ("id")
+[0m
+  [1m[35m (0.8ms)[0m  [1m[35mALTER TABLE "solid_queue_blocked_executions" ADD CONSTRAINT "fk_rails_4cd34e2228"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.8ms)[0m  [1m[35mALTER TABLE "solid_queue_claimed_executions" ADD CONSTRAINT "fk_rails_9cfe4d4944"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.5ms)[0m  [1m[35mALTER TABLE "solid_queue_failed_executions" ADD CONSTRAINT "fk_rails_39bbc7a631"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.5ms)[0m  [1m[35mALTER TABLE "solid_queue_ready_executions" ADD CONSTRAINT "fk_rails_81fcbd66af"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.4ms)[0m  [1m[35mALTER TABLE "solid_queue_recurring_executions" ADD CONSTRAINT "fk_rails_318a5533ed"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (0.7ms)[0m  [1m[35mALTER TABLE "solid_queue_scheduled_executions" ADD CONSTRAINT "fk_rails_c4316f352d"
+FOREIGN KEY ("job_id")
+  REFERENCES "solid_queue_jobs" ("id")
+ ON DELETE CASCADE[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE TABLE "schema_migrations" ("version" character varying NOT NULL PRIMARY KEY)[0m
+  [1m[36mActiveRecord::SchemaMigration Load (0.2ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+  [1m[35m (0.2ms)[0m  [1m[32mINSERT INTO "schema_migrations" (version) VALUES (20260205190010)[0m
+  [1m[35m (0.2ms)[0m  [1m[32mINSERT INTO "schema_migrations" (version) VALUES
+(20260205190000),
+(20260205184500),
+(20260205183000),
+(20251007143447),
+(20251006103741),
+(20251005105809),
+(20251002063356),
+(20250827153612),
+(20250825135133),
+(20250825084230),
+(20250825084229),
+(20250819123408),
+(20250819123324);[0m
+  [1m[35m (1.5ms)[0m  [1m[35mCREATE TABLE "ar_internal_metadata" ("key" character varying NOT NULL PRIMARY KEY, "value" character varying, "created_at" timestamp(6) NOT NULL, "updated_at" timestamp(6) NOT NULL)[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.4ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "environment"]]
+  [1m[36mActiveRecord::InternalMetadata Create (0.3ms)[0m  [1m[32mINSERT INTO "ar_internal_metadata" ("key", "value", "created_at", "updated_at") VALUES ('environment', 'test', '2026-02-05 23:50:25.429594', '2026-02-05 23:50:25.429596') RETURNING "key"[0m
+  [1m[36mActiveRecord::InternalMetadata Load (0.1ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "environment"]]
+  [1m[36mActiveRecord::InternalMetadata Load (0.1ms)[0m  [1m[34mSELECT * FROM "ar_internal_metadata" WHERE "ar_internal_metadata"."key" = $1 ORDER BY "ar_internal_metadata"."key" ASC LIMIT 1[0m  [[nil, "schema_sha1"]]
+  [1m[36mActiveRecord::InternalMetadata Create (0.2ms)[0m  [1m[32mINSERT INTO "ar_internal_metadata" ("key", "value", "created_at", "updated_at") VALUES ('schema_sha1', 'f6db43d025f5cc0faa3570ae01089ba4ddf06184', '2026-02-05 23:50:25.430729', '2026-02-05 23:50:25.430730') RETURNING "key"[0m
+  [1m[36mActiveRecord::SchemaMigration Load (0.5ms)[0m  [1m[34mSELECT "schema_migrations"."version" FROM "schema_migrations" ORDER BY "schema_migrations"."version" ASC[0m
+[dotenv] Saved a snapshot of [32mENV[0m
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN[0m
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mSAVEPOINT active_record_1[0m
+  [1m[36mProduct Create (0.6ms)[0m  [1m[32mINSERT INTO "products" ("name", "sku", "created_at", "updated_at", "batch_number", "path_name", "weight", "length", "color", "tone", "ombre", "code", "barcodes", "purchase_price", "retail_price", "small_wholesale_price", "large_wholesale_price", "five_hundred_plus_wholesale_price", "min_price", "ms_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING "id"[0m  [["name", "Test product"], ["sku", nil], ["created_at", "2026-02-05 23:50:25.482291"], ["updated_at", "2026-02-05 23:50:25.482291"], ["batch_number", nil], ["path_name", nil], ["weight", nil], ["length", nil], ["color", nil], ["tone", nil], ["ombre", false], ["code", "CODE-1"], ["barcodes", "[]"], ["purchase_price", nil], ["retail_price", "12.5"], ["small_wholesale_price", nil], ["large_wholesale_price", nil], ["five_hundred_plus_wholesale_price", nil], ["min_price", nil], ["ms_id", "efbbf5b7-3914-4b66-a12c-b4efe56981cc"]]
+  [1m[36mTRANSACTION (0.0ms)[0m  [1m[35mRELEASE SAVEPOINT active_record_1[0m
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mSAVEPOINT active_record_1[0m
+  [1m[36mProductStock Create (0.7ms)[0m  [1m[32mINSERT INTO "product_stocks" ("product_id", "store_name", "stock", "free_stock", "reserve", "synced_at", "created_at", "updated_at") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING "id"[0m  [["product_id", "174d3356-9acd-4985-a147-9445ecada533"], ["store_name", "Основной склад"], ["stock", "2.0"], ["free_stock", "0.0"], ["reserve", "0.0"], ["synced_at", "2026-02-05 23:50:25.495345"], ["created_at", "2026-02-05 23:50:25.496535"], ["updated_at", "2026-02-05 23:50:25.496535"]]
+  [1m[36mTRANSACTION (0.0ms)[0m  [1m[35mRELEASE SAVEPOINT active_record_1[0m
+  [1m[36mTRANSACTION (0.0ms)[0m  [1m[35mSAVEPOINT active_record_1[0m
+  [1m[36mProductStock Create (0.2ms)[0m  [1m[32mINSERT INTO "product_stocks" ("product_id", "store_name", "stock", "free_stock", "reserve", "synced_at", "created_at", "updated_at") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING "id"[0m  [["product_id", "174d3356-9acd-4985-a147-9445ecada533"], ["store_name", "Основной склад"], ["stock", "3.0"], ["free_stock", "0.0"], ["reserve", "0.0"], ["synced_at", "2026-02-05 23:50:25.498191"], ["created_at", "2026-02-05 23:50:25.498319"], ["updated_at", "2026-02-05 23:50:25.498319"]]
+  [1m[36mTRANSACTION (0.0ms)[0m  [1m[35mRELEASE SAVEPOINT active_record_1[0m
+  [1m[36mProductStock Sum (0.5ms)[0m  [1m[34mSELECT SUM("product_stocks"."stock") FROM "product_stocks" WHERE "product_stocks"."product_id" = $1[0m  [["product_id", "174d3356-9acd-4985-a147-9445ecada533"]]
+  [1m[36mTRANSACTION (0.2ms)[0m  [1m[31mROLLBACK[0m
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mBEGIN[0m
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mSAVEPOINT active_record_1[0m
+  [1m[36mProduct Create (0.5ms)[0m  [1m[32mINSERT INTO "products" ("name", "sku", "created_at", "updated_at", "batch_number", "path_name", "weight", "length", "color", "tone", "ombre", "code", "barcodes", "purchase_price", "retail_price", "small_wholesale_price", "large_wholesale_price", "five_hundred_plus_wholesale_price", "min_price", "ms_id") VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20) RETURNING "id"[0m  [["name", "Product 1"], ["sku", "SKU-0001"], ["created_at", "2026-02-05 23:50:25.526058"], ["updated_at", "2026-02-05 23:50:25.526058"], ["batch_number", nil], ["path_name", nil], ["weight", nil], ["length", nil], ["color", nil], ["tone", nil], ["ombre", false], ["code", nil], ["barcodes", "[]"], ["purchase_price", nil], ["retail_price", nil], ["small_wholesale_price", nil], ["large_wholesale_price", nil], ["five_hundred_plus_wholesale_price", nil], ["min_price", nil], ["ms_id", "57a01da7-fdd8-410f-9e7a-4d6b200b1fd5"]]
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mRELEASE SAVEPOINT active_record_1[0m
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[35mSAVEPOINT active_record_1[0m
+  [1m[36mProductStock Create (0.3ms)[0m  [1m[32mINSERT INTO "product_stocks" ("product_id", "store_name", "stock", "free_stock", "reserve", "synced_at", "created_at", "updated_at") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING "id"[0m  [["product_id", "02e0a956-731d-4d3f-9ce5-ecf89db7d17b"], ["store_name", "Основной склад"], ["stock", "1.5"], ["free_stock", "0.0"], ["reserve", "0.0"], ["synced_at", "2026-02-05 23:50:25.527792"], ["created_at", "2026-02-05 23:50:25.528038"], ["updated_at", "2026-02-05 23:50:25.528038"]]
+  [1m[36mTRANSACTION (0.0ms)[0m  [1m[35mRELEASE SAVEPOINT active_record_1[0m
+  [1m[36mTRANSACTION (0.0ms)[0m  [1m[35mSAVEPOINT active_record_1[0m
+  [1m[36mProductStock Create (0.2ms)[0m  [1m[32mINSERT INTO "product_stocks" ("product_id", "store_name", "stock", "free_stock", "reserve", "synced_at", "created_at", "updated_at") VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING "id"[0m  [["product_id", "02e0a956-731d-4d3f-9ce5-ecf89db7d17b"], ["store_name", "Основной склад"], ["stock", "2.25"], ["free_stock", "0.0"], ["reserve", "0.0"], ["synced_at", "2026-02-05 23:50:25.528942"], ["created_at", "2026-02-05 23:50:25.529023"], ["updated_at", "2026-02-05 23:50:25.529023"]]
+  [1m[36mTRANSACTION (0.0ms)[0m  [1m[35mRELEASE SAVEPOINT active_record_1[0m
+  [1m[36mProductStock Sum (0.1ms)[0m  [1m[34mSELECT SUM("product_stocks"."stock") FROM "product_stocks" WHERE "product_stocks"."product_id" = $1[0m  [["product_id", "02e0a956-731d-4d3f-9ce5-ecf89db7d17b"]]
+  [1m[36mTRANSACTION (0.1ms)[0m  [1m[31mROLLBACK[0m

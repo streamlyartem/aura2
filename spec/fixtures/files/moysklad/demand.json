@@ -1,0 +1,109 @@
+{"meta":
+  {"href":
+    "https://api.moysklad.ru/api/remap/1.2/entity/demand/7ae9da47-a5b2-11f0-0a80-0d30001221e0",
+   "metadataHref":
+    "https://api.moysklad.ru/api/remap/1.2/entity/demand/metadata",
+   "type": "demand",
+   "mediaType": "application/json",
+   "uuidHref":
+    "https://online.moysklad.ru/app/#demand/edit?id=7ae9da47-a5b2-11f0-0a80-0d30001221e0"},
+ "id": "7ae9da47-a5b2-11f0-0a80-0d30001221e0",
+ "accountId": "26f2d762-7dfd-11ee-0a80-08d300003cd5",
+ "owner":
+  {"meta":
+    {"href":
+      "https://api.moysklad.ru/api/remap/1.2/entity/employee/2734cfe4-7dfd-11ee-0a80-0e2a00051d94",
+     "metadataHref":
+      "https://api.moysklad.ru/api/remap/1.2/entity/employee/metadata",
+     "type": "employee",
+     "mediaType": "application/json",
+     "uuidHref":
+      "https://online.moysklad.ru/app/#employee/edit?id=2734cfe4-7dfd-11ee-0a80-0e2a00051d94"}},
+ "shared": false,
+ "group":
+  {"meta":
+    {"href":
+      "https://api.moysklad.ru/api/remap/1.2/entity/group/01c10059-81f1-11ee-0a80-02f100496ddf",
+     "metadataHref":
+      "https://api.moysklad.ru/api/remap/1.2/entity/group/metadata",
+     "type": "group",
+     "mediaType": "application/json"}},
+ "updated": "2025-10-10 11:24:03.167",
+ "name": "11550",
+ "description": "Списание из Aura",
+ "externalCode": "wO8CaYlpiUWKeWi-jGico1",
+ "moment": "2025-10-10 11:24:00.000",
+ "applicable": true,
+ "rate":
+  {"currency":
+    {"meta":
+      {"href":
+        "https://api.moysklad.ru/api/remap/1.2/entity/currency/274588e4-7dfd-11ee-0a80-0e2a00051e10",
+       "metadataHref":
+        "https://api.moysklad.ru/api/remap/1.2/entity/currency/metadata",
+       "type": "currency",
+       "mediaType": "application/json",
+       "uuidHref":
+        "https://online.moysklad.ru/app/#currency/edit?id=274588e4-7dfd-11ee-0a80-0e2a00051e10"}}},
+ "sum": 0.0,
+ "store":
+  {"meta":
+    {"href":
+      "https://api.moysklad.ru/api/remap/1.2/entity/store/d2a971ca-9164-11f0-0a80-19cb0021b994",
+     "metadataHref":
+      "https://api.moysklad.ru/api/remap/1.2/entity/store/metadata",
+     "type": "store",
+     "mediaType": "application/json",
+     "uuidHref":
+      "https://online.moysklad.ru/app/#warehouse/edit?id=d2a971ca-9164-11f0-0a80-19cb0021b994"}},
+ "agent":
+  {"meta":
+    {"href":
+      "https://api.moysklad.ru/api/remap/1.2/entity/counterparty/e407a3f8-a50e-11f0-0a80-0e580038a1ba",
+     "metadataHref":
+      "https://api.moysklad.ru/api/remap/1.2/entity/counterparty/metadata",
+     "type": "counterparty",
+     "mediaType": "application/json",
+     "uuidHref":
+      "https://online.moysklad.ru/app/#company/edit?id=e407a3f8-a50e-11f0-0a80-0e580038a1ba"}},
+ "organization":
+  {"meta":
+    {"href":
+      "https://api.moysklad.ru/api/remap/1.2/entity/organization/2743fc18-7dfd-11ee-0a80-0e2a00051e04",
+     "metadataHref":
+      "https://api.moysklad.ru/api/remap/1.2/entity/organization/metadata",
+     "type": "organization",
+     "mediaType": "application/json",
+     "uuidHref":
+      "https://online.moysklad.ru/app/#mycompany/edit?id=2743fc18-7dfd-11ee-0a80-0e2a00051e04"}},
+ "organizationAccount":
+  {"meta":
+    {"href":
+      "https://api.moysklad.ru/api/remap/1.2/entity/organization/2743fc18-7dfd-11ee-0a80-0e2a00051e04/accounts/27440038-7dfd-11ee-0a80-0e2a00051e05",
+     "type": "account",
+     "mediaType": "application/json"}},
+ "created": "2025-10-10 11:24:03.199",
+ "printed": false,
+ "published": false,
+ "files":
+  {"meta":
+    {"href":
+      "https://api.moysklad.ru/api/remap/1.2/entity/demand/7ae9da47-a5b2-11f0-0a80-0d30001221e0/files",
+     "type": "files",
+     "mediaType": "application/json",
+     "size": 0,
+     "limit": 1000,
+     "offset": 0}},
+ "positions":
+  {"meta":
+    {"href":
+      "https://api.moysklad.ru/api/remap/1.2/entity/demand/7ae9da47-a5b2-11f0-0a80-0d30001221e0/positions",
+     "type": "demandposition",
+     "mediaType": "application/json",
+     "size": 1,
+     "limit": 1000,
+     "offset": 0}},
+ "vatEnabled": true,
+ "vatIncluded": true,
+ "vatSum": 0.0,
+ "payedSum": 0.0}

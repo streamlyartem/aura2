@@ -1,0 +1,9 @@
+{
+  "errors": [
+    {
+      "error": "Неопознанный путь: product/00006cfc-8285-11f0-0a80-112a0007f611none",
+      "code": 1002,
+      "moreInfo": "https://dev.moysklad.ru/doc/api/remap/1.2/#error_1002"
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+<h2>📷 Сканировать штрихкод</h2>
+
+<div id="reader" style="width:100%; max-width:420px"></div>
+<p>Считанный штрихкод: <span id="result"></span></p>
+
+<div id="new-product-form" style="display:none;">
+  <%= form_with url: admin_products_path, method: :post, local: true, scope: :product do |f| %>
+    <%= f.label :sku, "Считанный штрихкод" %>
+    <%= f.text_field :sku, id: "product_sku" %>
+
+    <%= f.label :name, "Название продукта" %>
+    <%= f.text_field :name %>
+
+    <%= f.submit "Создать продукт" %>
+  <% end %>
+</div>
+
+<script src="https://unpkg.com/html5-qrcode/html5-qrcode.min.js"></script>
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const resultElem = document.getElementById("result");
+    const formDiv   = document.getElementById("new-product-form");
+    const skuField  = document.getElementById("product_sku");
+
+    const html5QrCode = new Html5Qrcode("reader");
+
+    const config = {
+      fps: 10,
+      qrbox: 250,
+      formatsToSupport: [
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.QR_CODE
+      ]
+    };
+
+    function handleDecoded(decodedText) {
+      resultElem.innerText = decodedText;
+
+      fetch(`/admin/products/check_sku.json?sku=${encodeURIComponent(decodedText)}`, {
+        headers: { "Accept": "application/json" }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (data.exists) {
+          window.location.href = data.edit_url;
+        } else {
+          skuField.value = decodedText;
+          formDiv.style.display = "block";
+        }
+      });
+    }
+
+    function onScanSuccess(decodedText/*, decodedResult */) {
+      html5QrCode.stop().catch(() => {});
+      handleDecoded(decodedText);
+    }
+
+    html5QrCode.start(
+      { facingMode: "environment" }, // камера телефона
+      config,
+      onScanSuccess,
+      (err) => { /* можно логировать ошибки сканирования */ }
+    ).catch(err => {
+      console.error("Ошибка при запуске камеры:", err);
+      const btn = document.createElement("button");
+      btn.textContent = "Разрешить доступ к камере";
+      btn.onclick = () => {
+        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess);
+      };
+      document.getElementById("reader").appendChild(btn);
+    });
+  });
+</script>
