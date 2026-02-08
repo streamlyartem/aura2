@@ -67,7 +67,7 @@ gem 'faraday'
 
 group :development do
   gem 'database_consistency', '~> 2.0.4', require: false
-  gem 'rubocop', '~> 1.62', require: false
+  gem 'rubocop', '~> 1.84', require: false
   gem 'rubocop-capybara', require: false
   gem 'rubocop-factory_bot', '~> 2.25', require: false
   gem 'rubocop-rails', '~> 2.24', require: false
