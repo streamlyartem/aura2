@@ -49,6 +49,7 @@ module Insales
         end
 
         response = client.post("/admin/products/#{mapping.insales_product_id}/images.json", { image: { src: src } })
+        Rails.logger.info("[InSales] Image upload src=#{src} status=#{response&.status}")
         if response_success?(response)
           insales_image_id = extract_image_id(response.body)
           InsalesImageMapping.create!(
@@ -78,8 +79,18 @@ module Insales
     attr_reader :client
 
     def image_src(image)
-      mode = InsalesSetting.first&.image_url_mode || ENV.fetch('INSALES_IMAGE_URL_MODE', 'service_url')
-      mode == 'rails_url' ? image.url : image.service_url
+      base = public_base_url
+      return nil if base.blank?
+
+      "#{base}/public/images/#{image.id}"
+    end
+
+    def public_base_url
+      host = Rails.application.default_url_options[:host]
+      return nil if host.blank?
+
+      host = host.sub(%r{^https?://}, '')
+      "https://#{host}"
     end
 
     def response_success?(response)

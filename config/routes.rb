@@ -27,6 +27,10 @@ Rails.application.routes.draw do
     end
   end
 
+  namespace :public do
+    get 'images/:image_id', to: 'images#show'
+  end
+
   # Defines the root path route ("/")
   root 'admin/products#index'
 end

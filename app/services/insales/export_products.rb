@@ -43,7 +43,7 @@ module Insales
       end
 
       if mapping
-        response = client.put("/admin/products/#{mapping.insales_product_id}.json", payload)
+        response = client.put("/admin/products/#{mapping.insales_product_id}.json", update_payload(product))
         if response_success?(response)
           mapping.touch
           result.updated += 1
@@ -87,6 +87,17 @@ module Insales
               quantity: quantity
             }
           ]
+        }
+      }
+    end
+
+    def update_payload(product)
+      category_id = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
+
+      {
+        product: {
+          title: product.name,
+          category_id: category_id.presence&.to_i
         }
       }
     end

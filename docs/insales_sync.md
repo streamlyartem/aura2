@@ -39,3 +39,9 @@ Optional env args for tasks:
 
 - `service_url` uses a signed ActiveStorage URL with expiration from `config.active_storage.service_urls_expire_in`.
 - `rails_url` uses `image.url`, so `API_HOST` must be configured to produce a public URL.
+
+## Почему не используем service_url
+
+При использовании ActiveStorage `service_url` для MinIO получали ошибку
+`SignatureDoesNotMatch` при загрузке изображений со стороны InSales.
+Поэтому для MVP используется публичный прокси-эндпоинт AURA.
