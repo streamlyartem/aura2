@@ -20,7 +20,7 @@ stackhero_minio:
   access_key_id: <%= ENV["STACKHERO_MINIO_ROOT_ACCESS_KEY"] %>
   secret_access_key: <%= ENV["STACKHERO_MINIO_ROOT_SECRET_KEY"] %>
   region: us-east-1
-  bucket: aura-<%= Rails.env %>
+  bucket: <%= ENV.fetch("STACKHERO_MINIO_BUCKET", "aura-#{Rails.env}") %>
   endpoint: https://<%= ENV["STACKHERO_MINIO_HOST"] %>
   force_path_style: true
 # Remember not to checkin your GCS keyfile to a repository
