@@ -49,12 +49,7 @@ namespace :insales do
     update_product_fields = env_truthy?(ENV['UPDATE_PRODUCT_FIELDS'])
     sync_images = env_truthy?(ENV['SYNC_IMAGES'])
 
-    result = Insales::SyncStore.new.call(
-      store_name: store_name,
-      collection_id: collection_id,
-      update_product_fields: update_product_fields,
-      sync_images: sync_images
-    )
+    result = Insales::SyncProductStocks.new.call(store_name: store_name)
 
     puts result.inspect
   end
