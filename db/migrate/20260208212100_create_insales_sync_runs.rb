@@ -8,7 +8,7 @@ class CreateInsalesSyncRuns < ActiveRecord::Migration[8.0]
       t.integer :processed, default: 0, null: false
       t.integer :created, default: 0, null: false
       t.integer :updated, default: 0, null: false
-      t.integer :errors, default: 0, null: false
+      t.integer :error_count, default: 0, null: false
       t.integer :variants_updated, default: 0, null: false
       t.string :status, null: false, default: 'running'
       t.datetime :started_at

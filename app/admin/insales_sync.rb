@@ -67,7 +67,7 @@ ActiveAdmin.register_page 'Insales Sync' do
         ['Processed', last_run&.processed || '—'],
         ['Created', last_run&.created || '—'],
         ['Updated', last_run&.updated || '—'],
-        ['Errors', last_run&.errors || '—'],
+        ['Errors', last_run&.error_count || '—'],
         ['Variants updated', last_run&.variants_updated || '—']
       ] do
         column('Metric') { |row| row[0] }
