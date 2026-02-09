@@ -2,6 +2,8 @@
 
 class AddStatusToInsalesSyncRuns < ActiveRecord::Migration[8.0]
   def change
+    return if column_exists?(:insales_sync_runs, :status)
+
     add_column :insales_sync_runs, :status, :string, null: false, default: 'running'
   end
 end
