@@ -40,31 +40,21 @@ module Insales
     end
 
     def upsert_status(store_name, result, error: nil)
-      status = InsalesSyncStatus.find_or_initialize_by(store_name: store_name)
+      status = InsalesStockSyncState.find_or_initialize_by(store_name: store_name)
       status.last_run_at = Time.current
 
       if result
         status.last_stock_sync_at = Time.current
-        status.last_processed = result.processed
-        status.last_created = result.created
-        status.last_updated = result.updated
-        status.last_error_count = result.errors
-        status.last_result_json = {
-          processed: result.processed,
-          created: result.created,
-          updated: result.updated,
-          errors: result.errors,
-          variants_updated: result.variant_updates
-        }
+        status.last_status = 'success'
+        status.processed = result.processed
+        status.created = result.created
+        status.updated = result.updated
+        status.errors = result.errors
+        status.variants_updated = result.variant_updates
+        status.last_error = nil
       elsif error
-        status.last_error_count = status.last_error_count.to_i + 1
-        status.last_result_json = {
-          error: {
-            class: error.class.name,
-            message: error.message,
-            backtrace: Array(error.backtrace).first(20)
-          }
-        }
+        status.last_status = 'failed'
+        status.last_error = "#{error.class}: #{error.message}"
       end
 
       status.save!
