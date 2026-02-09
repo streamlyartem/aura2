@@ -18,6 +18,7 @@ module Insales
         finished_at: Time.current,
         status: result.errors.positive? ? 'error' : 'success'
       )
+      upsert_status(store_name, result)
       Rails.logger.info("[InSalesSync] Job finished store=#{store_name} status=#{run.status}")
     rescue StandardError => e
       Rails.logger.error("[InSalesSync] Job failed store=#{store_name}: #{e.class} - #{e.message}")
@@ -26,6 +27,7 @@ module Insales
         finished_at: Time.current,
         error_details: format_error(e)
       )
+      upsert_status(store_name, nil, error: e)
       raise
     end
 
@@ -35,6 +37,37 @@ module Insales
         message: error.message,
         backtrace: Array(error.backtrace).first(20)
       }.to_json
+    end
+
+    def upsert_status(store_name, result, error: nil)
+      status = InsalesSyncStatus.find_or_initialize_by(store_name: store_name)
+      status.last_run_at = Time.current
+
+      if result
+        status.last_stock_sync_at = Time.current
+        status.last_processed = result.processed
+        status.last_created = result.created
+        status.last_updated = result.updated
+        status.last_error_count = result.errors
+        status.last_result_json = {
+          processed: result.processed,
+          created: result.created,
+          updated: result.updated,
+          errors: result.errors,
+          variants_updated: result.variant_updates
+        }
+      elsif error
+        status.last_error_count = status.last_error_count.to_i + 1
+        status.last_result_json = {
+          error: {
+            class: error.class.name,
+            message: error.message,
+            backtrace: Array(error.backtrace).first(20)
+          }
+        }
+      end
+
+      status.save!
     end
   end
 end

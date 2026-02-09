@@ -115,7 +115,8 @@ module Moysklad
                 else raise ArgumentError, "Unsupported method: #{method}"
                 end
       request['Authorization'] = "Bearer #{token}"
-      request['Accept'] = 'application/json'
+      request['Accept'] = 'application/json;charset=utf-8'
+      request['Content-Type'] = 'application/json;charset=utf-8'
       request
     end
 

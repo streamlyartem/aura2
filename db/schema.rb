@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_08_221500) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_08_223000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -129,6 +129,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_08_221500) do
     t.text "error_details"
     t.string "status", default: "running", null: false
     t.index ["store_name"], name: "index_insales_sync_runs_on_store_name"
+  end
+
+  create_table "insales_sync_statuses", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "store_name", null: false
+    t.datetime "last_stock_sync_at"
+    t.datetime "last_run_at"
+    t.integer "last_processed", default: 0, null: false
+    t.integer "last_created", default: 0, null: false
+    t.integer "last_updated", default: 0, null: false
+    t.integer "last_error_count", default: 0, null: false
+    t.jsonb "last_result_json"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["store_name"], name: "index_insales_sync_statuses_on_store_name", unique: true
   end
 
   create_table "product_stocks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

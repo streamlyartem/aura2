@@ -11,10 +11,6 @@ ActiveAdmin.register_page 'Insales Sync' do
     redirect_to admin_insales_sync_path, notice: 'Синхронизация запущена'
   end
 
-  action_item :sync_now, only: :index do
-    link_to 'Синхронизировать склад “Тест” с InSales', url_for(action: :sync_now), method: :post
-  end
-
   page_action :ensure_moysklad_webhooks, method: :post do
     Moysklad::EnsureWebhooksJob.perform_later
 
@@ -45,24 +41,29 @@ ActiveAdmin.register_page 'Insales Sync' do
       div class: 'mb-4' do
         form action: url_for(action: :sync_now), method: :post do
           input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-          input type: 'hidden', name: 'store_name', value: store_name
-          input type: 'submit', value: 'Синхронизировать склад “Тест” с InSales', class: 'button'
+          label 'Склад'
+          select name: 'store_name' do
+            store_names.each do |name|
+              option name, value: name, selected: name == store_name
+            end
+          end
+          input type: 'submit', value: 'Синхронизировать', class: 'button'
         end
       end
 
       last_run = InsalesSyncRun.where(store_name: store_name).order(created_at: :desc).first
-      status = last_run&.status || '—'
+      status_row = InsalesSyncStatus.find_by(store_name: store_name)
 
       table_for [
         ['InSales Base URL', settings&.base_url || '—'],
         ['InSales Category ID', settings&.category_id || '—'],
         ['InSales Collection ID', settings&.default_collection_id || '—'],
-        ['Last stock sync', last_stock_sync_at || '—'],
+        ['Last stock sync', status_row&.last_stock_sync_at || '—'],
         ['Products with stock records', products_with_stock],
         ['Stock rows', total_stocks],
         ['Products mapped to InSales', products_with_insales_mapping],
         ['Images mapped to InSales', images_with_insales_mapping],
-        ['Status', status],
+        ['Status', last_run&.status || '—'],
         ['Last sync run', last_run&.finished_at || '—'],
         ['Processed', last_run&.processed || '—'],
         ['Created', last_run&.created || '—'],
