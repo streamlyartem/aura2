@@ -12,7 +12,7 @@ ActiveAdmin.register_page 'Insales Sync' do
   end
 
   action_item :sync_now, only: :index do
-    link_to 'Sync now', url_for(action: :sync_now), method: :post
+    link_to 'Синхронизировать склад “Тест” с InSales', url_for(action: :sync_now), method: :post
   end
 
   page_action :ensure_moysklad_webhooks, method: :post do
@@ -42,18 +42,16 @@ ActiveAdmin.register_page 'Insales Sync' do
     settings = InsalesSetting.first
 
     panel "Test store sync status (#{store_name})" do
-      form action: url_for(action: :sync_now), method: :post do
-        input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-        label 'Store'
-        select name: 'store_name' do
-          store_names.each do |name|
-            option name, value: name, selected: name == store_name
-          end
+      div class: 'mb-4' do
+        form action: url_for(action: :sync_now), method: :post do
+          input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
+          input type: 'hidden', name: 'store_name', value: store_name
+          input type: 'submit', value: 'Синхронизировать склад “Тест” с InSales', class: 'button'
         end
-        input type: 'submit', value: 'Запустить синхронизацию', class: 'button'
       end
 
       last_run = InsalesSyncRun.where(store_name: store_name).order(created_at: :desc).first
+      status = last_run&.status || '—'
 
       table_for [
         ['InSales Base URL', settings&.base_url || '—'],
@@ -64,6 +62,7 @@ ActiveAdmin.register_page 'Insales Sync' do
         ['Stock rows', total_stocks],
         ['Products mapped to InSales', products_with_insales_mapping],
         ['Images mapped to InSales', images_with_insales_mapping],
+        ['Status', status],
         ['Last sync run', last_run&.finished_at || '—'],
         ['Processed', last_run&.processed || '—'],
         ['Created', last_run&.created || '—'],

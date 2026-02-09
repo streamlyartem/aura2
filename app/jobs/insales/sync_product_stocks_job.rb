@@ -5,7 +5,8 @@ module Insales
     queue_as :default
 
     def perform(store_name: 'Тест')
-      run = InsalesSyncRun.create!(store_name: store_name, started_at: Time.current)
+      Rails.logger.info("[InSalesSync] Job started store=#{store_name}")
+      run = InsalesSyncRun.create!(store_name: store_name, started_at: Time.current, status: 'running')
       result = Insales::SyncProductStocks.new.call(store_name: store_name)
       run.update!(
         total_products: result.processed,
@@ -14,8 +15,10 @@ module Insales
         updated: result.updated,
         errors: result.errors,
         variants_updated: result.variant_updates,
-        finished_at: Time.current
+        finished_at: Time.current,
+        status: result.errors.positive? ? 'error' : 'success'
       )
+      Rails.logger.info("[InSalesSync] Job finished store=#{store_name} status=#{run.status}")
     end
   end
 end
