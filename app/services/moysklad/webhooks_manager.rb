@@ -29,14 +29,16 @@ module Moysklad
       desired.each do |payload|
         if webhook_exists?(existing, payload)
           result.skipped += 1
-          Rails.logger.info("[MoySklad] Skip #{payload['action']} #{payload['entityType']} #{payload['url']}")
+          Rails.logger.info("[MoySklad] Skip #{payload['action']} #{payload['entityType']} #{masked_url(payload['url'])}")
           next
         end
+
+        delete_stale(existing, payload)
 
         response = request(:post, payload)
         if response.is_a?(Net::HTTPSuccess)
           result.created += 1
-          Rails.logger.info("[MoySklad] Created #{payload['action']} #{payload['entityType']} #{payload['url']}")
+          Rails.logger.info("[MoySklad] Created #{payload['action']} #{payload['entityType']} #{masked_url(payload['url'])}")
         else
           result.errors += 1
           Rails.logger.error("[MoySklad] Create failed status=#{response.code} body=#{short_body(response.body)}")
@@ -50,7 +52,7 @@ module Moysklad
       result = Result.new(created: 0, skipped: 0, deleted: 0, errors: 0)
       existing = list
       existing.each do |row|
-        next unless row['url'] == webhook_url
+        next unless same_base_url?(row['url'], webhook_url)
 
         response = request(:delete, nil, row['id'])
         if response.is_a?(Net::HTTPSuccess)
@@ -68,11 +70,37 @@ module Moysklad
     private
 
     def webhook_url
-      ENV.fetch('MOYSKLAD_WEBHOOK_URL', STAGING_URL)
+      base_url = ENV['MOYSKLAD_WEBHOOK_URL'].presence || default_webhook_base_url
+      if webhook_token.to_s.strip.empty?
+        Rails.logger.error('[MoySklad] Missing MOYSKLAD_WEBHOOK_TOKEN')
+      else
+        Rails.logger.info('[MoySklad] MOYSKLAD_WEBHOOK_TOKEN present')
+      end
+      append_token(base_url, webhook_token)
     end
 
     def token
       ENV['MOYSKLAD_TOKEN']
+    end
+
+    def webhook_token
+      ENV['MOYSKLAD_WEBHOOK_TOKEN']
+    end
+
+    def default_webhook_base_url
+      host = Rails.application.routes.default_url_options[:host]
+      return STAGING_URL if host.blank?
+
+      "https://#{host}/api/moysklad/webhooks"
+    end
+
+    def append_token(base_url, token)
+      uri = URI(base_url)
+      params = URI.decode_www_form(uri.query.to_s)
+      params.reject! { |(key, _)| key == 'token' }
+      params << ['token', token.to_s]
+      uri.query = URI.encode_www_form(params)
+      uri.to_s
     end
 
     def desired_payload(url, action)
@@ -89,6 +117,30 @@ module Moysklad
           row['action'] == payload['action'] &&
           row['entityType'] == payload['entityType']
       end
+    end
+
+    def delete_stale(existing, payload)
+      existing.each do |row|
+        next unless row['action'] == payload['action']
+        next unless row['entityType'] == payload['entityType']
+        next unless same_base_url?(row['url'], payload['url'])
+        next if row['url'] == payload['url']
+
+        response = request(:delete, nil, row['id'])
+        if response.is_a?(Net::HTTPSuccess)
+          Rails.logger.info("[MoySklad] Deleted stale webhook #{row['id']}")
+        else
+          Rails.logger.error("[MoySklad] Delete failed status=#{response.code} body=#{short_body(response.body)}")
+        end
+      end
+    end
+
+    def same_base_url?(left, right)
+      left_uri = URI(left.to_s)
+      right_uri = URI(right.to_s)
+      left_uri.scheme == right_uri.scheme &&
+        left_uri.host == right_uri.host &&
+        left_uri.path == right_uri.path
     end
 
     def request(method, payload = nil, id = nil)
@@ -123,6 +175,14 @@ module Moysklad
     def missing_token
       Rails.logger.error('[MoySklad] Missing MOYSKLAD_TOKEN')
       Net::HTTPResponse.new('1.1', '401', 'Missing token')
+    end
+
+    def masked_url(url)
+      token = webhook_token.to_s
+      return url if token.empty?
+
+      masked = token.length <= 4 ? '****' : "****#{token[-4, 4]}"
+      url.to_s.gsub(/token=[^&]+/, "token=#{masked}")
     end
 
     def short_body(body)
