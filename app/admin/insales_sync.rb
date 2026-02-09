@@ -15,6 +15,16 @@ ActiveAdmin.register_page 'Insales Sync' do
     link_to 'Sync now', url_for(action: :sync_now), method: :post
   end
 
+  page_action :ensure_moysklad_webhooks, method: :post do
+    Moysklad::EnsureWebhooksJob.perform_later
+
+    redirect_to admin_insales_sync_path, notice: 'MoySklad webhooks enqueued'
+  end
+
+  action_item :ensure_moysklad_webhooks, only: :index do
+    link_to 'Ensure MoySklad Webhooks', url_for(action: :ensure_moysklad_webhooks), method: :post
+  end
+
   content title: 'InSales Sync' do
     store_name = defined?(MoyskladClient::TEST_STORE_NAME) ? MoyskladClient::TEST_STORE_NAME : 'Тест'
 
