@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_08_205000) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_08_212100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -114,6 +114,21 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_08_205000) do
     t.bigint "default_collection_id"
   end
 
+  create_table "insales_sync_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "store_name", null: false
+    t.integer "total_products", default: 0, null: false
+    t.integer "processed", default: 0, null: false
+    t.integer "created", default: 0, null: false
+    t.integer "updated", default: 0, null: false
+    t.integer "errors", default: 0, null: false
+    t.integer "variants_updated", default: 0, null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["store_name"], name: "index_insales_sync_runs_on_store_name"
+  end
+
   create_table "product_stocks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "product_id", null: false
     t.string "store_name", null: false
@@ -147,6 +162,17 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_08_205000) do
     t.decimal "five_hundred_plus_wholesale_price", precision: 10, scale: 2
     t.decimal "min_price", precision: 10, scale: 2
     t.uuid "ms_id"
+  end
+
+  create_table "solid_cache_entries", force: :cascade do |t|
+    t.binary "key", null: false
+    t.binary "value", null: false
+    t.datetime "created_at", null: false
+    t.bigint "key_hash", null: false
+    t.integer "byte_size", null: false
+    t.index ["byte_size"], name: "index_solid_cache_entries_on_byte_size"
+    t.index ["key_hash", "byte_size"], name: "index_solid_cache_entries_on_key_hash_and_byte_size"
+    t.index ["key_hash"], name: "index_solid_cache_entries_on_key_hash", unique: true
   end
 
   create_table "solid_queue_blocked_executions", force: :cascade do |t|

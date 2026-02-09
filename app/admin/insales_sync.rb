@@ -22,11 +22,14 @@ ActiveAdmin.register_page 'Insales Sync' do
   end
 
   action_item :ensure_moysklad_webhooks, only: :index do
-    link_to 'Ensure MoySklad Webhooks', url_for(action: :ensure_moysklad_webhooks), method: :post
+    link_to 'Подключить вебхуки MoySklad (staging)', url_for(action: :ensure_moysklad_webhooks), method: :post
   end
 
   content title: 'InSales Sync' do
     store_name = defined?(MoyskladClient::TEST_STORE_NAME) ? MoyskladClient::TEST_STORE_NAME : 'Тест'
+
+    store_names = ProductStock.distinct.order(:store_name).pluck(:store_name)
+    store_name = store_names.include?(store_name) ? store_name : (store_names.first || 'Тест')
 
     stock_scope = ProductStock.where(store_name: store_name)
     last_stock_sync_at = stock_scope.maximum(:synced_at)
@@ -39,6 +42,19 @@ ActiveAdmin.register_page 'Insales Sync' do
     settings = InsalesSetting.first
 
     panel "Test store sync status (#{store_name})" do
+      form action: url_for(action: :sync_now), method: :post do
+        input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
+        label 'Store'
+        select name: 'store_name' do
+          store_names.each do |name|
+            option name, value: name, selected: name == store_name
+          end
+        end
+        input type: 'submit', value: 'Запустить синхронизацию', class: 'button'
+      end
+
+      last_run = InsalesSyncRun.where(store_name: store_name).order(created_at: :desc).first
+
       table_for [
         ['InSales Base URL', settings&.base_url || '—'],
         ['InSales Category ID', settings&.category_id || '—'],
@@ -47,7 +63,13 @@ ActiveAdmin.register_page 'Insales Sync' do
         ['Products with stock records', products_with_stock],
         ['Stock rows', total_stocks],
         ['Products mapped to InSales', products_with_insales_mapping],
-        ['Images mapped to InSales', images_with_insales_mapping]
+        ['Images mapped to InSales', images_with_insales_mapping],
+        ['Last sync run', last_run&.finished_at || '—'],
+        ['Processed', last_run&.processed || '—'],
+        ['Created', last_run&.created || '—'],
+        ['Updated', last_run&.updated || '—'],
+        ['Errors', last_run&.errors || '—'],
+        ['Variants updated', last_run&.variants_updated || '—']
       ] do
         column('Metric') { |row| row[0] }
         column('Value') { |row| row[1] }

@@ -5,8 +5,8 @@ module Moysklad
     queue_as :default
 
     def perform
-      result = Moysklad::Webhooks::Registrar.new.ensure!
-      Rails.logger.info("[MoySkladWebhooks] Result created=#{result.created} skipped=#{result.skipped} errors=#{result.errors}")
+      result = Moysklad::WebhooksManager.new.ensure
+      Rails.logger.info("[MoySklad] Result created=#{result.created} skipped=#{result.skipped} errors=#{result.errors}")
     end
   end
 end

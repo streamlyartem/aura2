@@ -12,21 +12,16 @@ module Insales
       result = Result.new(processed: 0, created: 0, updated: 0, errors: 0, variant_updates: 0)
 
       Rails.logger.info("[InSalesSync] Start sync for store '#{store_name}'")
-      stock_rows = ProductStock.where(store_name: store_name)
-      Rails.logger.info("[InSalesSync] Stock rows: #{stock_rows.count}")
+      stock_by_product = ProductStock.where(store_name: store_name).group(:product_id).sum(:stock)
+      product_ids = stock_by_product.keys
+      Rails.logger.info("[InSalesSync] Products in stock: #{product_ids.size}")
 
       variants = []
 
-      stock_rows.find_each do |stock|
-        product = stock.product
-        unless product
-          result.errors += 1
-          Rails.logger.warn("[InSalesSync] Missing product for stock #{stock.id}")
-          next
-        end
+      Product.where(id: product_ids).find_each do |product|
 
         result.processed += 1
-        quantity = stock.stock.to_f
+        quantity = stock_by_product[product.id].to_f
 
         mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
         unless mapping
