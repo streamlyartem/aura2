@@ -45,11 +45,11 @@ module Insales
 
       if result
         status.last_stock_sync_at = Time.current
-        status.last_status = 'success'
+        status.last_status = result.errors.to_i.positive? ? 'failed' : 'success'
         status.processed = result.processed
         status.created = result.created
         status.updated = result.updated
-        status.errors = result.errors
+        status.error_count = result.errors
         status.variants_updated = result.variant_updates
         status.last_error = nil
       elsif error

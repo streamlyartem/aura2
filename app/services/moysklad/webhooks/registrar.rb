@@ -15,11 +15,11 @@ module Moysklad
       def ensure!
         result = Result.new(created: 0, skipped: 0, errors: 0)
 
-        token = ENV['MOYSKLAD_TOKEN']
+        token = ENV['MOYSKLAD_API_TOKEN'].presence || ENV['MOYSKLAD_TOKEN']
         url = ENV['MOYSKLAD_WEBHOOK_URL']
 
         if token.to_s.strip.empty? || url.to_s.strip.empty?
-          Rails.logger.error('[MoySkladWebhooks] Missing MOYSKLAD_TOKEN or MOYSKLAD_WEBHOOK_URL')
+          Rails.logger.error('[MoySkladWebhooks] Missing MOYSKLAD_API_TOKEN or MOYSKLAD_WEBHOOK_URL')
           result.errors += 1
           return result
         end

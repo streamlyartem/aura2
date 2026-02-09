@@ -23,6 +23,8 @@ module Moysklad
     def ensure
       result = Result.new(created: 0, skipped: 0, deleted: 0, errors: 0)
 
+      raise_missing_webhook_token! if webhook_token.to_s.strip.empty?
+
       existing = list
       desired = ACTIONS.map { |action| desired_payload(webhook_url, action) }
 
@@ -71,16 +73,12 @@ module Moysklad
 
     def webhook_url
       base_url = ENV['MOYSKLAD_WEBHOOK_URL'].presence || default_webhook_base_url
-      if webhook_token.to_s.strip.empty?
-        Rails.logger.error('[MoySklad] Missing MOYSKLAD_WEBHOOK_TOKEN')
-      else
-        Rails.logger.info('[MoySklad] MOYSKLAD_WEBHOOK_TOKEN present')
-      end
+      Rails.logger.info("[MoySklad] Webhook token present=#{webhook_token.to_s.strip.present?}")
       append_token(base_url, webhook_token)
     end
 
     def token
-      ENV['MOYSKLAD_TOKEN']
+      ENV['MOYSKLAD_API_TOKEN'].presence || ENV['MOYSKLAD_TOKEN']
     end
 
     def webhook_token
@@ -88,7 +86,9 @@ module Moysklad
     end
 
     def default_webhook_base_url
-      host = Rails.application.routes.default_url_options[:host]
+      host = ENV['APP_HOST'].presence ||
+             ENV['RAILS_HOST'].presence ||
+             Rails.application.routes.default_url_options[:host]
       return STAGING_URL if host.blank?
 
       "https://#{host}/api/moysklad/webhooks"
@@ -150,7 +150,7 @@ module Moysklad
       request = build_request(method, uri)
 
       if payload
-        request['Content-Type'] = 'application/json'
+        request['Content-Type'] = 'application/json;charset=utf-8'
         request.body = JSON.generate(payload)
       end
 
@@ -168,13 +168,17 @@ module Moysklad
                 end
       request['Authorization'] = "Bearer #{token}"
       request['Accept'] = 'application/json;charset=utf-8'
-      request['Content-Type'] = 'application/json;charset=utf-8'
       request
     end
 
     def missing_token
-      Rails.logger.error('[MoySklad] Missing MOYSKLAD_TOKEN')
+      Rails.logger.error('[MoySklad] Missing MOYSKLAD_API_TOKEN')
       Net::HTTPResponse.new('1.1', '401', 'Missing token')
+    end
+
+    def raise_missing_webhook_token!
+      Rails.logger.error('[MoySklad] Missing MOYSKLAD_WEBHOOK_TOKEN')
+      raise ArgumentError, 'Missing MOYSKLAD_WEBHOOK_TOKEN'
     end
 
     def masked_url(url)

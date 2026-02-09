@@ -8,7 +8,7 @@ ActiveAdmin.register_page 'Insales Sync' do
 
     Insales::SyncProductStocksJob.perform_later(store_name: store_name)
 
-    redirect_to admin_insales_sync_path(store_name: store_name), notice: 'Синхронизация запущена'
+    redirect_to admin_insales_sync_path(store_name: store_name), notice: "Запущена синхронизация склада #{store_name}"
   end
 
   page_action :ensure_moysklad_webhooks, method: :post do
@@ -17,8 +17,18 @@ ActiveAdmin.register_page 'Insales Sync' do
     redirect_to admin_insales_sync_path(store_name: params[:store_name].presence), notice: 'MoySklad webhooks enqueued'
   end
 
+  page_action :import_moysklad_products, method: :post do
+    Moysklad::ImportProductsJob.perform_later
+
+    redirect_to admin_insales_sync_path(store_name: params[:store_name].presence), notice: 'Импорт товаров из MoySklad запущен'
+  end
+
   action_item :ensure_moysklad_webhooks, only: :index do
     link_to 'Подключить вебхуки MoySklad (staging)', url_for(action: :ensure_moysklad_webhooks, store_name: params[:store_name]), method: :post
+  end
+
+  action_item :import_moysklad_products, only: :index do
+    link_to 'Импортировать товары из MoySklad', url_for(action: :import_moysklad_products, store_name: params[:store_name]), method: :post
   end
 
   content title: 'InSales Sync' do
@@ -35,6 +45,11 @@ ActiveAdmin.register_page 'Insales Sync' do
     images_with_insales_mapping = InsalesImageMapping.count
     settings = InsalesSetting.first
     state = InsalesStockSyncState.find_by(store_name: store_name)
+    webhook_token = ENV['MOYSKLAD_WEBHOOK_TOKEN'].to_s
+    webhook_host = ENV['APP_HOST'].presence || ENV['RAILS_HOST'].presence || Rails.application.routes.default_url_options[:host]
+    webhook_base = ENV['MOYSKLAD_WEBHOOK_URL'].presence || (webhook_host.present? ? "https://#{webhook_host}/api/moysklad/webhooks" : '—')
+    masked_token = webhook_token.present? ? "****#{webhook_token[-4, 4]}" : '—'
+    webhook_hint = webhook_base == '—' ? '—' : "#{webhook_base}?token=#{masked_token}"
 
     panel 'Синхронизация остатков (InSales)' do
       div class: 'mb-4' do
@@ -54,13 +69,14 @@ ActiveAdmin.register_page 'Insales Sync' do
         ['InSales Base URL', settings&.base_url || '—'],
         ['InSales Category ID', settings&.category_id || '—'],
         ['InSales Collection ID', settings&.default_collection_id || '—'],
+        ['MoySklad Webhook URL', webhook_hint],
         ['Last stock sync', state&.last_stock_sync_at || '—'],
         ['Last sync run', state&.last_run_at || '—'],
         ['Status', state&.last_status || '—'],
         ['Processed', state&.processed || '—'],
         ['Created', state&.created || '—'],
         ['Updated', state&.updated || '—'],
-        ['Errors', state&.errors || '—'],
+        ['Errors', state&.error_count || '—'],
         ['Variants updated', state&.variants_updated || '—'],
         ['Last error', state&.last_status == 'failed' ? (state.last_error.presence || '—') : '—'],
         ['Products with stock records', products_with_stock],

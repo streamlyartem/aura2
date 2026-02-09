@@ -23,13 +23,33 @@ module Api
       private
 
       def verify_moysklad_token!
-        provided = params[:token].to_s
+        provided = params[:token].presence ||
+                   request.get_header('HTTP_X_MOYSKLAD_TOKEN').presence ||
+                   request.get_header('X-Moysklad-Token').presence
         expected = ENV['MOYSKLAD_WEBHOOK_TOKEN'].to_s
 
-        return if ActiveSupport::SecurityUtils.secure_compare(provided, expected)
+        if expected.blank?
+          Rails.logger.warn('[Moysklad Webhook] Missing MOYSKLAD_WEBHOOK_TOKEN in env')
+          return head :unauthorized
+        end
 
-        Rails.logger.warn '[Moysklad Webhook] Unauthorized access, token mismatch'
+        if provided.present? && ActiveSupport::SecurityUtils.secure_compare(provided.to_s, expected)
+          return
+        end
+
+        Rails.logger.warn(
+          "[Moysklad Webhook] Unauthorized access, token mismatch " \
+          "expected_present=#{expected.present?} token_present=#{provided.present?} " \
+          "token_prefix=#{mask_token(provided)} expected_prefix=#{mask_token(expected)}"
+        )
         head :unauthorized
+      end
+
+      def mask_token(token)
+        token = token.to_s
+        return 'none' if token.empty?
+
+        token.length <= 4 ? "#{token}****" : "#{token[0, 4]}****"
       end
     end
   end

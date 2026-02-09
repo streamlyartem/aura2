@@ -10,7 +10,7 @@ class CreateInsalesStockSyncStates < ActiveRecord::Migration[8.0]
       t.integer :processed
       t.integer :created
       t.integer :updated
-      t.integer :errors
+      t.integer :error_count
       t.integer :variants_updated
       t.text :last_error
       t.timestamps
