@@ -8,6 +8,14 @@ class InsalesSetting < ApplicationRecord
   validates :image_url_mode, inclusion: { in: %w[service_url rails_url] }
   validate :single_record
 
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[base_url category_id created_at default_collection_id id image_url_mode login updated_at]
+  end
+
+  def self.ransackable_associations(_auth_object = nil)
+    []
+  end
+
   private
 
   def single_record
