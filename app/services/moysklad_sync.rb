@@ -42,6 +42,7 @@ class MoyskladSync
     end
 
     Rails.logger.info "[MoyskladSync] Import finished, total: #{count}"
+    count
   end
 
   def import_stocks

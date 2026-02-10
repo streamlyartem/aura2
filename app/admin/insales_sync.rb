@@ -1,7 +1,13 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'Insales Sync' do
-  menu priority: 5, label: 'InSales Sync'
+  menu false
+
+  controller do
+    def index
+      redirect_to admin_insales_settings_path
+    end
+  end
 
   page_action :sync_now, method: :post do
     store_name = params[:store_name].presence || 'Тест'
