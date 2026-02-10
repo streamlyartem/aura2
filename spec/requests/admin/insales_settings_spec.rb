@@ -11,11 +11,16 @@ RSpec.describe 'Admin InSales Settings', type: :request do
 
   it 'renders settings page' do
     get '/admin/insales_settings'
+    expect(response).to have_http_status(:found)
+  end
+
+  it 'renders stock sync page' do
+    get '/admin/insales_stock_sync'
     expect(response).to have_http_status(:ok)
   end
 
   it 'enqueues sync job' do
-    post '/admin/insales_settings/sync_now', params: { store_name: 'Тест' }
+    post '/admin/insales_stock_sync/sync_now', params: { store_name: 'Тест' }
     expect(response).to have_http_status(:found)
   end
 end
