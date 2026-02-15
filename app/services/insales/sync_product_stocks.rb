@@ -9,14 +9,21 @@ module Insales
       :errors,
       :variant_updates,
       :images_uploaded,
+      :images_selected,
       :images_skipped,
       :images_errors,
+      :images_updated,
+      :images_deleted,
       :videos_uploaded,
+      :videos_selected,
       :videos_skipped,
+      :videos_updated,
+      :videos_deleted,
       :verify_failures,
       :last_http_status,
       :last_http_endpoint,
       :last_error_message,
+      :last_media_error,
       keyword_init: true
     )
 
@@ -32,12 +39,19 @@ module Insales
         errors: 0,
         variant_updates: 0,
         images_uploaded: 0,
+        images_selected: 0,
         images_skipped: 0,
         images_errors: 0,
+        images_updated: 0,
+        images_deleted: 0,
         videos_uploaded: 0,
+        videos_selected: 0,
         videos_skipped: 0,
+        videos_updated: 0,
+        videos_deleted: 0,
         verify_failures: 0,
-        last_error_message: nil
+        last_error_message: nil,
+        last_media_error: nil
       )
 
       Rails.logger.info("[InSalesSync] Start sync for store '#{store_name}'")
@@ -63,11 +77,19 @@ module Insales
           next
         end
 
-        images_result = Insales::ExportImages.call(product_id: product.id, dry_run: false)
-        result.images_uploaded += images_result.uploaded
-        result.images_skipped += images_result.skipped
-        result.images_errors += images_result.errors
-        result.videos_skipped += 0
+        media_result = Insales::ExportMedia.call(product_id: product.id, dry_run: false)
+        result.images_selected += media_result.images_selected
+        result.images_uploaded += media_result.images_uploaded
+        result.images_updated += media_result.images_updated
+        result.images_deleted += media_result.images_deleted
+        result.images_skipped += media_result.images_skipped
+        result.images_errors += media_result.images_errors
+        result.videos_selected += media_result.videos_selected
+        result.videos_uploaded += media_result.videos_uploaded
+        result.videos_updated += media_result.videos_updated
+        result.videos_deleted += media_result.videos_deleted
+        result.videos_skipped += media_result.videos_skipped
+        result.last_media_error ||= media_result.last_media_error
 
         variant_id = mapping.insales_variant_id || fetch_variant_id(mapping.insales_product_id)
         if variant_id
@@ -83,7 +105,9 @@ module Insales
           insales_product_id: mapping.insales_product_id,
           insales_variant_id: mapping.insales_variant_id,
           expected_category_id: InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID'],
-          expected_collection_id: InsalesSetting.first&.default_collection_id
+          expected_collection_id: InsalesSetting.first&.default_collection_id,
+          images_expected_count: media_result.images_selected,
+          video_urls: media_result.video_urls
         )
 
         unless verify_result.ok

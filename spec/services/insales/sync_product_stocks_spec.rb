@@ -21,6 +21,15 @@ RSpec.describe Insales::SyncProductStocks do
   it 'syncs one product and verifies' do
     product = create(:product, name: 'Sync Product', sku: 'SKU-3000', retail_price: 19.0)
     create(:product_stock, product: product, stock: 2, store_name: 'Тест')
+    image = create(:image, object: product)
+    InsalesMediaItem.create!(
+      aura_product_id: product.id,
+      kind: 'image',
+      source_type: 'image',
+      aura_image_id: image.id,
+      position: 1
+    )
+
     InsalesProductMapping.create!(
       aura_product_id: product.id,
       insales_product_id: 10,
@@ -38,6 +47,10 @@ RSpec.describe Insales::SyncProductStocks do
     stub_request(:post, "#{base_url}/admin/collections/999/products.json")
       .with(basic_auth: [login, password])
       .to_return(status: 200, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
+
+    stub_request(:post, "#{base_url}/admin/products/10/images.json")
+      .with(basic_auth: [login, password])
+      .to_return(status: 201, body: { id: 777 }.to_json, headers: { 'Content-Type' => 'application/json' })
 
     stub_request(:put, "#{base_url}/admin/products/variants_group_update.json")
       .with(basic_auth: [login, password])
@@ -58,6 +71,10 @@ RSpec.describe Insales::SyncProductStocks do
         }.to_json,
         headers: { 'Content-Type' => 'application/json' }
       )
+
+    stub_request(:get, "#{base_url}/admin/products/10/images.json")
+      .with(basic_auth: [login, password])
+      .to_return(status: 200, body: [{ id: 777 }].to_json, headers: { 'Content-Type' => 'application/json' })
 
     stub_request(:get, "#{base_url}/admin/variants/55.json")
       .with(basic_auth: [login, password])

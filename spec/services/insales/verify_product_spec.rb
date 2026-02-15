@@ -46,12 +46,22 @@ RSpec.describe Insales::VerifyProduct do
         headers: { 'Content-Type' => 'application/json' }
       )
 
+    stub_request(:get, "#{base_url}/admin/products/10/images.json")
+      .with(basic_auth: [login, password])
+      .to_return(
+        status: 200,
+        body: [{ id: 1 }, { id: 2 }].to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
+
     result = described_class.new.call(
       product: product,
       insales_product_id: 10,
       insales_variant_id: 55,
       expected_category_id: '123',
-      expected_collection_id: '555'
+      expected_collection_id: '555',
+      images_expected_count: 2,
+      video_urls: []
     )
 
     expect(result.ok).to be(true)
