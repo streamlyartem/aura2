@@ -2,14 +2,43 @@
 
 module Insales
   class SyncProductStocks
-    Result = Struct.new(:processed, :created, :updated, :errors, :variant_updates, keyword_init: true)
+    Result = Struct.new(
+      :processed,
+      :created,
+      :updated,
+      :errors,
+      :variant_updates,
+      :images_uploaded,
+      :images_skipped,
+      :images_errors,
+      :videos_uploaded,
+      :videos_skipped,
+      :verify_failures,
+      :last_http_status,
+      :last_http_endpoint,
+      :last_error_message,
+      keyword_init: true
+    )
 
     def initialize(client = Insales::InsalesClient.new)
       @client = client
     end
 
     def call(store_name: 'Тест')
-      result = Result.new(processed: 0, created: 0, updated: 0, errors: 0, variant_updates: 0)
+      result = Result.new(
+        processed: 0,
+        created: 0,
+        updated: 0,
+        errors: 0,
+        variant_updates: 0,
+        images_uploaded: 0,
+        images_skipped: 0,
+        images_errors: 0,
+        videos_uploaded: 0,
+        videos_skipped: 0,
+        verify_failures: 0,
+        last_error_message: nil
+      )
 
       Rails.logger.info("[InSalesSync] Start sync for store '#{store_name}'")
       stock_by_product = ProductStock.where(store_name: store_name).group(:product_id).sum(:stock)
@@ -23,18 +52,22 @@ module Insales
         result.processed += 1
         quantity = stock_by_product[product.id].to_f
 
+        export_result = Insales::ExportProducts.call(product_id: product.id, dry_run: false)
+        result.created += export_result.created
+        result.updated += export_result.updated
+        result.errors += export_result.errors
+
         mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
         unless mapping
-          mapping = ensure_product_exists(product)
-          if mapping
-            result.created += 1
-          else
-            result.errors += 1
-            next
-          end
-        else
-          result.updated += 1
+          result.errors += 1
+          next
         end
+
+        images_result = Insales::ExportImages.call(product_id: product.id, dry_run: false)
+        result.images_uploaded += images_result.uploaded
+        result.images_skipped += images_result.skipped
+        result.images_errors += images_result.errors
+        result.videos_skipped += 0
 
         variant_id = mapping.insales_variant_id || fetch_variant_id(mapping.insales_product_id)
         if variant_id
@@ -44,8 +77,27 @@ module Insales
           result.errors += 1
           Rails.logger.warn("[InSalesSync] Missing variant for product #{product.id}")
         end
+
+        verify_result = Insales::VerifyProduct.new(client).call(
+          product: product,
+          insales_product_id: mapping.insales_product_id,
+          insales_variant_id: mapping.insales_variant_id,
+          expected_category_id: InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID'],
+          expected_collection_id: InsalesSetting.first&.default_collection_id
+        )
+
+        unless verify_result.ok
+          result.errors += 1
+          result.verify_failures += 1
+          result.last_error_message = verify_result.message
+          Rails.logger.warn("[InSalesSync] Verify failed for product #{product.id}: #{verify_result.message}")
+        end
+
+        result.last_http_status = client.last_http_status
+        result.last_http_endpoint = client.last_http_endpoint
       rescue StandardError => e
         result.errors += 1
+        result.last_error_message = "#{e.class}: #{e.message}"
         Rails.logger.error("[InSalesSync] Error for product #{product&.id}: #{e.class} - #{e.message}")
       end
 
@@ -57,39 +109,6 @@ module Insales
     private
 
     attr_reader :client
-
-    def ensure_product_exists(product)
-      mapping = find_mapping_by_sku(product)
-      return mapping if mapping
-
-      Insales::ExportProducts.call(product_id: product.id, dry_run: false)
-      InsalesProductMapping.find_by(aura_product_id: product.id)
-    end
-
-    def find_mapping_by_sku(product)
-      sku = product.sku.presence || product.code
-      return nil if sku.blank?
-
-      response = client.get('/admin/products.json', { search: sku, page: 1, per_page: 1 })
-      return nil unless response_success?(response)
-
-      body = response.body
-      product_data = body.is_a?(Array) ? body.first : body&.dig('products', 0)
-      return nil unless product_data
-
-      insales_id = product_data['id'] || product_data.dig('product', 'id')
-      variant_id = extract_variant_id(product_data)
-      return nil unless insales_id
-
-      InsalesProductMapping.create!(
-        aura_product_id: product.id,
-        insales_product_id: insales_id,
-        insales_variant_id: variant_id
-      )
-    rescue StandardError => e
-      Rails.logger.warn("[InSalesSync] SKU lookup failed for #{product.id}: #{e.class} - #{e.message}")
-      nil
-    end
 
     def fetch_variant_id(insales_product_id)
       response = client.get("/admin/products/#{insales_product_id}.json")

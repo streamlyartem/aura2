@@ -99,6 +99,9 @@ module Insales
         attempts += 1
         response = perform_request(method, path, payload)
 
+        track_last_response(method, path, response)
+        log_debug(method, path, response)
+
         return response if (200..299).cover?(response.status)
 
         if retryable_status?(response.status) && attempts < DEFAULT_MAX_RETRIES
@@ -151,6 +154,32 @@ module Insales
       Rails.logger.warn("[InSales] #{method.to_s.upcase} #{path} -> #{response.status} #{body_str}")
     rescue StandardError
       Rails.logger.warn("[InSales] #{method.to_s.upcase} #{path} -> #{response.status}")
+    end
+
+    def track_last_response(method, path, response)
+      @last_http_method = method.to_s.upcase
+      @last_http_path = path
+      @last_http_status = response&.status
+    end
+
+    def log_debug(method, path, response)
+      return unless ENV['INSALES_HTTP_DEBUG'].to_s == '1'
+
+      status = response&.status
+      Rails.logger.info("[InSales] #{method.to_s.upcase} #{path} -> #{status}")
+      if status.to_i >= 400
+        Rails.logger.info("[InSales] Error body: #{response&.body.to_s.byteslice(0, MAX_ERROR_BODY_BYTES)}")
+      end
+    end
+
+    public
+
+    def last_http_status
+      @last_http_status
+    end
+
+    def last_http_endpoint
+      @last_http_path
     end
   end
 end

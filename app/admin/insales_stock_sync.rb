@@ -23,6 +23,7 @@ ActiveAdmin.register_page 'InSales Stock Sync' do
     images_with_insales_mapping = InsalesImageMapping.count
     settings = InsalesSetting.first
     state = InsalesStockSyncState.find_by(store_name: store_name)
+    last_run = InsalesSyncRun.where(store_name: store_name).order(created_at: :desc).first
 
     panel 'Синхронизация остатков (InSales)' do
       div class: 'mb-4' do
@@ -45,8 +46,12 @@ ActiveAdmin.register_page 'InSales Stock Sync' do
         ['InSales Category ID', settings&.category_id || '—'],
         ['InSales Collection ID', settings&.default_collection_id || '—'],
         ['Last stock sync', state&.last_stock_sync_at || '—'],
-        ['Last sync run', state&.last_run_at || '—'],
-        ['Status', state&.last_status || '—']
+        ['Last sync run', last_run&.started_at || state&.last_run_at || '—'],
+        ['Last sync finished', last_run&.finished_at || '—'],
+        ['Status', last_run&.status || state&.last_status || '—'],
+        ['Last HTTP endpoint', state&.last_http_endpoint || '—'],
+        ['Last HTTP status', state&.last_http_status || '—'],
+        ['Last verified at', state&.last_verified_at || '—']
       ] do
         column('Metric') { |row| row[0] }
         column('Value') { |row| row[1] }
@@ -61,6 +66,12 @@ ActiveAdmin.register_page 'InSales Stock Sync' do
         ['Updated', state&.updated || '—'],
         ['Errors', state&.error_count || '—'],
         ['Variants updated', state&.variants_updated || '—'],
+        ['Images uploaded', state&.images_uploaded || '—'],
+        ['Images skipped', state&.images_skipped || '—'],
+        ['Images errors', state&.images_errors || '—'],
+        ['Videos uploaded', state&.videos_uploaded || '—'],
+        ['Videos skipped', state&.videos_skipped || '—'],
+        ['Verify failures', state&.verify_failures || '—'],
         ['Last error', state&.last_status == 'failed' ? (state.last_error.presence || '—') : '—'],
         ['Products with stock records', products_with_stock],
         ['Stock rows', total_stocks],
