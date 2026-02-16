@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_08_223000) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_16_101100) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -90,6 +90,39 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_08_223000) do
     t.index ["insales_product_id"], name: "index_insales_image_mappings_on_insales_product_id"
   end
 
+  create_table "insales_media_status_items", force: :cascade do |t|
+    t.uuid "product_id", null: false
+    t.string "kind", null: false
+    t.string "source_key", null: false
+    t.string "source_checksum"
+    t.text "source_url"
+    t.boolean "api_ok", default: false, null: false
+    t.datetime "api_verified_at"
+    t.text "api_error"
+    t.boolean "storefront_ok", default: false, null: false
+    t.datetime "storefront_verified_at"
+    t.text "storefront_error"
+    t.string "status", default: "in_progress", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id", "source_key"], name: "index_insales_media_status_items_on_product_and_source", unique: true
+    t.index ["product_id"], name: "index_insales_media_status_items_on_product_id"
+  end
+
+  create_table "insales_media_statuses", force: :cascade do |t|
+    t.uuid "product_id", null: false
+    t.integer "photos_count", default: 0, null: false
+    t.integer "videos_count", default: 0, null: false
+    t.string "status", default: "in_progress", null: false
+    t.text "last_error"
+    t.datetime "last_checked_at"
+    t.datetime "last_api_verified_at"
+    t.datetime "last_storefront_verified_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_id"], name: "index_insales_media_statuses_on_product_id", unique: true
+  end
+
   create_table "insales_product_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "aura_product_id", null: false
     t.bigint "insales_product_id", null: false
@@ -114,6 +147,31 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_08_223000) do
     t.bigint "default_collection_id"
   end
 
+  create_table "insales_stock_sync_states", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "store_name", null: false
+    t.datetime "last_stock_sync_at"
+    t.datetime "last_run_at"
+    t.string "last_status"
+    t.integer "processed"
+    t.integer "created"
+    t.integer "updated"
+    t.integer "error_count"
+    t.integer "variants_updated"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.integer "images_uploaded", default: 0, null: false
+    t.integer "images_skipped", default: 0, null: false
+    t.integer "images_errors", default: 0, null: false
+    t.integer "videos_uploaded", default: 0, null: false
+    t.integer "videos_skipped", default: 0, null: false
+    t.integer "verify_failures", default: 0, null: false
+    t.integer "last_http_status"
+    t.string "last_http_endpoint"
+    t.datetime "last_verified_at"
+    t.index ["store_name"], name: "index_insales_stock_sync_states_on_store_name", unique: true
+  end
+
   create_table "insales_sync_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "store_name", null: false
     t.integer "total_products", default: 0, null: false
@@ -128,6 +186,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_08_223000) do
     t.datetime "updated_at", null: false
     t.text "error_details"
     t.string "status", default: "running", null: false
+    t.integer "images_uploaded", default: 0, null: false
+    t.integer "images_skipped", default: 0, null: false
+    t.integer "images_errors", default: 0, null: false
+    t.integer "videos_uploaded", default: 0, null: false
+    t.integer "videos_skipped", default: 0, null: false
+    t.integer "verify_failures", default: 0, null: false
+    t.integer "last_http_status"
+    t.string "last_http_endpoint"
+    t.datetime "last_verified_at"
+    t.string "last_error"
     t.index ["store_name"], name: "index_insales_sync_runs_on_store_name"
   end
 
@@ -143,6 +211,23 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_08_223000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["store_name"], name: "index_insales_sync_statuses_on_store_name", unique: true
+  end
+
+  create_table "moysklad_sync_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "run_type", null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.string "status", default: "running", null: false
+    t.integer "processed"
+    t.integer "created"
+    t.integer "updated"
+    t.integer "error_count"
+    t.text "last_error"
+    t.jsonb "meta"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["run_type"], name: "index_moysklad_sync_runs_on_run_type"
+    t.index ["started_at"], name: "index_moysklad_sync_runs_on_started_at"
   end
 
   create_table "product_stocks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
