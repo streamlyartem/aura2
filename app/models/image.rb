@@ -47,12 +47,4 @@ class Image < ApplicationRecord
 
     file.content_type&.start_with?('image/')
   end
-
-  def self.ransackable_attributes(_auth_object = nil)
-    %w[created_at id object_id object_type updated_at]
-  end
-
-  def self.ransackable_associations(_auth_object = nil)
-    []
-  end
 end
