@@ -59,18 +59,23 @@ RSpec.describe 'Moysklad product webhook handlers' do
   describe Moysklad::WebhookHandlers::ProductUpdateHandler do
     let(:action) { 'UPDATE' }
 
-    it 'updates product and enqueues insales trigger job' do
+    it 'updates product, syncs stock from weight and enqueues trigger jobs' do
       product = create(:product, sku: payload['article'], name: 'Old name')
       handler = described_class.new(event)
       allow(handler).to receive(:fetch_entity_data).and_return(
         payload.merge('id' => product.ms_id, 'name' => 'New name')
       )
 
-      expect { handler.handle }.to change { enqueued_jobs.size }.by(1)
-      expect(enqueued_jobs.last[:job]).to eq(Insales::SyncProductTriggerJob)
-      expect(enqueued_jobs.last.dig(:args, 0, 'reason')).to eq('product_changed')
+      expect { handler.handle }.to change { enqueued_jobs.size }.by(2)
+      reasons = enqueued_jobs
+                .select { |job| job[:job] == Insales::SyncProductTriggerJob }
+                .map { |job| job.dig(:args, 0, 'reason') }
+
+      expect(reasons).to include('product_changed', 'stock_changed')
 
       expect(product.reload.name).to eq('New name')
+      stock = ProductStock.find_by(product_id: product.id, store_name: MoyskladClient::TEST_STORE_NAME)
+      expect(stock.stock.to_f).to eq(100.0)
     end
   end
 end

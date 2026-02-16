@@ -36,8 +36,28 @@ module Moysklad
           five_hundred_plus_wholesale_price: ms_product.five_hundred_plus_wholesale_price.to_f,
           min_price: ms_product.min_price.to_f
         )
+        sync_stock_with_weight(product, ms_product.weight)
 
         Rails.logger.info "[Moysklad Webhook] Product #{product.id} updated from Moysklad"
+      end
+
+      private
+
+      def sync_stock_with_weight(product, weight)
+        stock_value = weight.to_f
+        stock = ::ProductStock.find_or_initialize_by(
+          product_id: product.id,
+          store_name: ::MoyskladClient::TEST_STORE_NAME
+        )
+
+        return if stock.stock.to_f == stock_value
+
+        stock.assign_attributes(
+          stock: stock_value,
+          synced_at: Time.current
+        )
+        stock.free_stock = stock_value if stock.new_record? && stock.free_stock.nil?
+        stock.save!
       end
     end
   end

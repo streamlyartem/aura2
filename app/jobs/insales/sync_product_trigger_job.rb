@@ -21,10 +21,9 @@ module Insales
 
     def with_product_lock(product_id)
       key = advisory_lock_key(product_id)
-      namespace = advisory_lock_namespace
 
       ActiveRecord::Base.connection_pool.with_connection do |connection|
-        obtained = connection.select_value("SELECT pg_try_advisory_lock(#{namespace}, #{key})")
+        obtained = connection.select_value("SELECT pg_try_advisory_lock(#{key}::bigint)")
         unless obtained
           Rails.logger.info("[InSalesSync][TriggerJob] skip product=#{product_id} reason=lock_not_acquired")
           return
@@ -32,16 +31,15 @@ module Insales
 
         yield
       ensure
-        connection.execute("SELECT pg_advisory_unlock(#{namespace}, #{key})") if obtained
+        connection.execute("SELECT pg_advisory_unlock(#{key}::bigint)") if obtained
       end
     end
 
     def advisory_lock_key(product_id)
-      Zlib.crc32(product_id.to_s)
-    end
-
-    def advisory_lock_namespace
-      42_017
+      namespace = 42_017
+      crc = Zlib.crc32(product_id.to_s)
+      value = ((namespace & 0xffffffff) << 32) | (crc & 0xffffffff)
+      value > 0x7fffffffffffffff ? value - 0x10000000000000000 : value
     end
   end
 end
