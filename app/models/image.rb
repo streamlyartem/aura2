@@ -23,6 +23,7 @@ class Image < ApplicationRecord
   ].freeze
 
   belongs_to :object, polymorphic: true, optional: true
+  after_commit :enqueue_insales_sync_trigger, on: %i[create update destroy]
 
   has_one_attached :file
 
@@ -46,5 +47,14 @@ class Image < ApplicationRecord
     return false unless file.attached?
 
     file.content_type&.start_with?('image/')
+  end
+
+  private
+
+  def enqueue_insales_sync_trigger
+    return unless object_type == 'Product'
+    return if object_id.blank?
+
+    Insales::SyncProductTriggerJob.perform_later(product_id: object_id, reason: 'media_changed')
   end
 end

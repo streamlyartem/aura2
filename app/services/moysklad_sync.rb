@@ -46,6 +46,8 @@ class MoyskladSync
   end
 
   def import_stocks
+    changed_product_ids = []
+
     @client.stocks_for_store.each do |row|
       ms_product_uuid = extract_uuid(row[:product_meta]['href'])
 
@@ -55,14 +57,29 @@ class MoyskladSync
       next unless product
 
       product_stock = ProductStock.find_or_initialize_by(product_id: product.id, store_name: row[:store_name])
+      new_stock = row[:stock].to_f
+      new_free_stock = row[:free_stock].to_f
+      new_reserve = row[:reserve].to_f
+      next unless stock_changed?(product_stock, new_stock, new_free_stock, new_reserve)
+
       product_stock.assign_attributes(
-        stock: row[:stock],
-        free_stock: row[:free_stock],
-        reserve: row[:reserve],
+        stock: new_stock,
+        free_stock: new_free_stock,
+        reserve: new_reserve,
         synced_at: Time.current
       )
       product_stock.save!
+      changed_product_ids << product.id
     end
-    nil
+
+    changed_product_ids.uniq
+  end
+
+  private
+
+  def stock_changed?(product_stock, stock, free_stock, reserve)
+    product_stock.stock.to_f != stock ||
+      product_stock.free_stock.to_f != free_stock ||
+      product_stock.reserve.to_f != reserve
   end
 end

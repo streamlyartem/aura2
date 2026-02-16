@@ -27,4 +27,26 @@ RSpec.describe Image do
 
     it { is_expected.to eq(Rails.application.routes.url_helpers.rails_blob_url(image.file)) }
   end
+
+  describe 'callbacks' do
+    it 'enqueues insales trigger job for product media changes' do
+      ActiveJob::Base.queue_adapter = :test
+      product = create(:product)
+
+      expect do
+        create(:image, object: product)
+      end.to have_enqueued_job(Insales::SyncProductTriggerJob).with(
+        product_id: product.id,
+        reason: 'media_changed'
+      )
+    end
+
+    it 'does not enqueue insales trigger for non-product object' do
+      ActiveJob::Base.queue_adapter = :test
+
+      expect do
+        create(:image)
+      end.not_to have_enqueued_job(Insales::SyncProductTriggerJob)
+    end
+  end
 end

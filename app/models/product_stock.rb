@@ -4,6 +4,7 @@ class ProductStock < ApplicationRecord
   self.implicit_order_column = :created_at
 
   belongs_to :product
+  after_commit :enqueue_insales_sync_trigger, on: %i[create update destroy]
 
   validates :store_name, presence: true
 
@@ -21,5 +22,13 @@ class ProductStock < ApplicationRecord
     new_stock = stock - stock_to_withdraw
     update(stock: new_stock)
     save!
+  end
+
+  private
+
+  def enqueue_insales_sync_trigger
+    return if product_id.blank?
+
+    Insales::SyncProductTriggerJob.perform_later(product_id: product_id, reason: 'stock_changed')
   end
 end

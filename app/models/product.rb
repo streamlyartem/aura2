@@ -5,6 +5,7 @@ class Product < ApplicationRecord
 
   has_many :images, dependent: :destroy, as: :object
   has_many :product_stocks, dependent: :destroy
+  after_commit :enqueue_insales_sync_trigger, on: %i[create update]
 
   accepts_nested_attributes_for :images, allow_destroy: true
 
@@ -19,6 +20,12 @@ class Product < ApplicationRecord
   end
 
   private
+
+  def enqueue_insales_sync_trigger
+    return if id.blank?
+
+    Insales::SyncProductTriggerJob.perform_later(product_id: id, reason: 'product_changed')
+  end
 
   def sync_to_moysklad
     return unless Rails.env.production? || Rails.env.development?

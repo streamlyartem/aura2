@@ -42,6 +42,9 @@ module Moysklad
       when %w[product CREATE] then WebhookHandlers::ProductCreateHandler
       when %w[product UPDATE] then WebhookHandlers::ProductUpdateHandler
       when %w[product DELETE] then WebhookHandlers::ProductDeleteHandler
+      when %w[demand CREATE] then WebhookHandlers::DemandChangeHandler
+      when %w[demand UPDATE] then WebhookHandlers::DemandChangeHandler
+      when %w[demand DELETE] then WebhookHandlers::DemandChangeHandler
       end
     end
   end

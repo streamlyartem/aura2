@@ -7,8 +7,8 @@ module Moysklad
   class WebhooksManager
     Result = Struct.new(:created, :skipped, :deleted, :errors, keyword_init: true)
 
-    ACTIONS = %w[CREATE UPDATE DELETE].freeze
-    ENTITY_TYPE = 'product'
+    PRODUCT_ACTIONS = %w[CREATE UPDATE DELETE].freeze
+    DEMAND_ACTIONS = %w[CREATE UPDATE DELETE].freeze
     BASE_URL = 'https://api.moysklad.ru/api/remap/1.2/entity/webhook'
     STAGING_URL = 'https://staging-aura.tophair.tech/api/moysklad/webhooks'
 
@@ -26,7 +26,7 @@ module Moysklad
       raise_missing_webhook_token! if webhook_token.to_s.strip.empty?
 
       existing = list
-      desired = ACTIONS.map { |action| desired_payload(webhook_url, action) }
+      desired = desired_payloads
 
       desired.each do |payload|
         if webhook_exists?(existing, payload)
@@ -103,12 +103,24 @@ module Moysklad
       uri.to_s
     end
 
-    def desired_payload(url, action)
-      {
-        'url' => url,
-        'action' => action,
-        'entityType' => ENTITY_TYPE
-      }
+    def desired_payloads
+      product_payloads = PRODUCT_ACTIONS.map do |action|
+        {
+          'url' => webhook_url,
+          'action' => action,
+          'entityType' => 'product'
+        }
+      end
+
+      demand_payloads = DEMAND_ACTIONS.map do |action|
+        {
+          'url' => webhook_url,
+          'action' => action,
+          'entityType' => 'demand'
+        }
+      end
+
+      product_payloads + demand_payloads
     end
 
     def webhook_exists?(existing, payload)
