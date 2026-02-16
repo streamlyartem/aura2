@@ -39,6 +39,29 @@ module Insales
       )
       state.save!
 
+      if photos.empty?
+        state.update!(
+          photos_uploaded: 0,
+          verified_admin: true,
+          verified_storefront: true,
+          status: 'success',
+          last_error: nil,
+          synced_at: Time.current
+        )
+
+        return Result.new(
+          photos_in_aura: 0,
+          photos_uploaded: 0,
+          photos_skipped: 0,
+          photos_errors: 0,
+          verified_admin: true,
+          verified_storefront: true,
+          status: 'success',
+          last_error: nil,
+          storefront_url: nil
+        )
+      end
+
       upload_result = Insales::ExportImages.call(product_id: product.id, dry_run: false)
 
       verified_admin, image_urls, admin_error = verify_admin(insales_product_id, upload_result.uploaded)

@@ -42,10 +42,33 @@ ActiveAdmin.register_page 'InSales Media Status' do
         end
       end
     else
-      products = Product.includes(:images).order(created_at: :desc).page(params[:page]).per(25)
+      store_names = ProductStock.distinct.order(:store_name).pluck(:store_name)
+      preferred_store = params[:store_name].presence || 'Тест'
+      store_name = store_names.include?(preferred_store) ? preferred_store : store_names.first
+      product_ids = if store_name
+                      ProductStock.where(store_name: store_name).distinct.pluck(:product_id)
+                    else
+                      []
+                    end
+
+      products = Product.where(id: product_ids).includes(:images).order(created_at: :desc).page(params[:page]).per(25)
       states = InsalesMediaSyncState.where(product_id: products.map(&:id)).index_by(&:product_id)
 
       panel 'Media status by product' do
+        div class: 'mb-4' do
+          form action: admin_insales_media_status_path, method: :get do
+            label 'Склад'
+            select name: 'store_name' do
+              store_names.each do |name|
+                option name, value: name, selected: name == store_name
+              end
+            end
+            div class: 'mt-3' do
+              input type: 'submit', value: 'Показать', class: 'button'
+            end
+          end
+        end
+
         paginated_collection(products, download_links: false) do
           table_for products do
             column('Id', &:id)
