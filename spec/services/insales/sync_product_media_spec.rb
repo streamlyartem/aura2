@@ -11,6 +11,10 @@ RSpec.describe Insales::SyncProductMedia do
   let(:product) { create(:product, name: 'Test Product', sku: 'SKU1', path_name: 'test-product') }
 
   before do
+    stub_const('Insales::SyncProductMedia::ADMIN_VERIFY_ATTEMPTS', 1)
+    stub_const('Insales::SyncProductMedia::STOREFRONT_VERIFY_ATTEMPTS', 1)
+    stub_const('Insales::SyncProductMedia::VERIFY_RETRY_DELAY', 0)
+
     InsalesSetting.create!(base_url: base_url, login: 'login', password: 'password', category_id: '1', image_url_mode: 'service_url')
     InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: insales_product_id)
     Rails.application.routes.default_url_options[:host] = 'example.test'
@@ -47,7 +51,7 @@ RSpec.describe Insales::SyncProductMedia do
     expect(state.verified_storefront).to be(true)
   end
 
-  it 'marks error when admin verification fails' do
+  it 'marks in_progress when admin verification is not ready yet' do
     stub_request(:post, "#{base_url}/admin/products/#{insales_product_id}/images.json")
       .to_return(status: 200, body: { image: { id: 1 } }.to_json, headers: { 'Content-Type' => 'application/json' })
 
@@ -60,11 +64,12 @@ RSpec.describe Insales::SyncProductMedia do
     result = described_class.new.call(product: product, insales_product_id: insales_product_id)
 
     state = InsalesMediaSyncState.find_by(product_id: product.id)
-    expect(state.status).to eq('error')
+    expect(result.status).to eq('in_progress')
+    expect(state.status).to eq('in_progress')
     expect(state.verified_admin).to be(false)
   end
 
-  it 'marks error when storefront verification fails' do
+  it 'marks in_progress when storefront verification is not ready yet' do
     stub_request(:post, "#{base_url}/admin/products/#{insales_product_id}/images.json")
       .to_return(status: 200, body: { image: { id: 1 } }.to_json, headers: { 'Content-Type' => 'application/json' })
 
@@ -84,7 +89,7 @@ RSpec.describe Insales::SyncProductMedia do
 
     result = described_class.new.call(product: product, insales_product_id: insales_product_id)
 
-    expect(result.status).to eq('error')
+    expect(result.status).to eq('in_progress')
     state = InsalesMediaSyncState.find_by(product_id: product.id)
     expect(state.verified_storefront).to be(false)
   end

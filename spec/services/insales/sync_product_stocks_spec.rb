@@ -67,6 +67,19 @@ RSpec.describe Insales::SyncProductStocks do
         headers: { 'Content-Type' => 'application/json' }
       )
 
+    allow_any_instance_of(Insales::SyncProductMedia).to receive(:call)
+      .and_return(
+        double(
+          status: 'success',
+          last_error: nil,
+          photos_uploaded: 0,
+          photos_errors: 0,
+          photos_skipped: 0,
+          verified_admin: true,
+          verified_storefront: true
+        )
+      )
+
     result = described_class.new.call(store_name: 'Тест')
 
     expect(result.processed).to eq(1)

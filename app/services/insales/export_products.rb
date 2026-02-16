@@ -175,9 +175,14 @@ module Insales
     def assign_to_collection(insales_product_id, override)
       id = override.presence || InsalesSetting.first&.default_collection_id
       return if id.blank?
+      return unless collection_assignment_enabled?
 
       Rails.logger.info("[InSales] Assign product to collection #{id}")
       client.post("/admin/collections/#{id}/products.json", { product_id: insales_product_id })
+    end
+
+    def collection_assignment_enabled?
+      ENV['INSALES_ASSIGN_COLLECTIONS'].to_s == '1'
     end
 
     def total_stock(product)

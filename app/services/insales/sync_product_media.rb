@@ -7,6 +7,11 @@ require 'uri'
 
 module Insales
   class SyncProductMedia
+    ADMIN_VERIFY_ATTEMPTS = 5
+    STOREFRONT_VERIFY_ATTEMPTS = 4
+    VERIFY_RETRY_DELAY = 1.5
+    PROCESSING_ERROR_PREFIX = 'processing:'
+
     Result = Struct.new(
       :photos_in_aura,
       :photos_uploaded,
@@ -74,6 +79,8 @@ module Insales
 
       status = if verified_admin && verified_storefront
                  'success'
+               elsif transient_error?(admin_error, storefront_error)
+                 'in_progress'
                elsif admin_error.present? || storefront_error.present?
                  'error'
                else
@@ -159,21 +166,33 @@ module Insales
     end
 
     def verify_admin(insales_product_id, expected_count)
-      response = client.get("/admin/products/#{insales_product_id}/images.json")
-      unless success?(response)
-        return [false, [], "Admin verify failed status=#{response&.status}"]
+      urls = []
+      last_status = nil
+
+      ADMIN_VERIFY_ATTEMPTS.times do |attempt|
+        response = client.get("/admin/products/#{insales_product_id}/images.json")
+        last_status = response&.status
+        unless success?(response)
+          return [false, [], "Admin verify failed status=#{last_status}"]
+        end
+
+        images = extract_images(response.body)
+        urls = images.filter_map { |img| normalize_remote_url(img['url'] || img['original_url'] || img['src']) }
+        processing = images_processing?(images, urls)
+
+        debug_media("Verify admin attempt=#{attempt + 1} #{urls.size}/#{expected_count} processing=#{processing} product=#{insales_product_id}")
+
+        return [true, urls.first(expected_count), nil] if urls.size == expected_count && !processing
+
+        break if attempt == ADMIN_VERIFY_ATTEMPTS - 1
+
+        sleep VERIFY_RETRY_DELAY
       end
 
-      images = extract_images(response.body)
-      urls = images.filter_map { |img| img['url'] || img['original_url'] || img['src'] }
+      return [false, urls, processing_error("Admin images count #{urls.size} < expected #{expected_count}")] if urls.size < expected_count
+      return [false, urls, processing_error("Admin images are still processing")] if urls.any? { |url| loading_placeholder_url?(url) }
 
-      debug_media("Verify admin #{urls.size}/#{expected_count} product=#{insales_product_id}")
-
-      if urls.size != expected_count
-        return [false, urls, "Admin images count #{urls.size} != expected #{expected_count}"]
-      end
-
-      [true, urls.first(expected_count), nil]
+      [false, urls, "Admin images count #{urls.size} != expected #{expected_count}"]
     end
 
     def verify_storefront(insales_product_id, image_urls)
@@ -184,27 +203,48 @@ module Insales
       storefront_url = build_storefront_url(insales_product)
       return [false, 'Storefront URL missing', nil] if storefront_url.blank?
 
-      html_response = fetch_url(storefront_url)
-      unless html_response[:status] == 200
-        return [false, "Storefront GET failed status=#{html_response[:status]}", storefront_url]
-      end
+      last_reason = nil
 
-      html = html_response[:body].to_s
-      image_urls.each do |url|
-        unless html_includes_url?(html, url)
-          debug_media("Verify storefront FAIL missing_html product=#{insales_product_id} url=#{url}")
-          return [false, "Storefront HTML missing image #{url}", storefront_url]
+      STOREFRONT_VERIFY_ATTEMPTS.times do |attempt|
+        html_response = fetch_url(storefront_url, force: attempt.positive?)
+        unless html_response[:status] == 200
+          last_reason = "Storefront GET failed status=#{html_response[:status]}"
+          break if attempt == STOREFRONT_VERIFY_ATTEMPTS - 1
+
+          sleep VERIFY_RETRY_DELAY
+          next
         end
 
-        image_response = fetch_url(url)
-        unless image_response[:status] == 200
-          debug_media("Verify storefront FAIL image_get product=#{insales_product_id} url=#{url} status=#{image_response[:status]}")
-          return [false, "Storefront image GET failed status=#{image_response[:status]}", storefront_url]
+        html = html_response[:body].to_s
+        missing_image = false
+
+        image_urls.each do |url|
+          unless html_includes_url?(html, url)
+            last_reason = "Storefront HTML missing image #{url}"
+            missing_image = true
+            break
+          end
+
+          image_response = fetch_url(url, force: attempt.positive?)
+          unless image_response[:status] == 200
+            last_reason = "Storefront image GET failed status=#{image_response[:status]}"
+            missing_image = true
+            break
+          end
         end
+
+        unless missing_image
+          debug_media("Verify storefront OK product=#{insales_product_id}")
+          return [true, nil, storefront_url]
+        end
+
+        break if attempt == STOREFRONT_VERIFY_ATTEMPTS - 1
+
+        sleep VERIFY_RETRY_DELAY
       end
 
-      debug_media("Verify storefront OK product=#{insales_product_id}")
-      [true, nil, storefront_url]
+      debug_media("Verify storefront pending product=#{insales_product_id} reason=#{last_reason}")
+      [false, processing_error(last_reason || 'Storefront image visibility pending'), storefront_url]
     end
 
     def build_storefront_url(insales_product)
@@ -232,7 +272,9 @@ module Insales
       base.chomp('/')
     end
 
-    def fetch_url(url)
+    def fetch_url(url, force: false)
+      return { status: nil, body: nil, error: 'blank_url' } if url.blank?
+      return fetch_url_uncached(url) if force
       return @fetch_cache[url] if @fetch_cache.key?(url)
 
       response = fetch_url_uncached(url)
@@ -272,6 +314,37 @@ module Insales
         filename
       ]
       variants.any? { |variant| html.include?(variant) }
+    end
+
+    def normalize_remote_url(url)
+      return nil if url.blank?
+
+      if url.start_with?('http://', 'https://')
+        url
+      elsif url.start_with?('/')
+        base = storefront_base_url
+        base.present? ? URI.join("#{base}/", url.delete_prefix('/')).to_s : nil
+      else
+        url
+      end
+    rescue URI::InvalidURIError
+      nil
+    end
+
+    def images_processing?(images, urls)
+      images.any? { |img| img['image_processing'] } || urls.any? { |url| loading_placeholder_url?(url) }
+    end
+
+    def loading_placeholder_url?(url)
+      url.to_s.include?('/images/loading.gif')
+    end
+
+    def processing_error(message)
+      "#{PROCESSING_ERROR_PREFIX} #{message}"
+    end
+
+    def transient_error?(*errors)
+      errors.compact.any? { |error| error.to_s.start_with?(PROCESSING_ERROR_PREFIX) }
     end
 
     def extract_images(body)
