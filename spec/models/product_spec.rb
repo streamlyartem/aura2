@@ -29,5 +29,15 @@ RSpec.describe Product do
         reason: 'product_changed'
       )
     end
+
+    it 'does not enqueue trigger for touch-only updates' do
+      ActiveJob::Base.queue_adapter = :test
+      product = create(:product)
+      ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+      expect do
+        product.touch
+      end.not_to have_enqueued_job(Insales::SyncProductTriggerJob)
+    end
   end
 end

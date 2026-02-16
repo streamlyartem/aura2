@@ -41,32 +41,29 @@ module Insales
       )
       state.save!
 
-      if photos.empty?
+      existing_images, admin_list_error = fetch_admin_images(insales_product_id)
+      if admin_list_error.present?
         state.update!(
-          photos_uploaded: 0,
-          verified_admin: true,
-          verified_storefront: true,
-          status: 'success',
-          last_error: nil,
+          status: 'error',
+          last_error: admin_list_error,
           synced_at: Time.current
         )
+        return Result.new(status: 'error', last_error: admin_list_error)
+      end
 
-        return Result.new(
-          photos_in_aura: 0,
-          photos_uploaded: 0,
-          photos_skipped: 0,
-          photos_errors: 0,
-          verified_admin: true,
-          verified_storefront: true,
-          status: 'success',
-          last_error: nil,
-          storefront_url: nil
+      cleanup_error = remove_existing_images(insales_product_id, existing_images)
+      if cleanup_error.present?
+        state.update!(
+          status: 'error',
+          last_error: cleanup_error,
+          synced_at: Time.current
         )
+        return Result.new(status: 'error', last_error: cleanup_error)
       end
 
       upload_result = Insales::ExportImages.call(product_id: product.id, dry_run: false)
 
-      verified_admin, image_urls, admin_error = verify_admin(insales_product_id, upload_result.uploaded)
+      verified_admin, image_urls, admin_error = verify_admin(insales_product_id, photos.size)
       if verified_admin
         verified_storefront, storefront_error, storefront_url = verify_storefront(insales_product_id, image_urls)
       else
@@ -114,17 +111,66 @@ module Insales
 
     attr_reader :client
 
+    def fetch_admin_images(insales_product_id)
+      response = client.get("/admin/products/#{insales_product_id}/images.json")
+      return [[], "Admin images fetch failed status=#{response&.status}"] unless success?(response)
+
+      [extract_images(response.body), nil]
+    end
+
+    def remove_existing_images(insales_product_id, remote_images)
+      errors = []
+
+      remote_images.each do |image|
+        image_id = image['id'] || image[:id]
+        next if image_id.blank?
+
+        debug_media("Delete old image product=#{insales_product_id} image_id=#{image_id}")
+
+        response = delete_remote_image(insales_product_id, image_id)
+        next if response_success_or_not_found?(response)
+
+        errors << "id=#{image_id}: status=#{response&.status || 'n/a'}"
+      end
+
+      return nil if errors.empty?
+
+      "Failed to delete remote images (#{errors.join(', ')})"
+    end
+
+    def delete_remote_image(insales_product_id, image_id)
+      paths = [
+        "/admin/products/#{insales_product_id}/images/#{image_id}.json",
+        "/admin/products/images/#{image_id}.json"
+      ]
+
+      last_response = nil
+      paths.each do |path|
+        response = client.delete(path)
+        last_response = response
+        return response if response_success_or_not_found?(response)
+      end
+
+      last_response
+    end
+
+    def response_success_or_not_found?(response)
+      response && ((200..299).cover?(response.status) || response.status.to_i == 404)
+    end
+
     def verify_admin(insales_product_id, expected_count)
       response = client.get("/admin/products/#{insales_product_id}/images.json")
       unless success?(response)
         return [false, [], "Admin verify failed status=#{response&.status}"]
       end
 
-      images = response.body['images'] || response.body || []
-      urls = images.map { |img| img['url'] || img['original_url'] || img['src'] }.compact
+      images = extract_images(response.body)
+      urls = images.filter_map { |img| img['url'] || img['original_url'] || img['src'] }
 
-      if urls.size < expected_count
-        return [false, urls, "Admin images count #{urls.size} < expected #{expected_count}"]
+      debug_media("Verify admin #{urls.size}/#{expected_count} product=#{insales_product_id}")
+
+      if urls.size != expected_count
+        return [false, urls, "Admin images count #{urls.size} != expected #{expected_count}"]
       end
 
       [true, urls.first(expected_count), nil]
@@ -146,13 +192,18 @@ module Insales
       html = html_response[:body].to_s
       image_urls.each do |url|
         unless html_includes_url?(html, url)
+          debug_media("Verify storefront FAIL missing_html product=#{insales_product_id} url=#{url}")
           return [false, "Storefront HTML missing image #{url}", storefront_url]
         end
 
         image_response = fetch_url(url)
-        return [false, "Storefront image GET failed status=#{image_response[:status]}", storefront_url] unless image_response[:status] == 200
+        unless image_response[:status] == 200
+          debug_media("Verify storefront FAIL image_get product=#{insales_product_id} url=#{url} status=#{image_response[:status]}")
+          return [false, "Storefront image GET failed status=#{image_response[:status]}", storefront_url]
+        end
       end
 
+      debug_media("Verify storefront OK product=#{insales_product_id}")
       [true, nil, storefront_url]
     end
 
@@ -221,6 +272,26 @@ module Insales
         filename
       ]
       variants.any? { |variant| html.include?(variant) }
+    end
+
+    def extract_images(body)
+      case body
+      when Array
+        body.select { |item| item.is_a?(Hash) }
+      when Hash
+        list = body['images'] || body['product_images'] || body.dig('product', 'images')
+        return [] unless list.is_a?(Array)
+
+        list.select { |item| item.is_a?(Hash) }
+      else
+        []
+      end
+    end
+
+    def debug_media(message)
+      return unless ENV['INSALES_HTTP_DEBUG'].to_s == '1'
+
+      Rails.logger.info("[InSales][MEDIA] #{message}")
     end
 
     def success?(response)

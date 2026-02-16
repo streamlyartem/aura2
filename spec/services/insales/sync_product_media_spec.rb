@@ -24,7 +24,10 @@ RSpec.describe Insales::SyncProductMedia do
       .to_return(status: 200, body: { image: { id: 1 } }.to_json, headers: { 'Content-Type' => 'application/json' })
 
     stub_request(:get, "#{base_url}/admin/products/#{insales_product_id}/images.json")
-      .to_return(status: 200, body: { images: [{ url: image_url_1 }, { url: image_url_2 }] }.to_json, headers: { 'Content-Type' => 'application/json' })
+      .to_return(
+        { status: 200, body: { images: [] }.to_json, headers: { 'Content-Type' => 'application/json' } },
+        { status: 200, body: { images: [{ url: image_url_1 }, { url: image_url_2 }] }.to_json, headers: { 'Content-Type' => 'application/json' } }
+      )
 
     stub_request(:get, "#{base_url}/admin/products/#{insales_product_id}.json")
       .to_return(status: 200, body: { product: { id: insales_product_id, permalink: 'test-product' } }.to_json, headers: { 'Content-Type' => 'application/json' })
@@ -49,7 +52,10 @@ RSpec.describe Insales::SyncProductMedia do
       .to_return(status: 200, body: { image: { id: 1 } }.to_json, headers: { 'Content-Type' => 'application/json' })
 
     stub_request(:get, "#{base_url}/admin/products/#{insales_product_id}/images.json")
-      .to_return(status: 200, body: { images: [] }.to_json, headers: { 'Content-Type' => 'application/json' })
+      .to_return(
+        { status: 200, body: { images: [] }.to_json, headers: { 'Content-Type' => 'application/json' } },
+        { status: 200, body: { images: [] }.to_json, headers: { 'Content-Type' => 'application/json' } }
+      )
 
     result = described_class.new.call(product: product, insales_product_id: insales_product_id)
 
@@ -63,7 +69,10 @@ RSpec.describe Insales::SyncProductMedia do
       .to_return(status: 200, body: { image: { id: 1 } }.to_json, headers: { 'Content-Type' => 'application/json' })
 
     stub_request(:get, "#{base_url}/admin/products/#{insales_product_id}/images.json")
-      .to_return(status: 200, body: { images: [{ url: image_url_1 }, { url: image_url_2 }] }.to_json, headers: { 'Content-Type' => 'application/json' })
+      .to_return(
+        { status: 200, body: { images: [] }.to_json, headers: { 'Content-Type' => 'application/json' } },
+        { status: 200, body: { images: [{ url: image_url_1 }, { url: image_url_2 }] }.to_json, headers: { 'Content-Type' => 'application/json' } }
+      )
 
     stub_request(:get, "#{base_url}/admin/products/#{insales_product_id}.json")
       .to_return(status: 200, body: { product: { id: insales_product_id, permalink: 'test-product' } }.to_json, headers: { 'Content-Type' => 'application/json' })
@@ -78,5 +87,35 @@ RSpec.describe Insales::SyncProductMedia do
     expect(result.status).to eq('error')
     state = InsalesMediaSyncState.find_by(product_id: product.id)
     expect(state.verified_storefront).to be(false)
+  end
+
+  it 'removes stale remote images before upload to prevent duplicates' do
+    stale_image_id = 999
+
+    stub_request(:delete, "#{base_url}/admin/products/#{insales_product_id}/images/#{stale_image_id}.json")
+      .to_return(status: 200, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
+
+    stub_request(:post, "#{base_url}/admin/products/#{insales_product_id}/images.json")
+      .to_return(status: 200, body: { image: { id: 1 } }.to_json, headers: { 'Content-Type' => 'application/json' })
+
+    stub_request(:get, "#{base_url}/admin/products/#{insales_product_id}/images.json")
+      .to_return(
+        { status: 200, body: { images: [{ id: stale_image_id, url: image_url_1 }] }.to_json, headers: { 'Content-Type' => 'application/json' } },
+        { status: 200, body: { images: [{ url: image_url_1 }, { url: image_url_2 }] }.to_json, headers: { 'Content-Type' => 'application/json' } }
+      )
+
+    stub_request(:get, "#{base_url}/admin/products/#{insales_product_id}.json")
+      .to_return(status: 200, body: { product: { id: insales_product_id, permalink: 'test-product' } }.to_json, headers: { 'Content-Type' => 'application/json' })
+
+    storefront_url = "#{base_url}/product/test-product"
+    storefront_html = "<img src=\"#{image_url_1}\"><img src=\"#{image_url_2}\">"
+    stub_request(:get, storefront_url).to_return(status: 200, body: storefront_html)
+    stub_request(:get, image_url_1).to_return(status: 200, body: 'image1')
+    stub_request(:get, image_url_2).to_return(status: 200, body: 'image2')
+
+    result = described_class.new.call(product: product, insales_product_id: insales_product_id)
+
+    expect(result.status).to eq('success')
+    expect(a_request(:delete, "#{base_url}/admin/products/#{insales_product_id}/images/#{stale_image_id}.json")).to have_been_made.once
   end
 end

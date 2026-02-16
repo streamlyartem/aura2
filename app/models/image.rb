@@ -23,7 +23,7 @@ class Image < ApplicationRecord
   ].freeze
 
   belongs_to :object, polymorphic: true, optional: true
-  after_commit :enqueue_insales_sync_trigger, on: %i[create update destroy]
+  after_commit :enqueue_insales_sync_trigger, on: %i[create destroy]
 
   has_one_attached :file
 
