@@ -3,6 +3,7 @@
 module Insales
   class ProductFieldCatalog
     FieldDefinition = Struct.new(:key, :title, :extractor, keyword_init: true)
+    DEFAULT_FIELD_TYPE = 'ProductField::Text'
 
     FIELD_DEFINITIONS = [
       FieldDefinition.new(
@@ -104,7 +105,10 @@ module Insales
       missing = FIELD_DEFINITIONS.select { |field| existing_by_title[field.title].blank? }
 
       missing.each do |field|
-        response = client.post('/admin/product_fields.json', { product_field: { title: field.title } })
+        response = client.post(
+          '/admin/product_fields.json',
+          { product_field: { title: field.title, type: DEFAULT_FIELD_TYPE } }
+        )
         unless response_success?(response)
           Rails.logger.warn(
             "[InSales][Fields] Create failed title=#{field.title.inspect} status=#{response&.status} body=#{truncate_body(response&.body)}"
