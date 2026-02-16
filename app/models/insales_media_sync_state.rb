@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class InsalesMediaStatus < ApplicationRecord
+class InsalesMediaSyncState < ApplicationRecord
   self.implicit_order_column = :created_at
 
   belongs_to :product

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_16_101100) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_16_103000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -90,37 +90,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_16_101100) do
     t.index ["insales_product_id"], name: "index_insales_image_mappings_on_insales_product_id"
   end
 
-  create_table "insales_media_status_items", force: :cascade do |t|
+  create_table "insales_media_sync_states", force: :cascade do |t|
     t.uuid "product_id", null: false
-    t.string "kind", null: false
-    t.string "source_key", null: false
-    t.string "source_checksum"
-    t.text "source_url"
-    t.boolean "api_ok", default: false, null: false
-    t.datetime "api_verified_at"
-    t.text "api_error"
-    t.boolean "storefront_ok", default: false, null: false
-    t.datetime "storefront_verified_at"
-    t.text "storefront_error"
-    t.string "status", default: "in_progress", null: false
-    t.datetime "created_at", null: false
-    t.datetime "updated_at", null: false
-    t.index ["product_id", "source_key"], name: "index_insales_media_status_items_on_product_and_source", unique: true
-    t.index ["product_id"], name: "index_insales_media_status_items_on_product_id"
-  end
-
-  create_table "insales_media_statuses", force: :cascade do |t|
-    t.uuid "product_id", null: false
-    t.integer "photos_count", default: 0, null: false
-    t.integer "videos_count", default: 0, null: false
+    t.integer "insales_product_id"
+    t.integer "photos_in_aura", default: 0, null: false
+    t.integer "photos_uploaded", default: 0, null: false
+    t.boolean "verified_admin", default: false, null: false
+    t.boolean "verified_storefront", default: false, null: false
     t.string "status", default: "in_progress", null: false
     t.text "last_error"
-    t.datetime "last_checked_at"
-    t.datetime "last_api_verified_at"
-    t.datetime "last_storefront_verified_at"
+    t.datetime "synced_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
-    t.index ["product_id"], name: "index_insales_media_statuses_on_product_id", unique: true
+    t.index ["product_id"], name: "index_insales_media_sync_states_on_product_id", unique: true
   end
 
   create_table "insales_product_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
