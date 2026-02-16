@@ -18,9 +18,11 @@ RSpec.describe Insales::VerifyMediaVisibility do
     InsalesSetting.create!(base_url: base_url, login: 'login', password: 'password', category_id: '1', image_url_mode: 'service_url')
     InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: insales_product_id)
     Rails.application.routes.default_url_options[:host] = 'example.test'
+    image.file.blob.update!(content_type: 'image/png')
   end
 
   it 'marks status success when API and storefront checks pass' do
+    video.file.blob.update!(content_type: 'video/mp4')
     video_url = video.url
 
     stub_request(:get, "#{base_url}/admin/products/#{insales_product_id}.json")
@@ -50,6 +52,7 @@ RSpec.describe Insales::VerifyMediaVisibility do
   end
 
   it 'marks error when storefront html does not contain image url' do
+    video.file.blob.update!(content_type: 'video/mp4')
     video_url = video.url
 
     stub_request(:get, "#{base_url}/admin/products/#{insales_product_id}.json")

@@ -93,7 +93,7 @@ module Insales
         source_url: nil,
         api_ok: matched_url.present?,
         api_verified_at: Time.current,
-        api_error: matched_url.present? ? nil : 'Image not found in InSales API',
+        api_error: nil,
         storefront_ok: false,
         storefront_verified_at: nil,
         storefront_error: nil,
