@@ -28,15 +28,10 @@ module Insales
         return result
       end
 
-      images = product.images.order(:created_at).limit(2)
+      images = product.images.order(:created_at).limit(3)
 
       images.each do |image|
         result.processed += 1
-
-        if InsalesImageMapping.exists?(aura_image_id: image.id)
-          result.skipped += 1
-          next
-        end
 
         if dry_run
           result.uploaded += 1
@@ -88,12 +83,6 @@ module Insales
         Rails.logger.info("[InSales] Image upload status=#{response&.status} body=#{short_body(response&.body)}")
 
         if response_success?(response)
-          insales_image_id = extract_image_id(response.body)
-          InsalesImageMapping.create!(
-            aura_image_id: image.id,
-            insales_product_id: insales_product_id,
-            insales_image_id: insales_image_id
-          )
           result.uploaded += 1
           return
         end
@@ -110,13 +99,6 @@ module Insales
       end
 
       result.errors += 1
-    end
-
-    def extract_image_id(body)
-      payload = parse_json(body)
-      return nil unless payload.is_a?(Hash)
-
-      payload['id'] || payload.dig('image', 'id')
     end
 
     def build_payload(field, encoded, filename)

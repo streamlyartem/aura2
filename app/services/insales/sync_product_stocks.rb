@@ -63,11 +63,25 @@ module Insales
           next
         end
 
-        images_result = Insales::ExportImages.call(product_id: product.id, dry_run: false)
-        result.images_uploaded += images_result.uploaded
-        result.images_skipped += images_result.skipped
-        result.images_errors += images_result.errors
+        log_media("[InSales][MEDIA] Upload product=#{product.id}")
+        media_result = Insales::SyncProductMedia.new(client).call(
+          product: product,
+          insales_product_id: mapping.insales_product_id
+        )
+
+        result.images_uploaded += media_result.photos_uploaded.to_i
+        result.images_skipped += media_result.photos_skipped.to_i
+        result.images_errors += media_result.photos_errors.to_i
         result.videos_skipped += 0
+
+        if media_result.status == 'success'
+          log_media("[InSales][MEDIA] Verify admin OK product=#{product.id}") if media_result.verified_admin
+          log_media("[InSales][MEDIA] Verify storefront OK product=#{product.id}") if media_result.verified_storefront
+        else
+          result.errors += 1
+          result.last_error_message = media_result.last_error
+          log_media("[InSales][MEDIA] Verify failed product=#{product.id} error=#{media_result.last_error}")
+        end
 
         variant_id = mapping.insales_variant_id || fetch_variant_id(mapping.insales_product_id)
         if variant_id
@@ -139,6 +153,12 @@ module Insales
 
     def response_success?(response)
       response && (200..299).cover?(response.status)
+    end
+
+    def log_media(message)
+      return unless ENV['INSALES_HTTP_DEBUG'].to_s == '1'
+
+      Rails.logger.info(message)
     end
   end
 end
