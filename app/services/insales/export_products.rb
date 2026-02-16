@@ -10,6 +10,7 @@ module Insales
 
     def initialize(client = Insales::InsalesClient.new)
       @client = client
+      @product_field_catalog = Insales::ProductFieldCatalog.new(client)
     end
 
     def call(product_id:, dry_run:, collection_id:)
@@ -31,11 +32,16 @@ module Insales
 
     private
 
-    attr_reader :client
+    attr_reader :client, :product_field_catalog
 
     def export_product(product, dry_run, result, collection_id)
       mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
-      payload = build_payload(product, collection_id: collection_id)
+      product_field_values = if dry_run || !product_fields_enabled?
+                               []
+                             else
+                               product_field_catalog.product_field_values_attributes(product)
+                             end
+      payload = build_payload(product, collection_id: collection_id, product_field_values: product_field_values)
 
       if dry_run
         mapping ? result.updated += 1 : result.created += 1
@@ -45,12 +51,17 @@ module Insales
       if mapping
         update_response = client.put(
           "/admin/products/#{mapping.insales_product_id}.json",
-          update_payload(product, collection_id: collection_id)
+          update_payload(product, collection_id: collection_id, product_field_values: product_field_values)
         )
         if collection_ids_rejected?(update_response)
           update_response = client.put(
             "/admin/products/#{mapping.insales_product_id}.json",
-            update_payload(product, include_collection: false, collection_id: collection_id)
+            update_payload(
+              product,
+              include_collection: false,
+              collection_id: collection_id,
+              product_field_values: product_field_values
+            )
           )
         end
 
@@ -80,7 +91,12 @@ module Insales
         if collection_ids_rejected?(create_response)
           create_response = client.post(
             '/admin/products.json',
-            build_payload(product, include_collection: false, collection_id: collection_id)
+            build_payload(
+              product,
+              include_collection: false,
+              collection_id: collection_id,
+              product_field_values: product_field_values
+            )
           )
         end
 
@@ -107,7 +123,7 @@ module Insales
       Rails.logger.error("[InSales] Product export failed for #{product.id}: #{e.class} - #{e.message}")
     end
 
-    def build_payload(product, include_collection: true, collection_id: nil)
+    def build_payload(product, include_collection: true, collection_id: nil, product_field_values: [])
       sku = product.sku.presence || product.code
       price = product.retail_price&.to_f
       quantity = total_stock(product)
@@ -128,11 +144,12 @@ module Insales
           ]
         }.tap do |p|
           p[:collection_ids] = collection_ids if collection_ids.present?
+          p[:product_field_values_attributes] = product_field_values if product_field_values.present?
         end
       }
     end
 
-    def update_payload(product, include_collection: true, collection_id: nil)
+    def update_payload(product, include_collection: true, collection_id: nil, product_field_values: [])
       category_id = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
       collection_ids = include_collection ? collection_ids_array(collection_id) : nil
 
@@ -142,6 +159,7 @@ module Insales
           category_id: category_id.presence&.to_i
         }.tap do |p|
           p[:collection_ids] = collection_ids if collection_ids.present?
+          p[:product_field_values_attributes] = product_field_values if product_field_values.present?
         end
       }
     end
@@ -183,6 +201,10 @@ module Insales
 
     def collection_assignment_enabled?
       ENV['INSALES_ASSIGN_COLLECTIONS'].to_s == '1'
+    end
+
+    def product_fields_enabled?
+      ENV.fetch('INSALES_EXPORT_PRODUCT_FIELDS', '1') != '0'
     end
 
     def total_stock(product)

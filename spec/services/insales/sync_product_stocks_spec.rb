@@ -8,6 +8,9 @@ RSpec.describe Insales::SyncProductStocks do
   let(:password) { 'pass' }
 
   before do
+    @previous_export_fields = ENV['INSALES_EXPORT_PRODUCT_FIELDS']
+    ENV['INSALES_EXPORT_PRODUCT_FIELDS'] = '0'
+
     InsalesSetting.create!(
       base_url: base_url,
       login: login,
@@ -16,6 +19,10 @@ RSpec.describe Insales::SyncProductStocks do
       default_collection_id: '999',
       image_url_mode: 'service_url'
     )
+  end
+
+  after do
+    ENV['INSALES_EXPORT_PRODUCT_FIELDS'] = @previous_export_fields
   end
 
   it 'syncs one product and verifies' do
