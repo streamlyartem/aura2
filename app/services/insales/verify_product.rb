@@ -16,10 +16,7 @@ module Insales
       @client = client
     end
 
-    def call(product:, insales_product_id:, insales_variant_id: nil, expected_category_id: nil, expected_collection_id: nil,
-             images_expected_count: 0, video_urls: [])
-      return fail_result('product_id missing') if insales_product_id.blank?
-
+    def call(product:, insales_product_id:, insales_variant_id: nil, expected_category_id: nil, expected_collection_id: nil)
       response = client.get("/admin/products/#{insales_product_id}.json")
       return fail_result("GET product failed status=#{response&.status}") unless success?(response)
 
@@ -46,15 +43,8 @@ module Insales
 
       stock_verify = verify_variant(variant_id, product)
 
-      media_verify = verify_media(
-        insales_product_id,
-        images_expected_count: images_expected_count,
-        video_urls: video_urls,
-        description: insales_product['description']
-      )
-
-      unless title_ok && category_ok && collection_ok && sku_ok && stock_verify[:ok] && media_verify[:ok]
-        message = build_failure_message(title_ok, category_ok, collection_ok, sku_ok, stock_verify, media_verify)
+      unless title_ok && category_ok && collection_ok && sku_ok && stock_verify[:ok]
+        message = build_failure_message(title_ok, category_ok, collection_ok, sku_ok, stock_verify)
         return fail_result(message, stock_verify[:skipped_reason])
       end
 
@@ -64,7 +54,7 @@ module Insales
         http_status: response.status,
         http_endpoint: "/admin/products/#{insales_product_id}.json",
         verified_at: Time.current,
-        stock_verify_skipped_reason: stock_verify[:skipped_reason] || media_verify[:skipped_reason]
+        stock_verify_skipped_reason: stock_verify[:skipped_reason]
       )
     rescue StandardError => e
       fail_result("#{e.class}: #{e.message}")
@@ -109,32 +99,13 @@ module Insales
       )
     end
 
-    def verify_media(insales_product_id, images_expected_count:, video_urls:, description:)
-      if images_expected_count.to_i.positive?
-        response = client.get("/admin/products/#{insales_product_id}/images.json")
-        return { ok: true, skipped_reason: 'images_verify_skipped' } unless success?(response)
-
-        body = response.body
-        images = body.is_a?(Array) ? body : body['images'] || []
-        return { ok: false, skipped_reason: nil } unless images.size == images_expected_count.to_i
-      end
-
-      if video_urls.present?
-        desc = description.to_s
-        return { ok: false, skipped_reason: nil } unless video_urls.all? { |u| desc.include?(u.to_s) }
-      end
-
-      { ok: true, skipped_reason: nil }
-    end
-
-    def build_failure_message(title_ok, category_ok, collection_ok, sku_ok, stock_verify, media_verify)
+    def build_failure_message(title_ok, category_ok, collection_ok, sku_ok, stock_verify)
       parts = []
       parts << 'title' unless title_ok
       parts << 'category_id' unless category_ok
       parts << 'collection_id' unless collection_ok
       parts << 'sku' unless sku_ok
       parts << 'variant' unless stock_verify[:ok]
-      parts << 'media' unless media_verify[:ok]
       parts.join(', ')
     end
   end

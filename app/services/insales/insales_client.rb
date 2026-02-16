@@ -38,10 +38,6 @@ module Insales
       request(:put, path, json_body)
     end
 
-    def delete(path)
-      request(:delete, path, nil)
-    end
-
     def post_multipart(path, fields:, file_field_name:, filename:, content_type:, file_bytes:)
       uri = build_uri(path)
       boundary = "----RubyMultipart#{SecureRandom.hex(12)}"
@@ -134,8 +130,6 @@ module Insales
         connection.post(path, payload)
       when :put
         connection.put(path, payload)
-      when :delete
-        connection.delete(path)
       else
         raise ArgumentError, "Unsupported HTTP method: #{method}"
       end

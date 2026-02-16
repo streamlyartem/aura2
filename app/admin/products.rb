@@ -84,21 +84,6 @@ ActiveAdmin.register Product do
           status_tag t('admin.products.show.no_images')
         end
       end
-      row 'InSales Media' do |product|
-        items = InsalesMediaItem.where(aura_product_id: product.id).order(:position)
-        if items.any?
-          table_for items do
-            column :kind
-            column :position
-            column :export_to_insales
-            column :url
-            column :aura_image_id
-            column :updated_at
-          end
-        else
-          status_tag 'No media items'
-        end
-      end
       row :created_at
       row :updated_at
     end

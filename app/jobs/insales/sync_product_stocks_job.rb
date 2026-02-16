@@ -26,7 +26,6 @@ module Insales
         last_http_endpoint: result.last_http_endpoint,
         last_verified_at: Time.current,
         last_error: result.last_error_message,
-        last_media_error: result.last_media_error,
         finished_at: Time.current,
         status: result.errors.positive? ? 'error' : 'success'
       )
@@ -75,7 +74,6 @@ module Insales
         status.last_http_endpoint = result.last_http_endpoint
         status.last_verified_at = Time.current
         status.last_error = result.last_error_message
-        status.last_media_error = result.last_media_error
       elsif error
         status.last_status = 'failed'
         status.last_error = "#{error.class}: #{error.message}"

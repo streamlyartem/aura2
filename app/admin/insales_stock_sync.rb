@@ -71,7 +71,6 @@ ActiveAdmin.register_page 'InSales Stock Sync' do
         ['Images errors', state&.images_errors || '—'],
         ['Videos uploaded', state&.videos_uploaded || '—'],
         ['Videos skipped', state&.videos_skipped || '—'],
-        ['Last media error', state&.last_media_error.presence || '—'],
         ['Verify failures', state&.verify_failures || '—'],
         ['Last error', state&.last_status == 'failed' ? (state.last_error.presence || '—') : '—'],
         ['Products with stock records', products_with_stock],
