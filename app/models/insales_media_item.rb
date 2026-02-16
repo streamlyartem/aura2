@@ -17,6 +17,14 @@ class InsalesMediaItem < ApplicationRecord
   before_validation :assign_checksum
   validate :source_presence
 
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[aura_product_id kind source_type aura_image_id url position export_to_insales checksum created_at updated_at]
+  end
+
+  def self.ransackable_associations(_auth_object = nil)
+    %w[image product]
+  end
+
   private
 
   def assign_checksum
