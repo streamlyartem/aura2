@@ -12,17 +12,20 @@ module Insales
       product = Product.includes(:images).find_by(id: product_id)
       return Result.new(status: 'skipped', action: 'missing_product', message: 'Product not found') unless product
 
-      in_stock = ProductStock.where(product_id: product.id).sum(:stock).to_f.positive?
+      stock_sum = ProductStock.where(product_id: product.id).sum(:stock).to_f
+      free_stock_sum = ProductStock.where(product_id: product.id).sum(:free_stock).to_f
+      in_stock = free_stock_sum.positive? || stock_sum.positive?
       has_media = product.images.any? { |image| image.file.attached? }
 
       Rails.logger.info(
-        "[InSalesSync][Trigger] product=#{product.id} reason=#{reason} in_stock=#{in_stock} has_media=#{has_media}"
+        "[InSalesSync][Trigger] product=#{product.id} reason=#{reason} " \
+        "in_stock=#{in_stock} stock_sum=#{stock_sum} free_stock_sum=#{free_stock_sum} has_media=#{has_media}"
       )
 
-      if in_stock && has_media
+      if in_stock
         publish_or_update(product)
       else
-        unpublish(product, in_stock: in_stock, has_media: has_media)
+        unpublish(product)
       end
     rescue StandardError => e
       Rails.logger.error("[InSalesSync][Trigger] product=#{product_id} failed: #{e.class} - #{e.message}")
@@ -56,7 +59,7 @@ module Insales
       Result.new(status: 'success', action: 'publish', message: 'Published or updated')
     end
 
-    def unpublish(product, in_stock:, has_media:)
+    def unpublish(product)
       mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
       return Result.new(status: 'skipped', action: 'unpublish', message: 'No InSales mapping') unless mapping
 
@@ -74,11 +77,7 @@ module Insales
         return Result.new(status: 'error', action: 'unpublish', message: "HTTP #{response&.status}")
       end
 
-      reason = []
-      reason << 'sold_out' unless in_stock
-      reason << 'missing_media' unless has_media
-
-      Result.new(status: 'success', action: 'unpublish', message: "Unpublished (#{reason.join('+')})")
+      Result.new(status: 'success', action: 'unpublish', message: 'Unpublished (sold_out)')
     end
 
     def ensure_visible(insales_product_id)
