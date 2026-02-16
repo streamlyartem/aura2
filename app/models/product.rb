@@ -23,7 +23,7 @@ class Product < ApplicationRecord
 
   def enqueue_insales_sync_trigger
     return if id.blank?
-    return if previous_changes.keys == ['updated_at']
+    return if previous_changes.except('updated_at').blank?
 
     Insales::SyncProductTriggerJob.perform_later(product_id: id, reason: 'product_changed')
   end

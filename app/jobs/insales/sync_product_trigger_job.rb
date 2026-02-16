@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'zlib'
+
 module Insales
   class SyncProductTriggerJob < ApplicationJob
     queue_as :default
@@ -18,13 +20,28 @@ module Insales
     private
 
     def with_product_lock(product_id)
-      lock_key = "insales:trigger:product:#{product_id}"
-      obtained = Rails.cache.write(lock_key, true, unless_exist: true, expires_in: 2.minutes)
-      return unless obtained
+      key = advisory_lock_key(product_id)
+      namespace = advisory_lock_namespace
 
-      yield
-    ensure
-      Rails.cache.delete(lock_key) if obtained
+      ActiveRecord::Base.connection_pool.with_connection do |connection|
+        obtained = connection.select_value("SELECT pg_try_advisory_lock(#{namespace}, #{key})")
+        unless obtained
+          Rails.logger.info("[InSalesSync][TriggerJob] skip product=#{product_id} reason=lock_not_acquired")
+          return
+        end
+
+        yield
+      ensure
+        connection.execute("SELECT pg_advisory_unlock(#{namespace}, #{key})") if obtained
+      end
+    end
+
+    def advisory_lock_key(product_id)
+      Zlib.crc32(product_id.to_s)
+    end
+
+    def advisory_lock_namespace
+      42_017
     end
   end
 end
