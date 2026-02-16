@@ -3,6 +3,13 @@
 ActiveAdmin.register ProductStock do
   actions :index, :show
   config.batch_actions = false
+  config.filters = false
+
+  controller do
+    def scoped_collection
+      super.includes(:product)
+    end
+  end
 
   member_action :write_off, method: %i[get post] do
     @product_stock = ProductStock.find(params[:id])
@@ -31,16 +38,6 @@ ActiveAdmin.register ProductStock do
   action_item :write_off, only: :show do
     link_to 'Списать', write_off_admin_product_stock_path(resource), method: :get
   end
-
-  filter :id
-  filter :product
-  filter :store_name
-  filter :stock
-  filter :free_stock
-  filter :reserve
-  filter :synced_at
-  filter :created_at
-  filter :updated_at
 
   index do
     selectable_column
