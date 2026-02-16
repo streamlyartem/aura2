@@ -3,7 +3,7 @@
 module Insales
   class ProductFieldCatalog
     FieldDefinition = Struct.new(:key, :title, :extractor, keyword_init: true)
-    DEFAULT_FIELD_TYPE = 'ProductField::Text'
+    DEFAULT_FIELD_TYPE = 'ProductField::TextArea'
 
     FIELD_DEFINITIONS = [
       FieldDefinition.new(
