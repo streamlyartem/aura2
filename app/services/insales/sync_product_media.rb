@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'erb'
+
 require 'net/http'
 require 'uri'
 
@@ -165,7 +167,8 @@ module Insales
         raw_url
       else
         path = raw_url.start_with?('/') ? raw_url : "/product/#{raw_url}"
-        URI.join("#{base}/", path.sub(%r{^/}, '')).to_s
+        escaped_path = path.sub(%r{^/}, '').split('/').map { |seg| ERB::Util.url_encode(seg) }.join('/')
+        URI.join("#{base}/", escaped_path).to_s
       end
     end
 

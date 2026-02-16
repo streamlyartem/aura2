@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'erb'
+
 ActiveAdmin.register_page 'InSales Media Status' do
   menu label: 'InSales Media Status', priority: 7
 
@@ -10,7 +12,10 @@ ActiveAdmin.register_page 'InSales Media Status' do
       storefront_url = if product&.path_name.present?
                           base = InsalesSetting.first&.base_url || ENV['INSALES_BASE_URL']
                           base = "https://#{base}" if base.present? && !base.start_with?('http')
-                          base.present? ? URI.join("#{base}/", "product/#{product.path_name}").to_s : nil
+                          if base.present?
+                            escaped_path = product.path_name.to_s.split('/').map { |seg| ERB::Util.url_encode(seg) }.join('/')
+                            URI.join("#{base}/", "product/#{escaped_path}").to_s
+                          end
                         end
 
       panel 'Product media status' do
