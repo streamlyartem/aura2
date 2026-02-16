@@ -41,6 +41,9 @@ module Insales
                              else
                                product_field_catalog.product_field_values_attributes(product)
                              end
+      if product_fields_enabled? && !dry_run && product_field_values.empty?
+        Rails.logger.warn("[InSales][Fields] No fields prepared for product=#{product.id} sku=#{product.sku}")
+      end
       payload = build_payload(product, collection_id: collection_id, product_field_values: product_field_values)
 
       if dry_run

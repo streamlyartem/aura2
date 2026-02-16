@@ -105,7 +105,12 @@ module Insales
 
       missing.each do |field|
         response = client.post('/admin/product_fields.json', { product_field: { title: field.title } })
-        next unless response_success?(response)
+        unless response_success?(response)
+          Rails.logger.warn(
+            "[InSales][Fields] Create failed title=#{field.title.inspect} status=#{response&.status} body=#{truncate_body(response&.body)}"
+          )
+          next
+        end
 
         created_id = extract_field_id(response.body)
         existing_by_title[field.title] = created_id if created_id.present?
@@ -118,7 +123,12 @@ module Insales
 
     def fetch_existing_fields
       response = client.get('/admin/product_fields.json')
-      return {} unless response_success?(response)
+      unless response_success?(response)
+        Rails.logger.warn(
+          "[InSales][Fields] GET /admin/product_fields.json failed status=#{response&.status} body=#{truncate_body(response&.body)}"
+        )
+        return {}
+      end
 
       parse_fields(response.body).each_with_object({}) do |field, map|
         title = field['title'].to_s
@@ -168,6 +178,10 @@ module Insales
       return format_number(value) if value.is_a?(Numeric)
 
       value.to_s.strip
+    end
+
+    def truncate_body(body)
+      body.to_s.byteslice(0, 300)
     end
   end
 end
