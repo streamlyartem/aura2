@@ -18,7 +18,7 @@ class MoyskladClient
     TEST_STORE_NAME => 'https://api.moysklad.ru/api/remap/1.2/entity/store/d2a971ca-9164-11f0-0a80-19cb0021b994'
   }.freeze
 
-  attr_reader :config, :http_client, :products, :demands, :stocks
+  attr_reader :config, :http_client, :products, :demands, :stocks, :stores
 
   def initialize(username: ENV.fetch('MOYSKLAD_USER', nil), password: ENV.fetch('MOYSKLAD_PASS', nil),
                  base_url: BASE_URL)
@@ -27,6 +27,7 @@ class MoyskladClient
     @products = Moysklad::Resources::Products.new(@http_client)
     @demands = Moysklad::Resources::Demands.new(@http_client)
     @stocks = Moysklad::Resources::Stocks.new(@http_client)
+    @stores = Moysklad::Resources::Stores.new(@http_client)
   rescue Moysklad::HttpClient::Error => e
     Rails.logger.error "[MoyskladClient] Initialization error: #{e.message}"
     raise
@@ -46,7 +47,7 @@ class MoyskladClient
 
   # Business logic method - transforms stock data into a more usable format
   def stocks_for_store(store_name: TEST_STORE_NAME)
-    store_href = TEST_NAMES_HREF[store_name]
+    store_href = store_href_map[store_name]
     raise ArgumentError, "Unknown store: #{store_name}" unless store_href
 
     rows = stocks.for_store(store_href)
@@ -65,6 +66,43 @@ class MoyskladClient
 
     Rails.logger.debug { "[MoyskladClient] Found #{products_data.size} products at store '#{store_name}'" }
     products_data
+  end
+
+  def stores_list(limit: 1000)
+    if Rails.env.test?
+      return store_href_map.map { |name, href| { 'name' => name, 'href' => href } }
+    end
+
+    stores.each(limit: limit).map do |store|
+      {
+        'name' => store['name'],
+        'href' => store.dig('meta', 'href')
+      }
+    end
+  end
+
+  def store_names
+    store_href_map.keys
+  end
+
+  def store_href_map
+    return TEST_NAMES_HREF if Rails.env.test?
+
+    Rails.cache.fetch('moysklad:store_hrefs', expires_in: 15.minutes) do
+      map = {}
+      stores.each(limit: 1000) do |store|
+        name = store['name'].to_s.strip
+        href = store.dig('meta', 'href')
+        next if name.blank? || href.blank?
+
+        map[name] = href
+      end
+
+      map.presence || TEST_NAMES_HREF
+    end
+  rescue StandardError => e
+    Rails.logger.warn "[MoyskladClient] Fetch stores failed: #{e.class} - #{e.message}"
+    TEST_NAMES_HREF
   end
 
   # Business logic method - creates a demand for a product write-off

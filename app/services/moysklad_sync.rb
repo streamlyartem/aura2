@@ -60,10 +60,12 @@ class MoyskladSync
   def import_stocks
     changed_product_ids = []
 
-    @client.stocks_for_store.each do |row|
+    store_rows = build_store_rows
+
+    store_rows.each do |row|
       ms_product_uuid = extract_uuid(row[:product_meta]['href'])
 
-      Rails.logger.info "[MoyskladSync] name: #{row[:name]} - #{ms_product_uuid}"
+      Rails.logger.info "[MoyskladSync] name: #{row[:name]} - #{ms_product_uuid} store=#{row[:store_name]}"
 
       product = Product.find_by(ms_id: ms_product_uuid)
       next unless product
@@ -82,7 +84,7 @@ class MoyskladSync
       )
       product_stock.save!
       # In this domain stock value is used as current effective weight on storefront cards.
-      product.update_column(:weight, new_stock) if product.weight.to_f != new_stock
+      product.update_column(:weight, new_stock) if row[:store_name] == MoyskladClient::TEST_STORE_NAME && product.weight.to_f != new_stock
       changed_product_ids << product.id
     end
 
@@ -95,5 +97,18 @@ class MoyskladSync
     product_stock.stock.to_f != stock ||
       product_stock.free_stock.to_f != free_stock ||
       product_stock.reserve.to_f != reserve
+  end
+
+  def build_store_rows
+    store_rows = []
+    store_names = @client.store_names
+
+    store_names.each do |store_name|
+      @client.stocks_for_store(store_name: store_name).each do |row|
+        store_rows << row
+      end
+    end
+
+    store_rows
   end
 end

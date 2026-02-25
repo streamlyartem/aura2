@@ -38,7 +38,13 @@ ActiveAdmin.register InsalesSetting do
   form do |f|
     f.semantic_errors(*f.object.errors.attribute_names)
 
-    store_names = ProductStock.distinct.order(:store_name).pluck(:store_name)
+    store_names = begin
+      MoyskladClient.new.stores_list.map { |store| store['name'].to_s }
+    rescue StandardError => e
+      Rails.logger.warn "[InSalesSettings] Fetch Moysklad stores failed: #{e.class} - #{e.message}"
+      []
+    end
+    store_names = (store_names + ProductStock.distinct.order(:store_name).pluck(:store_name)).uniq
 
     f.inputs 'InSales Settings' do
       f.input :base_url
