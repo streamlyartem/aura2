@@ -153,6 +153,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_221000) do
     t.datetime "updated_at", null: false
     t.bigint "default_collection_id"
     t.jsonb "allowed_store_names", default: [], null: false
+    t.jsonb "cached_store_names", default: [], null: false
+    t.datetime "cached_store_names_synced_at"
   end
 
   create_table "insales_stock_sync_states", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

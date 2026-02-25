@@ -35,15 +35,28 @@ ActiveAdmin.register InsalesSetting do
     end
   end
 
+  member_action :refresh_store_names, method: :post do
+    setting = InsalesSetting.find(params[:id])
+    begin
+      store_names = MoyskladClient.new.store_names
+    rescue StandardError => e
+      Rails.logger.warn "[InSalesSettings] Refresh Moysklad stores failed: #{e.class} - #{e.message}"
+      store_names = []
+    end
+
+    store_names = (store_names + ProductStock.distinct.order(:store_name).pluck(:store_name)).uniq
+    setting.update!(
+      cached_store_names: store_names,
+      cached_store_names_synced_at: Time.zone.now
+    )
+
+    redirect_to edit_admin_insales_setting_path(setting), notice: 'Список складов обновлен.'
+  end
+
   form do |f|
     f.semantic_errors(*f.object.errors.attribute_names)
 
-    store_names = begin
-      MoyskladClient.new.store_names
-    rescue StandardError => e
-      Rails.logger.warn "[InSalesSettings] Fetch Moysklad stores failed: #{e.class} - #{e.message}"
-      []
-    end
+    store_names = f.object.cached_store_names_list
     store_names = (store_names + ProductStock.distinct.order(:store_name).pluck(:store_name)).uniq
 
     f.inputs 'InSales Settings' do
@@ -58,8 +71,13 @@ ActiveAdmin.register InsalesSetting do
               collection: store_names,
               input_html: { multiple: true },
               hint: 'Склады, которые участвуют в экспорте в InSales. Если пусто — используется "Тест".'
+      f.input :cached_store_names_synced_at, label: 'Склады обновлены', input_html: { disabled: true }
     end
 
     f.actions
+  end
+
+  action_item :refresh_store_names, only: :edit do
+    link_to 'Обновить склады', refresh_store_names_admin_insales_setting_path(resource), method: :post
   end
 end
