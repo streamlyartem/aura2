@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_16_103000) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_25_161000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -245,6 +245,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_16_103000) do
     t.decimal "five_hundred_plus_wholesale_price", precision: 10, scale: 2
     t.decimal "min_price", precision: 10, scale: 2
     t.uuid "ms_id"
+    t.string "structure"
   end
 
   create_table "solid_cache_entries", force: :cascade do |t|

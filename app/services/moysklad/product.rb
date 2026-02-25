@@ -2,8 +2,8 @@
 
 module Moysklad
   class Product
-    attr_reader :id, :name, :batch_number, :path_name, :weight, :length, :color, :tone, :ombre, :sku,
-                :code, :barcodes, :purchase_price, :retail_price, :small_wholesale_price,
+    attr_reader :id, :name, :batch_number, :path_name, :weight, :length, :color, :tone, :ombre,
+                :structure, :sku, :code, :barcodes, :purchase_price, :retail_price, :small_wholesale_price,
                 :large_wholesale_price, :five_hundred_plus_wholesale_price, :min_price
 
     def initialize(ms_product_payload)

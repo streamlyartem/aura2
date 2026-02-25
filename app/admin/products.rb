@@ -58,6 +58,7 @@ ActiveAdmin.register Product do
       row :color
       row :tone
       row :ombre
+      row :structure
       row :sku
       row :code
       row :barcodes

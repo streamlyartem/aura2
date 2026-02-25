@@ -277,6 +277,26 @@
         },
         {
           "meta": {
+            "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/98fd6cbb-9167-11f0-0a80-17cb002248b0",
+            "type": "attributemetadata",
+            "mediaType": "application/json"
+          },
+          "id": "98fd6cbb-9167-11f0-0a80-17cb002248b0",
+          "name": "Структура",
+          "type": "customentity",
+          "value": {
+            "meta": {
+              "href": "https://api.moysklad.ru/api/remap/1.2/entity/customentity/93d487be-9167-11f0-0a80-19cb0021eae3/b00a00a3-9167-11f0-0a80-1bb000236758",
+              "metadataHref": "https://api.moysklad.ru/api/remap/1.2/context/companysettings/metadata/customEntities/93d487be-9167-11f0-0a80-19cb0021eae3",
+              "type": "customentity",
+              "mediaType": "application/json",
+              "uuidHref": "https://online.moysklad.ru/app/#custom_93d487be-9167-11f0-0a80-19cb0021eae3/edit?id=b00a00a3-9167-11f0-0a80-1bb000236758"
+            },
+            "name": "прямой"
+          }
+        },
+        {
+          "meta": {
             "href": "https://api.moysklad.ru/api/remap/1.2/entity/product/metadata/attributes/964395ac-7e2f-11ee-0a80-02ec001152ee",
             "type": "attributemetadata",
             "mediaType": "application/json"

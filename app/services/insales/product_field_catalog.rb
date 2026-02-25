@@ -32,6 +32,11 @@ module Insales
         extractor: ->(product) { product.weight }
       ),
       FieldDefinition.new(
+        key: :aura_structure,
+        title: 'AURA: Структура',
+        extractor: ->(product) { product.structure }
+      ),
+      FieldDefinition.new(
         key: :aura_ombre,
         title: 'AURA: Омбре',
         extractor: ->(product) { product.ombre ? 'Да' : 'Нет' }

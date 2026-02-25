@@ -25,6 +25,7 @@ RSpec.describe MoyskladSync do
           color: '2',
           tone: 'Темный',
           ombre: false,
+          structure: 'прямой',
           sku: sku,
           code: sku,
           barcodes: [{ 'code128' => '1905432613387' }, { 'ean13' => '2000000337920' }],

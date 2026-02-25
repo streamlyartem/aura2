@@ -25,6 +25,7 @@ class MoyskladSync
         color: ms_product.color,
         tone: ms_product.tone,
         ombre: ms_product.ombre,
+        structure: ms_product.structure,
         code: ms_product.code,
         barcodes: ms_product.barcodes,
         purchase_price: ms_product.purchase_price&.to_f,

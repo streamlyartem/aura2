@@ -30,7 +30,8 @@ RSpec.describe 'Moysklad product webhook handlers' do
         { 'name' => 'Омбре', 'value' => 'нет' },
         { 'name' => 'Длина', 'value' => '50' },
         { 'name' => 'Цвет', 'value' => 'natural' },
-        { 'name' => 'Тон', 'value' => { 'name' => '7' } }
+        { 'name' => 'Тон', 'value' => { 'name' => '7' } },
+        { 'name' => 'Структура', 'value' => { 'name' => 'прямой' } }
       ],
       'salePrices' => [],
       'buyPrice' => { 'value' => 0 },
@@ -53,6 +54,7 @@ RSpec.describe 'Moysklad product webhook handlers' do
       expect(enqueued_jobs.last[:job]).to eq(Insales::SyncProductTriggerJob)
       expect(enqueued_jobs.last.dig(:args, 0, 'reason')).to eq('product_changed')
       expect(created.name).to eq('Hair Bundle')
+      expect(created.structure).to eq('прямой')
     end
   end
 
@@ -74,6 +76,7 @@ RSpec.describe 'Moysklad product webhook handlers' do
       expect(reasons).to include('product_changed', 'stock_changed')
 
       expect(product.reload.name).to eq('New name')
+      expect(product.reload.structure).to eq('прямой')
       stock = ProductStock.find_by(product_id: product.id, store_name: MoyskladClient::TEST_STORE_NAME)
       expect(stock.stock.to_f).to eq(100.0)
       expect(product.reload.weight.to_f).to eq(100.0)
