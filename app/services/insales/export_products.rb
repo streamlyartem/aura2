@@ -9,7 +9,7 @@ module Insales
     end
 
     def self.skip_reason_for(product)
-      new.skip_reason_for(product)
+      new.send(:skip_reason_for, product)
     end
 
     def initialize(client = Insales::InsalesClient.new)
