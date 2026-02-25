@@ -76,6 +76,7 @@ RSpec.describe 'Moysklad product webhook handlers' do
       expect(product.reload.name).to eq('New name')
       stock = ProductStock.find_by(product_id: product.id, store_name: MoyskladClient::TEST_STORE_NAME)
       expect(stock.stock.to_f).to eq(100.0)
+      expect(product.reload.weight.to_f).to eq(100.0)
     end
   end
 end

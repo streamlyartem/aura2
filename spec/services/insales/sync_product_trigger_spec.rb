@@ -101,5 +101,56 @@ RSpec.describe Insales::SyncProductTrigger do
         { product: { collection_ids: [] } }
       )
     end
+
+
+    it 'publishes when free stock exists even if stock is zero' do
+      create(:product_stock, product: product, stock: 0, free_stock: 1, store_name: 'Тест')
+      mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 555, insales_variant_id: 666)
+
+      allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
+      allow_any_instance_of(Insales::SyncProductMedia).to receive(:call).and_return(double(status: 'success', last_error: nil))
+      allow(client).to receive(:put).and_return(double(status: 200, body: {}))
+
+      result = service.call(product_id: product.id, reason: 'stock_changed')
+
+      expect(result.status).to eq('success')
+      expect(result.action).to eq('publish')
+      expect(client).to have_received(:put).with(
+        "/admin/products/#{mapping.insales_product_id}.json",
+        { product: { is_hidden: false } }
+      )
+    end
+
+    it 'returns error when export has errors' do
+      create(:product_stock, product: product, stock: 1, store_name: 'Тест')
+      InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 222, insales_variant_id: 333)
+
+      allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 1))
+      allow_any_instance_of(Insales::SyncProductMedia).to receive(:call).and_return(double(status: 'success', last_error: nil))
+      allow(client).to receive(:put).and_return(double(status: 200, body: {}))
+
+      result = service.call(product_id: product.id, reason: 'product_changed')
+
+      expect(result.status).to eq('error')
+      expect(result.action).to eq('publish')
+      expect(result.message).to include('Export errors=1')
+    end
+
+    it 'returns error when unpublish fails' do
+      create(:product_stock, product: product, stock: 0, store_name: 'Тест')
+      mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 999, insales_variant_id: 888)
+
+      allow(client).to receive(:put).and_return(double(status: 500, body: {}))
+
+      result = service.call(product_id: product.id, reason: 'stock_changed')
+
+      expect(result.status).to eq('error')
+      expect(result.action).to eq('unpublish')
+      expect(result.message).to eq('HTTP 500')
+      expect(client).to have_received(:put).with(
+        "/admin/products/#{mapping.insales_product_id}.json",
+        { product: { collection_ids: [], is_hidden: true } }
+      )
+    end
   end
 end
