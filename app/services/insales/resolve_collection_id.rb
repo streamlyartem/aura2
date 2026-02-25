@@ -16,6 +16,9 @@ module Insales
 
       autocreate = autocreate_enabled? if autocreate.nil?
 
+      manual_mapping = mapping_for_path(normalized)
+      return handle_success(normalized, manual_mapping) if manual_mapping
+
       index = load_index
       collection = index.by_full_path[normalized]
       return handle_success(normalized, collection) if collection.present?
@@ -124,6 +127,19 @@ module Insales
       InsalesCategoryStatus.upsert(payload, unique_by: :index_insales_category_statuses_on_aura_path)
     rescue StandardError => e
       Rails.logger.warn("[InSales][Collections] Status upsert failed path=#{path} error=#{e.class} #{e.message}")
+    end
+
+    def mapping_for_path(normalized)
+      mapping = InsalesCategoryMapping.where(is_active: true, aura_key_type: 'path').find do |candidate|
+        index_builder.normalize_path(candidate.aura_key).casecmp(normalized).zero?
+      end
+      return nil unless mapping
+
+      {
+        'id' => mapping.insales_category_id,
+        'title' => mapping.insales_collection_title,
+        'parent_id' => nil
+      }
     end
 
     def extract_collection(body)

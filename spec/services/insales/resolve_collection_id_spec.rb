@@ -27,6 +27,24 @@ RSpec.describe Insales::ResolveCollectionId do
     expect(status.insales_collection_id).to eq(2)
   end
 
+  it 'resolves via manual mapping override first' do
+    mapping = InsalesCategoryMapping.create!(
+      aura_key_type: 'path',
+      aura_key: 'Срезы/Светлый',
+      insales_category_id: 99,
+      insales_collection_title: 'Светлый',
+      is_active: true
+    )
+
+    allow(client).to receive(:get_collections).and_return(double(status: 200, body: []))
+
+    resolver = described_class.new(client)
+    id = resolver.resolve('Срезы/Светлый', autocreate: false)
+
+    expect(id).to eq(99)
+    expect(mapping.reload.insales_category_id).to eq(99)
+  end
+
   it 'creates missing collections when autocreate is enabled' do
     allow(client).to receive(:get_collections).and_return(double(status: 200, body: []))
     allow(client).to receive(:create_collection)

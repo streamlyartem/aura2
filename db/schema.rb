@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_25_221000) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_25_222408) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -78,7 +78,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_221000) do
   end
 
   create_table "insales_category_mappings", force: :cascade do |t|
-    t.string "product_type", null: false
+    t.string "product_type"
     t.string "tone"
     t.integer "length"
     t.boolean "ombre"
@@ -86,6 +86,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_221000) do
     t.bigint "insales_category_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "aura_key"
+    t.string "aura_key_type"
+    t.string "insales_collection_title"
+    t.string "comment"
+    t.boolean "is_active", default: true, null: false
+    t.index ["aura_key_type", "aura_key"], name: "index_insales_category_mappings_on_aura_key_type_and_aura_key", unique: true
+    t.index ["insales_category_id"], name: "index_insales_category_mappings_on_insales_category_id"
     t.index ["product_type", "tone", "length", "ombre", "structure"], name: "index_insales_category_mappings_on_key", unique: true
   end
 

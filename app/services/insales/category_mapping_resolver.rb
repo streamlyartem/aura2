@@ -7,6 +7,9 @@ module Insales
     end
 
     def category_id_for(product)
+      path_mapping = mapping_for_path(product.path_name)
+      return path_mapping&.insales_category_id if path_mapping
+
       product_type = extract_type(product)
       return nil if product_type.blank?
 
@@ -26,6 +29,21 @@ module Insales
 
     def extract_type(product)
       product.path_name.to_s.split('/').first
+    end
+
+    def mapping_for_path(path_name)
+      return nil if path_name.blank?
+
+      normalized = normalize_path(path_name)
+      @mappings.find do |mapping|
+        mapping.is_active &&
+          mapping.path_mapping? &&
+          normalize_path(mapping.aura_key).casecmp(normalized).zero?
+      end
+    end
+
+    def normalize_path(path)
+      path.to_s.split('/').map { |segment| segment.to_s.strip.gsub(/\s+/, ' ') }.reject(&:blank?).join('/')
     end
 
     def safe_length(value)
