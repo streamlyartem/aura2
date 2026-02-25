@@ -9,9 +9,18 @@ module Moysklad
         data = fetch_entity_data
         return unless data
 
-        ms_product = ::Moysklad::Product.new(data)
+      ms_product = ::Moysklad::Product.new(data)
+      if ms_product.sku.blank?
+        Rails.logger.info "[Moysklad Webhook] Skip product without article ms_id=#{ms_product.id}"
+        return
+      end
 
-        product = ::Product.create!(
+      if ms_product.weight.to_f <= 0
+        Rails.logger.info "[Moysklad Webhook] Skip product with non-positive weight ms_id=#{ms_product.id} weight=#{ms_product.weight.inspect}"
+        return
+      end
+
+      product = ::Product.create!(
           ms_id: ms_product.id,
           name: ms_product.name,
           sku: ms_product.sku,

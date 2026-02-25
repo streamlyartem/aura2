@@ -13,7 +13,17 @@ class MoyskladSync
     @client.each_product do |ms_product_payload|
       ms_product = Moysklad::Product.new(ms_product_payload)
 
-      product = Product.find_or_initialize_by(sku: ms_product.sku)
+      if ms_product.sku.blank?
+        Rails.logger.info "[MoyskladSync] Skip product without article ms_id=#{ms_product.id}"
+        next
+      end
+
+      if ms_product.weight.to_f <= 0
+        Rails.logger.info "[MoyskladSync] Skip product with non-positive weight ms_id=#{ms_product.id} weight=#{ms_product.weight.inspect}"
+        next
+      end
+
+      product = Product.find_or_initialize_by(ms_id: ms_product.id)
 
       product.assign_attributes(
         ms_id: ms_product.id,
@@ -26,6 +36,7 @@ class MoyskladSync
         tone: ms_product.tone,
         ombre: ms_product.ombre,
         structure: ms_product.structure,
+        sku: ms_product.sku,
         code: ms_product.code,
         barcodes: ms_product.barcodes,
         purchase_price: ms_product.purchase_price&.to_f,

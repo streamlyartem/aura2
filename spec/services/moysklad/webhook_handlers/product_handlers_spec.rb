@@ -56,6 +56,20 @@ RSpec.describe 'Moysklad product webhook handlers' do
       expect(created.name).to eq('Hair Bundle')
       expect(created.structure).to eq('Прямой')
     end
+
+    it 'skips product without article' do
+      handler = described_class.new(event)
+      allow(handler).to receive(:fetch_entity_data).and_return(payload.merge('article' => nil))
+
+      expect { handler.handle }.not_to change(Product, :count)
+    end
+
+    it 'skips product with non-positive weight' do
+      handler = described_class.new(event)
+      allow(handler).to receive(:fetch_entity_data).and_return(payload.merge('weight' => 0))
+
+      expect { handler.handle }.not_to change(Product, :count)
+    end
   end
 
   describe Moysklad::WebhookHandlers::ProductUpdateHandler do
@@ -80,6 +94,26 @@ RSpec.describe 'Moysklad product webhook handlers' do
       stock = ProductStock.find_by(product_id: product.id, store_name: MoyskladClient::TEST_STORE_NAME)
       expect(stock.stock.to_f).to eq(100.0)
       expect(product.reload.weight.to_f).to eq(100.0)
+    end
+
+    it 'skips update when article missing' do
+      product = create(:product, sku: payload['article'], name: 'Old name')
+      handler = described_class.new(event)
+      allow(handler).to receive(:fetch_entity_data).and_return(
+        payload.merge('id' => product.ms_id, 'article' => nil, 'name' => 'New name')
+      )
+
+      expect { handler.handle }.not_to change { product.reload.name }
+    end
+
+    it 'skips update when weight non-positive' do
+      product = create(:product, sku: payload['article'], name: 'Old name')
+      handler = described_class.new(event)
+      allow(handler).to receive(:fetch_entity_data).and_return(
+        payload.merge('id' => product.ms_id, 'weight' => 0, 'name' => 'New name')
+      )
+
+      expect { handler.handle }.not_to change { product.reload.name }
     end
   end
 end

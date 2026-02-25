@@ -11,12 +11,13 @@ RSpec.describe MoyskladSync do
 
     context "when products don't exist yet" do
       let(:sku) { '1905432613387' } # from fixture
+      let(:ms_id) { '00006cfc-8285-11f0-0a80-112a0007f611' }
 
       it 'creates products with proper attributes' do
         expect { import_products }.to change(Product, :count).by(2)
 
-        expect(Product.find_by(sku: sku)).to have_attributes(
-          ms_id: '00006cfc-8285-11f0-0a80-112a0007f611',
+        expect(Product.find_by(ms_id: ms_id)).to have_attributes(
+          ms_id: ms_id,
           name: 'Срезы Темный 55/2',
           batch_number: 'Партия 2498',
           path_name: 'Срезы/Темный/55',
@@ -39,14 +40,29 @@ RSpec.describe MoyskladSync do
       end
     end
 
+    context 'when product missing article or non-positive weight' do
+      it 'skips such products' do
+        bad_payloads = [
+          { 'id' => 'skip-1', 'name' => 'No Article', 'article' => nil, 'pathName' => 'Срезы/Светлый/55', 'weight' => 10, 'attributes' => [], 'salePrices' => [], 'buyPrice' => { 'value' => 0 }, 'minPrice' => { 'value' => 0 } },
+          { 'id' => 'skip-2', 'name' => 'Zero Weight', 'article' => 'SKU-ZERO', 'pathName' => 'Срезы/Светлый/55', 'weight' => 0, 'attributes' => [], 'salePrices' => [], 'buyPrice' => { 'value' => 0 }, 'minPrice' => { 'value' => 0 } }
+        ]
+
+        allow_any_instance_of(MoyskladClient).to receive(:each_product) do |_, &block|
+          bad_payloads.each(&block)
+        end
+
+        expect { import_products }.not_to change(Product, :count)
+      end
+    end
+
     context 'when some products already exist' do
-      let!(:existing_product) { create(:product, sku: '1905432613387', name: 'Old Name') }
+      let!(:existing_product) { create(:product, ms_id: '00006cfc-8285-11f0-0a80-112a0007f611', sku: '1905432613387', name: 'Old Name') }
 
       it 'creates only one product' do
         expect { import_products }.to change(Product, :count).by(1)
       end
 
-      it 'updates existing product name by sku' do
+      it 'updates existing product name by ms_id' do
         expect { import_products }.to change { existing_product.reload.name }.from('Old Name').to('Срезы Темный 55/2')
       end
     end
