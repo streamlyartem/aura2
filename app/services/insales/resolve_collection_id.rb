@@ -20,7 +20,7 @@ module Insales
       return handle_success(normalized, manual_mapping) if manual_mapping
 
       index = load_index
-      collection = index.by_full_path[normalized]
+      collection = find_in_index(index, normalized)
       return handle_success(normalized, collection) if collection.present?
 
       return handle_failure(normalized, 'Collection path not found') unless autocreate
@@ -62,7 +62,11 @@ module Insales
       parts = normalized.split('/').map { |segment| index_builder.normalize_segment(segment) }.reject(&:blank?)
       return nil if parts.empty?
 
+      root = root_collection(index)
       parent_id = nil
+      if root && !parts.first.to_s.casecmp(index_builder.normalize_segment(root['title'])).zero?
+        parent_id = root['id']
+      end
       parts.each do |segment|
         candidates = index.children_by_parent_id[parent_id] || []
         existing = candidates.find { |collection| index_builder.normalize_segment(collection['title']).casecmp(segment).zero? }
@@ -116,6 +120,34 @@ module Insales
     def handle_failure(normalized, error)
       upsert_status(normalized, sync_status: 'failed', last_error: error)
       nil
+    end
+
+    def find_in_index(index, normalized)
+      direct = index.by_full_path[normalized]
+      return direct if direct.present?
+
+      root = root_collection(index)
+      if root
+        root_name = index_builder.normalize_segment(root['title'])
+        with_root = index.by_full_path["#{root_name}/#{normalized}"]
+        return with_root if with_root.present?
+
+        if normalized.start_with?("#{root_name}/")
+          stripped = normalized.sub(/^#{Regexp.escape(root_name)}\//, '')
+          stripped_match = index.by_full_path[stripped]
+          return stripped_match if stripped_match.present?
+        end
+      end
+
+      nil
+    end
+
+    def root_collection(index)
+      roots = index.children_by_parent_id[nil] || []
+      return nil if roots.empty?
+      return roots.first if roots.length == 1
+
+      roots.find { |collection| index_builder.normalize_segment(collection['title']).casecmp('Каталог').zero? }
     end
 
     def upsert_status(path, attrs)

@@ -16,6 +16,10 @@ ActiveAdmin.register InsalesCategoryMapping do
   filter :aura_key_type
   filter :is_active
 
+  scope :all, default: true
+  scope('Path mappings') { |scope| scope.where(aura_key_type: 'path') }
+  scope('Attribute mappings') { |scope| scope.where.not(aura_key_type: 'path') }
+
   index do
     selectable_column
     id_column
@@ -27,7 +31,7 @@ ActiveAdmin.register InsalesCategoryMapping do
     column :length
     column :ombre
     column :structure
-    column :insales_category_id
+    column('InSales Collection ID', :insales_category_id)
     column :insales_collection_title
     column :comment
     column :updated_at
@@ -38,16 +42,18 @@ ActiveAdmin.register InsalesCategoryMapping do
     f.semantic_errors(*f.object.errors.attribute_names)
     f.inputs 'Mapping' do
       f.input :is_active
-      f.input :aura_key_type, as: :select, collection: %w[path], include_blank: true
-      f.input :aura_key, hint: 'Например: Срезы/Светлый/55'
+      f.input :aura_key_type, as: :select, collection: %w[path], include_blank: true, hint: 'Для маппинга по пути'
+      f.input :aura_key, hint: 'Например: Срезы/Светлый/55 (без Каталог)'
       f.input :insales_collection_title
       f.input :comment
+      f.input :insales_category_id, label: 'InSales Collection ID'
+    end
+    f.inputs 'Attribute Mapping (fallback)' do
       f.input :product_type
       f.input :tone
       f.input :length
       f.input :ombre, as: :select, collection: [['Any', nil], ['Yes', true], ['No', false]]
       f.input :structure
-      f.input :insales_category_id
     end
     f.actions
   end
