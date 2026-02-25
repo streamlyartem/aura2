@@ -10,7 +10,7 @@ module Insales
     MultipartResponse = Struct.new(:status, :body, keyword_init: true)
     RETRY_STATUSES = [429].freeze
     RETRY_RANGE = (500..599).freeze
-    DEFAULT_MAX_RETRIES = 3
+    DEFAULT_MAX_RETRIES = 5
     DEFAULT_OPEN_TIMEOUT = 5
     DEFAULT_TIMEOUT = 15
     MAX_ERROR_BODY_BYTES = 500
@@ -109,7 +109,7 @@ module Insales
         return response if (200..299).cover?(response.status)
 
         if retryable_status?(response.status) && attempts < DEFAULT_MAX_RETRIES
-          sleep retry_delay(attempts)
+          sleep retry_delay(attempts, response)
           next
         end
 
@@ -117,7 +117,7 @@ module Insales
         return response
       rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
         if attempts < DEFAULT_MAX_RETRIES
-          sleep retry_delay(attempts)
+          sleep retry_delay(attempts, nil)
           retry
         end
 
@@ -145,8 +145,17 @@ module Insales
       RETRY_STATUSES.include?(status) || RETRY_RANGE.cover?(status)
     end
 
-    def retry_delay(attempt)
-      0.5 * (2**(attempt - 1))
+    def retry_delay(attempt, response)
+      if response&.status.to_i == 429
+        retry_after = response.headers['retry-after'].to_s
+        if retry_after.match?(/\A\d+\z/)
+          return retry_after.to_i
+        end
+
+        return 2.0 + rand * 0.5
+      end
+
+      0.5 * (2**(attempt - 1)) + (rand * 0.2)
     end
 
     def log_error(method, path, response)

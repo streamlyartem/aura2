@@ -109,27 +109,37 @@ module Insales
     def ensure_field_ids!
       return @field_ids_by_key if @field_ids_by_key.present?
 
-      existing_by_title = fetch_existing_fields
-      missing = FIELD_DEFINITIONS.select { |field| existing_by_title[field.title].blank? }
+      cached = Rails.cache.read(fields_cache_key)
+      return (@field_ids_by_key = cached) if cached.present?
 
-      missing.each do |field|
-        response = client.post(
-          '/admin/product_fields.json',
-          { product_field: { title: field.title, type: DEFAULT_FIELD_TYPE } }
-        )
-        unless response_success?(response)
-          Rails.logger.warn(
-            "[InSales][Fields] Create failed title=#{field.title.inspect} status=#{response&.status} body=#{truncate_body(response&.body)}"
+      with_fields_lock do
+        cached = Rails.cache.read(fields_cache_key)
+        return (@field_ids_by_key = cached) if cached.present?
+
+        existing_by_title = fetch_existing_fields
+        missing = FIELD_DEFINITIONS.select { |field| existing_by_title[field.title].blank? }
+
+        missing.each do |field|
+          response = client.post(
+            '/admin/product_fields.json',
+            { product_field: { title: field.title, type: DEFAULT_FIELD_TYPE } }
           )
-          next
+          unless response_success?(response)
+            Rails.logger.warn(
+              "[InSales][Fields] Create failed title=#{field.title.inspect} status=#{response&.status} body=#{truncate_body(response&.body)}"
+            )
+            next
+          end
+
+          created_id = extract_field_id(response.body)
+          existing_by_title[field.title] = created_id if created_id.present?
         end
 
-        created_id = extract_field_id(response.body)
-        existing_by_title[field.title] = created_id if created_id.present?
-      end
+        @field_ids_by_key = FIELD_DEFINITIONS.to_h do |field|
+          [field.key, existing_by_title[field.title]]
+        end
 
-      @field_ids_by_key = FIELD_DEFINITIONS.to_h do |field|
-        [field.key, existing_by_title[field.title]]
+        Rails.cache.write(fields_cache_key, @field_ids_by_key, expires_in: 10.minutes)
       end
     end
 
@@ -194,6 +204,20 @@ module Insales
 
     def truncate_body(body)
       body.to_s.byteslice(0, 300)
+    end
+
+    def fields_cache_key
+      'insales:product_fields:v1'
+    end
+
+    def with_fields_lock
+      lock_key = 42_019
+      ActiveRecord::Base.connection_pool.with_connection do |connection|
+        connection.execute("SELECT pg_advisory_lock(#{lock_key})")
+        yield
+      ensure
+        connection.execute("SELECT pg_advisory_unlock(#{lock_key})")
+      end
     end
   end
 end
