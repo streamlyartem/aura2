@@ -3,57 +3,47 @@
 require 'rails_helper'
 
 RSpec.describe Insales::VerifyProduct do
-  let(:base_url) { 'https://example.myinsales.ru' }
-  let(:login) { 'user' }
-  let(:password) { 'pass' }
+  let(:client) { instance_double(Insales::InsalesClient) }
+  let(:product) { create(:product, sku: 'SKU-1', retail_price: 123.456) }
 
   before do
     InsalesSetting.create!(
-      base_url: base_url,
-      login: login,
-      password: password,
-      category_id: '123',
-      default_collection_id: '555',
-      image_url_mode: 'service_url',
+      base_url: 'https://example.myinsales.ru',
+      login: 'login',
+      password: 'password',
+      category_id: 1,
       allowed_store_names: ['Тест']
     )
+    create(:product_stock, product: product, store_name: 'Тест', stock: 10)
+    create(:product_stock, product: product, store_name: 'Другой', stock: 99)
   end
 
-  it 'verifies product and variant' do
-    product = create(:product, name: 'Test Product', sku: 'SKU-1000', retail_price: 12.5)
-    create(:product_stock, product: product, stock: 3, store_name: 'Тест')
+  it 'verifies using allowed stores stock only and rounded price' do
+    product_response = {
+      'product' => {
+        'title' => product.name,
+        'category_id' => nil,
+        'collection_ids' => [],
+        'variants' => [{ 'id' => 55, 'sku' => product.sku }]
+      }
+    }
+    variant_response = {
+      'variant' => {
+        'id' => 55,
+        'sku' => product.sku,
+        'price' => 123.46,
+        'quantity' => 10
+      }
+    }
 
-    stub_request(:get, "#{base_url}/admin/products/10.json")
-      .with(basic_auth: [login, password])
-      .to_return(
-        status: 200,
-        body: {
-          product: {
-            id: 10,
-            title: 'Test Product',
-            category_id: 123,
-            collection_ids: [555],
-            variants: [{ id: 55, sku: 'SKU-1000' }]
-          }
-        }.to_json,
-        headers: { 'Content-Type' => 'application/json' }
-      )
+    allow(client).to receive(:get)
+      .with('/admin/products/1.json')
+      .and_return(double(status: 200, body: product_response))
+    allow(client).to receive(:get)
+      .with('/admin/variants/55.json')
+      .and_return(double(status: 200, body: variant_response))
 
-    stub_request(:get, "#{base_url}/admin/variants/55.json")
-      .with(basic_auth: [login, password])
-      .to_return(
-        status: 200,
-        body: { variant: { id: 55, sku: 'SKU-1000', price: 12.5, quantity: 3 } }.to_json,
-        headers: { 'Content-Type' => 'application/json' }
-      )
-
-    result = described_class.new.call(
-      product: product,
-      insales_product_id: 10,
-      insales_variant_id: 55,
-      expected_category_id: '123',
-      expected_collection_id: '555'
-    )
+    result = described_class.new(client).call(product: product, insales_product_id: 1, insales_variant_id: 55)
 
     expect(result.ok).to be(true)
   end

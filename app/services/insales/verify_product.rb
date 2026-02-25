@@ -73,10 +73,10 @@ module Insales
       body = response.body['variant'] || response.body
       sku_expected = product.sku.presence || product.code
       price_expected = product.retail_price&.to_f
-      quantity_expected = ProductStock.where(product_id: product.id).sum(:stock).to_f
+      quantity_expected = total_stock(product)
 
       sku_ok = body['sku'].to_s == sku_expected.to_s
-      price_ok = price_expected.nil? || body['price'].to_f == price_expected.to_f
+      price_ok = price_expected.nil? || normalized_price(body['price']) == normalized_price(price_expected)
       quantity_ok = body['quantity'].to_f == quantity_expected.to_f
 
       { ok: sku_ok && price_ok && quantity_ok, skipped_reason: nil }
@@ -107,6 +107,18 @@ module Insales
       parts << 'sku' unless sku_ok
       parts << 'variant' unless stock_verify[:ok]
       parts.join(', ')
+    end
+
+    def total_stock(product)
+      store_names = InsalesSetting.first&.allowed_store_names_list
+      store_names = [MoyskladClient::TEST_STORE_NAME] if store_names.blank?
+      ProductStock.where(product_id: product.id, store_name: store_names).sum(:stock).to_f
+    end
+
+    def normalized_price(value)
+      return nil if value.nil?
+
+      value.to_f.round(2)
     end
   end
 end
