@@ -60,6 +60,7 @@ module Insales
     end
 
     def unpublish(product)
+      export_result = Insales::ExportProducts.call(product_id: product.id, dry_run: false)
       mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
       return Result.new(status: 'skipped', action: 'unpublish', message: 'No InSales mapping') unless mapping
 
@@ -75,6 +76,10 @@ module Insales
 
       unless success?(response)
         return Result.new(status: 'error', action: 'unpublish', message: "HTTP #{response&.status}")
+      end
+
+      if export_result.errors.to_i.positive?
+        return Result.new(status: 'error', action: 'unpublish', message: "Export errors=#{export_result.errors}")
       end
 
       Result.new(status: 'success', action: 'unpublish', message: 'Unpublished (sold_out)')

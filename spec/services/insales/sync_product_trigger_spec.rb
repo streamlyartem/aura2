@@ -49,6 +49,7 @@ RSpec.describe Insales::SyncProductTrigger do
       create(:image, object: product)
       mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 123, insales_variant_id: 456)
 
+      allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
       allow(client).to receive(:put).and_return(double(status: 200, body: {}))
 
       result = service.call(product_id: product.id, reason: 'stock_changed')
@@ -84,6 +85,7 @@ RSpec.describe Insales::SyncProductTrigger do
       create(:image, object: product)
       mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 987, insales_variant_id: 654)
 
+      allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
       allow(client).to receive(:put).and_return(
         double(status: 422, body: { errors: { is_hidden: ['unknown'] } }),
         double(status: 200, body: {})
@@ -140,6 +142,7 @@ RSpec.describe Insales::SyncProductTrigger do
       create(:product_stock, product: product, stock: 0, store_name: 'Тест')
       mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 999, insales_variant_id: 888)
 
+      allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
       allow(client).to receive(:put).and_return(double(status: 500, body: {}))
 
       result = service.call(product_id: product.id, reason: 'stock_changed')
@@ -147,6 +150,24 @@ RSpec.describe Insales::SyncProductTrigger do
       expect(result.status).to eq('error')
       expect(result.action).to eq('unpublish')
       expect(result.message).to eq('HTTP 500')
+      expect(client).to have_received(:put).with(
+        "/admin/products/#{mapping.insales_product_id}.json",
+        { product: { collection_ids: [], is_hidden: true } }
+      )
+    end
+
+    it 'returns error when unpublish export has errors' do
+      create(:product_stock, product: product, stock: 0, store_name: 'Тест')
+      mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 1001, insales_variant_id: 1002)
+
+      allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 2))
+      allow(client).to receive(:put).and_return(double(status: 200, body: {}))
+
+      result = service.call(product_id: product.id, reason: 'stock_changed')
+
+      expect(result.status).to eq('error')
+      expect(result.action).to eq('unpublish')
+      expect(result.message).to include('Export errors=2')
       expect(client).to have_received(:put).with(
         "/admin/products/#{mapping.insales_product_id}.json",
         { product: { collection_ids: [], is_hidden: true } }
