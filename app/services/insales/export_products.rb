@@ -11,6 +11,7 @@ module Insales
     def initialize(client = Insales::InsalesClient.new)
       @client = client
       @product_field_catalog = Insales::ProductFieldCatalog.new(client)
+      @category_resolver = Insales::CategoryResolver.new(client)
     end
 
     def call(product_id:, dry_run:, collection_id:)
@@ -254,7 +255,7 @@ module Insales
     end
 
     def resolved_category_id(product)
-      mapping_id = Insales::CategoryMappingResolver.new.category_id_for(product)
+      mapping_id = category_resolver.category_id_for(product)
       return mapping_id if mapping_id.present?
 
       fallback = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
@@ -262,6 +263,10 @@ module Insales
         Rails.logger.warn("[InSales][Category] Missing mapping for product=#{product.id} path=#{product.path_name}")
       end
       fallback
+    end
+
+    def category_resolver
+      @category_resolver
     end
 
     def response_success?(response)

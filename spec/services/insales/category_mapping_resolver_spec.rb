@@ -3,6 +3,10 @@
 require 'rails_helper'
 
 RSpec.describe Insales::CategoryMappingResolver do
+  before do
+    Rails.cache.clear
+  end
+
   it 'picks the most specific mapping for a product' do
     create(:product, path_name: 'Срезы/Светлый/55', tone: 'Светлый', length: 55, ombre: true, structure: 'Прямой')
 

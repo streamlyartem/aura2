@@ -96,7 +96,7 @@ module Insales
           product: product,
           insales_product_id: mapping.insales_product_id,
           insales_variant_id: mapping.insales_variant_id,
-          expected_category_id: Insales::CategoryMappingResolver.new.category_id_for(product) ||
+          expected_category_id: Insales::CategoryResolver.new(client).category_id_for(product) ||
             InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID'],
           expected_collection_id: InsalesSetting.first&.default_collection_id
         )
