@@ -19,6 +19,21 @@ RSpec.describe Insales::CategoryTreeResolver do
     expect(resolver.category_id_for_path('Срезы/Светлый/55')).to eq(3)
   end
 
+  it 'builds category paths' do
+    categories = [
+      { 'id' => 1, 'title' => 'Срезы', 'parent_id' => nil },
+      { 'id' => 2, 'title' => 'Светлый', 'parent_id' => 1 },
+      { 'id' => 3, 'title' => '55', 'parent_id' => 2 }
+    ]
+    allow(client).to receive(:get).with('/admin/categories.json')
+      .and_return(double(status: 200, body: { 'categories' => categories }))
+
+    resolver = described_class.new(client)
+
+    paths = resolver.category_paths
+    expect(paths).to include({ id: 3, path: ['Срезы', 'Светлый', '55'] })
+  end
+
   it 'returns nil when path not found' do
     allow(client).to receive(:get).with('/admin/categories.json')
       .and_return(double(status: 200, body: { 'categories' => [] }))

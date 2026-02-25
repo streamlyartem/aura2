@@ -20,4 +20,10 @@ RSpec.describe 'Admin InSales Category Mappings', type: :request do
 
     expect(response).to have_http_status(:ok)
   end
+
+  it 'enqueues category sync job' do
+    expect do
+      post '/admin/insales_category_status/sync_categories'
+    end.to have_enqueued_job(Insales::SyncCategoryMappingsJob)
+  end
 end

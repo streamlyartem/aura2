@@ -29,6 +29,21 @@ module Insales
       parent_id
     end
 
+    def category_paths
+      index = category_index
+      return [] if index.empty?
+
+      categories = index.values.flatten
+      by_id = categories.index_by { |category| category['id'] }
+
+      categories.map do |category|
+        {
+          id: category['id'],
+          path: build_path(category, by_id)
+        }
+      end
+    end
+
     private
 
     attr_reader :client
@@ -48,6 +63,17 @@ module Insales
     rescue StandardError => e
       Rails.logger.warn("[InSales][Category] Fetch categories failed: #{e.class} #{e.message}")
       []
+    end
+
+    def build_path(category, by_id)
+      names = []
+      current = category
+      while current
+        names << current['title'].to_s
+        parent_id = current['parent_id']
+        current = parent_id ? by_id[parent_id] : nil
+      end
+      names.reverse
     end
 
     def parse_categories(body)
