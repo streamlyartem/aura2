@@ -15,11 +15,11 @@ module Insales
       autocreate = autocreate_enabled? if autocreate.nil?
 
       manual_mapping = mapping_for_path(normalized)
-      return handle_success(normalized, manual_mapping) if manual_mapping
+      return handle_success(normalized, manual_mapping, manual: true) if manual_mapping
 
       collections = cache.fetch
       collection = resolve_by_tree(collections, normalized, autocreate: autocreate)
-      return handle_success(normalized, collection) if collection.present?
+      return handle_success(normalized, collection, manual: false) if collection.present?
 
       handle_failure(normalized, 'Collection path not found')
     end
@@ -28,7 +28,7 @@ module Insales
 
     attr_reader :client, :index_builder, :cache
 
-    def handle_success(normalized, collection)
+    def handle_success(normalized, collection, manual:)
       upsert_status(
         normalized,
         sync_status: 'ok',
@@ -37,6 +37,7 @@ module Insales
         insales_parent_collection_id: collection['parent_id'],
         last_error: nil
       )
+      ensure_auto_mapping(normalized, collection) unless manual
       collection['id']
     end
 
@@ -113,6 +114,22 @@ module Insales
         'title' => mapping.insales_collection_title,
         'parent_id' => nil
       }
+    end
+
+    def ensure_auto_mapping(path, collection)
+      existing = InsalesCategoryMapping.find_by(aura_key_type: 'path', aura_key: path)
+      return if existing.present?
+
+      InsalesCategoryMapping.create!(
+        aura_key_type: 'path',
+        aura_key: path,
+        insales_category_id: collection['id'],
+        insales_collection_title: collection['title'],
+        comment: 'auto from resolve',
+        is_active: true
+      )
+    rescue StandardError => e
+      Rails.logger.warn("[InSales][Collections] Mapping upsert failed path=#{path} error=#{e.class} #{e.message}")
     end
 
     def extract_collection(body)

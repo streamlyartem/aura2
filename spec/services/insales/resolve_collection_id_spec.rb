@@ -20,6 +20,9 @@ RSpec.describe Insales::ResolveCollectionId do
     status = InsalesCategoryStatus.find_by(aura_path: 'Срезы/Светлый')
     expect(status.sync_status).to eq('ok')
     expect(status.insales_collection_id).to eq(2)
+    mapping = InsalesCategoryMapping.find_by(aura_key_type: 'path', aura_key: 'Срезы/Светлый')
+    expect(mapping).not_to be_nil
+    expect(mapping.insales_category_id).to eq(2)
   end
 
   it 'resolves when collections include root Каталог but path omits it' do
@@ -56,6 +59,7 @@ RSpec.describe Insales::ResolveCollectionId do
 
     expect(id).to eq(99)
     expect(mapping.reload.insales_category_id).to eq(99)
+    expect(InsalesCategoryMapping.where(aura_key_type: 'path', aura_key: 'Срезы/Светлый').count).to eq(1)
   end
 
   it 'creates missing collections when autocreate is enabled' do
