@@ -1,0 +1,47 @@
+# frozen_string_literal: true
+
+require 'rails_helper'
+
+RSpec.describe Insales::ResolveCollectionId do
+  let(:client) { instance_double(Insales::InsalesClient) }
+
+  before do
+    allow(Rails.cache).to receive(:read).and_call_original
+    allow(Rails.cache).to receive(:write).and_call_original
+    allow(Rails.cache).to receive(:fetch).and_call_original
+  end
+
+  it 'resolves existing collection without autocreate' do
+    collections = [
+      { 'id' => 1, 'title' => 'Срезы', 'parent_id' => nil },
+      { 'id' => 2, 'title' => 'Светлый', 'parent_id' => 1 }
+    ]
+    allow(client).to receive(:get_collections).and_return(double(status: 200, body: collections))
+
+    resolver = described_class.new(client)
+    id = resolver.resolve('Срезы/Светлый', autocreate: false)
+
+    expect(id).to eq(2)
+    status = InsalesCategoryStatus.find_by(aura_path: 'Срезы/Светлый')
+    expect(status.sync_status).to eq('ok')
+    expect(status.insales_collection_id).to eq(2)
+  end
+
+  it 'creates missing collections when autocreate is enabled' do
+    allow(client).to receive(:get_collections).and_return(double(status: 200, body: []))
+    allow(client).to receive(:create_collection)
+      .with(title: 'Срезы', parent_id: nil)
+      .and_return(double(status: 201, body: { 'collection' => { 'id' => 10, 'title' => 'Срезы', 'parent_id' => nil } }))
+    allow(client).to receive(:create_collection)
+      .with(title: 'Светлый', parent_id: 10)
+      .and_return(double(status: 201, body: { 'collection' => { 'id' => 11, 'title' => 'Светлый', 'parent_id' => 10 } }))
+
+    resolver = described_class.new(client)
+    id = resolver.resolve('Срезы/Светлый', autocreate: true)
+
+    expect(id).to eq(11)
+    status = InsalesCategoryStatus.find_by(aura_path: 'Срезы/Светлый')
+    expect(status.sync_status).to eq('ok')
+    expect(status.insales_collection_id).to eq(11)
+  end
+end

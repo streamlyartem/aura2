@@ -107,7 +107,7 @@ module Insales
           return
         end
 
-        assign_to_collection(mapping.insales_product_id, collection_id)
+        sync_collection_assignment(product, mapping.insales_product_id)
         result.updated += 1
       else
         create_product(product, payload, collection_id, product_field_values, result)
@@ -249,7 +249,7 @@ module Insales
             insales_product_id: insales_id,
             insales_variant_id: variant_id
           )
-          assign_to_collection(insales_id, collection_id)
+          sync_collection_assignment(product, insales_id)
           result.created += 1
         else
           log_response('create_product_missing_id', product, create_response)
@@ -263,6 +263,20 @@ module Insales
 
     def collection_assignment_enabled?
       ENV['INSALES_ASSIGN_COLLECTIONS'].to_s == '1'
+    end
+
+    def sync_collection_assignment(product, insales_product_id)
+      return unless collection_assignment_enabled?
+
+      resolver = Insales::ResolveCollectionId.new(client)
+      collection_id = resolver.resolve(product.path_name)
+      return if collection_id.blank?
+
+      response = client.create_collect(product_id: insales_product_id, collection_id: collection_id)
+      return if response_success?(response)
+      return if [409, 422].include?(response&.status)
+
+      Rails.logger.warn("[InSales][Collect] create failed product=#{product.id} collection_id=#{collection_id} status=#{response&.status}")
     end
 
     def product_fields_enabled?

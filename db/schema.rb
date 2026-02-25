@@ -89,6 +89,19 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_221000) do
     t.index ["product_type", "tone", "length", "ombre", "structure"], name: "index_insales_category_mappings_on_key", unique: true
   end
 
+  create_table "insales_category_statuses", force: :cascade do |t|
+    t.string "aura_path", null: false
+    t.bigint "insales_collection_id"
+    t.string "insales_collection_title"
+    t.bigint "insales_parent_collection_id"
+    t.string "sync_status", default: "pending", null: false
+    t.text "last_error"
+    t.datetime "synced_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["aura_path"], name: "index_insales_category_statuses_on_aura_path", unique: true
+  end
+
   create_table "insales_category_sync_runs", force: :cascade do |t|
     t.string "status", default: "running", null: false
     t.integer "processed"
