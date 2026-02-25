@@ -46,12 +46,28 @@ module Insales
       get('/admin/collections.json')
     end
 
+    def collections_all
+      get_collections
+    end
+
     def create_collection(title:, parent_id: nil)
       post('/admin/collections.json', { collection: { title: title, parent_id: parent_id } })
     end
 
+    def collection_create(title:, parent_id: nil)
+      create_collection(title: title, parent_id: parent_id)
+    end
+
     def create_collect(product_id:, collection_id:)
       post("/admin/collections/#{collection_id}/products.json", { product_id: product_id })
+    end
+
+    def collect_create(product_id:, collection_id:)
+      create_collect(product_id: product_id, collection_id: collection_id)
+    end
+
+    def collects_by_product(product_id:)
+      get('/admin/collects.json', { product_id: product_id })
     end
 
     def post_multipart(path, fields:, file_field_name:, filename:, content_type:, file_bytes:)

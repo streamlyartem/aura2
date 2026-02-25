@@ -272,11 +272,8 @@ module Insales
       collection_id = resolver.resolve(product.path_name)
       return if collection_id.blank?
 
-      response = client.create_collect(product_id: insales_product_id, collection_id: collection_id)
-      return if response_success?(response)
-      return if [409, 422].include?(response&.status)
-
-      Rails.logger.warn("[InSales][Collect] create failed product=#{product.id} collection_id=#{collection_id} status=#{response&.status}")
+      attacher = Insales::AttachProductToCollection.new(client)
+      attacher.ensure_attached(product_id: insales_product_id, collection_id: collection_id)
     end
 
     def product_fields_enabled?

@@ -2,12 +2,10 @@
 
 module Insales
   class ResolveCollectionId
-    CACHE_KEY = 'insales:collections:index'.freeze
-    DEFAULT_CACHE_TTL = 10.minutes
-
     def initialize(client = Insales::InsalesClient.new)
       @client = client
       @index_builder = Insales::CollectionsIndex.new
+      @cache = Insales::CollectionsCache.new(client)
     end
 
     def resolve(full_path, autocreate: nil)
@@ -19,91 +17,16 @@ module Insales
       manual_mapping = mapping_for_path(normalized)
       return handle_success(normalized, manual_mapping) if manual_mapping
 
-      index = load_index
-      collection = find_in_index(index, normalized)
+      collections = cache.fetch
+      collection = resolve_by_tree(collections, normalized, autocreate: autocreate)
       return handle_success(normalized, collection) if collection.present?
 
-      return handle_failure(normalized, 'Collection path not found') unless autocreate
-
-      leaf = create_missing_collections(normalized, index)
-      return handle_failure(normalized, 'Failed to create collection path') if leaf.blank?
-
-      update_cache(index)
-      handle_success(normalized, leaf)
+      handle_failure(normalized, 'Collection path not found')
     end
 
     private
 
-    attr_reader :client, :index_builder
-
-    def load_index
-      Rails.cache.fetch(CACHE_KEY, expires_in: cache_ttl) do
-        collections = fetch_collections
-        index_builder.build_index(collections)
-      end
-    end
-
-    def update_cache(index)
-      Rails.cache.write(CACHE_KEY, index, expires_in: cache_ttl)
-    end
-
-    def fetch_collections
-      response = client.get_collections
-      return parse_collections(response&.body) if response_success?(response)
-
-      Rails.logger.warn("[InSales][Collections] Fetch failed status=#{response&.status}")
-      []
-    rescue StandardError => e
-      Rails.logger.warn("[InSales][Collections] Fetch failed: #{e.class} #{e.message}")
-      []
-    end
-
-    def create_missing_collections(normalized, index)
-      parts = normalized.split('/').map { |segment| index_builder.normalize_segment(segment) }.reject(&:blank?)
-      return nil if parts.empty?
-
-      root = root_collection(index)
-      parent_id = nil
-      if root && !parts.first.to_s.casecmp(index_builder.normalize_segment(root['title'])).zero?
-        parent_id = root['id']
-      end
-      parts.each do |segment|
-        candidates = index.children_by_parent_id[parent_id] || []
-        existing = candidates.find { |collection| index_builder.normalize_segment(collection['title']).casecmp(segment).zero? }
-        if existing
-          parent_id = existing['id']
-          next
-        end
-
-        response = client.create_collection(title: segment, parent_id: parent_id)
-        unless response_success?(response)
-          Rails.logger.warn("[InSales][Collections] Create failed title=#{segment} parent_id=#{parent_id} status=#{response&.status}")
-          return nil
-        end
-
-        created = extract_collection(response.body)
-        return nil unless created
-
-        index.by_id[created['id']] = created
-        index.children_by_parent_id[parent_id] ||= []
-        index.children_by_parent_id[parent_id] << created
-        index.by_full_path[index_builder.normalize_path(build_path_from(created, index.by_id))] = created
-        parent_id = created['id']
-      end
-
-      index.by_id[parent_id]
-    end
-
-    def build_path_from(collection, by_id)
-      names = []
-      current = collection
-      while current
-        names << index_builder.normalize_segment(current['title'])
-        parent_id = current['parent_id']
-        current = parent_id ? by_id[parent_id] : nil
-      end
-      names.reverse.join('/')
-    end
+    attr_reader :client, :index_builder, :cache
 
     def handle_success(normalized, collection)
       upsert_status(
@@ -122,28 +45,46 @@ module Insales
       nil
     end
 
-    def find_in_index(index, normalized)
-      direct = index.by_full_path[normalized]
-      return direct if direct.present?
+    def resolve_by_tree(collections, normalized, autocreate:)
+      parts = normalized.split('/').map { |segment| index_builder.normalize_segment(segment) }.reject(&:blank?)
+      return nil if parts.empty?
 
-      root = root_collection(index)
-      if root
-        root_name = index_builder.normalize_segment(root['title'])
-        with_root = index.by_full_path["#{root_name}/#{normalized}"]
-        return with_root if with_root.present?
+      children_by_parent_id = collections.group_by { |collection| collection['parent_id'] }
+      root = root_collection(children_by_parent_id)
+      parent_id = root ? root['id'] : nil
 
-        if normalized.start_with?("#{root_name}/")
-          stripped = normalized.sub(/^#{Regexp.escape(root_name)}\//, '')
-          stripped_match = index.by_full_path[stripped]
-          return stripped_match if stripped_match.present?
+      parts.each do |segment|
+        candidates = children_by_parent_id[parent_id] || []
+        existing = candidates.find { |collection| index_builder.normalize_segment(collection['title']).casecmp(segment).zero? }
+        if existing
+          parent_id = existing['id']
+          next
         end
+
+        return nil unless autocreate
+
+        response = client.collection_create(title: segment, parent_id: parent_id)
+        unless response_success?(response)
+          Rails.logger.warn("[InSales][Collections] Create failed title=#{segment} parent_id=#{parent_id} status=#{response&.status}")
+          return nil
+        end
+
+        created = extract_collection(response.body)
+        return nil unless created
+
+        collections << created
+        children_by_parent_id[parent_id] ||= []
+        children_by_parent_id[parent_id] << created
+        parent_id = created['id']
       end
 
-      nil
+      collections.find { |collection| collection['id'] == parent_id }
+    ensure
+      cache.invalidate if autocreate
     end
 
-    def root_collection(index)
-      roots = index.children_by_parent_id[nil] || []
+    def root_collection(children_by_parent_id)
+      roots = children_by_parent_id[nil] || []
       return nil if roots.empty?
       return roots.first if roots.length == 1
 
@@ -181,28 +122,12 @@ module Insales
       nil
     end
 
-    def parse_collections(body)
-      return body if body.is_a?(Array)
-      return body['collections'] if body.is_a?(Hash) && body['collections'].is_a?(Array)
-      return [body['collection']] if body.is_a?(Hash) && body['collection'].is_a?(Hash)
-      return [body] if body.is_a?(Hash)
-
-      []
-    end
-
     def response_success?(response)
       response && (200..299).cover?(response.status)
     end
 
     def autocreate_enabled?
       ENV.fetch('INS_SALES_AUTOCREATE_COLLECTIONS', 'false') == 'true'
-    end
-
-    def cache_ttl
-      ttl = ENV.fetch('INS_SALES_COLLECTIONS_CACHE_TTL', nil)
-      return DEFAULT_CACHE_TTL if ttl.blank?
-
-      ttl.to_i.seconds
     end
   end
 end

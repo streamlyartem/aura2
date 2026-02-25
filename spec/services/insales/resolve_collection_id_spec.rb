@@ -5,19 +5,13 @@ require 'rails_helper'
 RSpec.describe Insales::ResolveCollectionId do
   let(:client) { instance_double(Insales::InsalesClient) }
 
-  before do
-    allow(Rails.cache).to receive(:read).and_call_original
-    allow(Rails.cache).to receive(:write).and_call_original
-    allow(Rails.cache).to receive(:fetch).and_call_original
-  end
-
   it 'resolves existing collection without autocreate' do
     collections = [
       { 'id' => 10, 'title' => 'Каталог', 'parent_id' => nil },
       { 'id' => 1, 'title' => 'Срезы', 'parent_id' => 10 },
       { 'id' => 2, 'title' => 'Светлый', 'parent_id' => 1 }
     ]
-    allow(client).to receive(:get_collections).and_return(double(status: 200, body: collections))
+    allow(client).to receive(:collections_all).and_return(double(status: 200, body: collections))
 
     resolver = described_class.new(client)
     id = resolver.resolve('Срезы/Светлый', autocreate: false)
@@ -35,7 +29,7 @@ RSpec.describe Insales::ResolveCollectionId do
       { 'id' => 12, 'title' => 'Светлый', 'parent_id' => 11 },
       { 'id' => 13, 'title' => '55', 'parent_id' => 12 }
     ]
-    allow(client).to receive(:get_collections).and_return(double(status: 200, body: collections))
+    allow(client).to receive(:collections_all).and_return(double(status: 200, body: collections))
 
     resolver = described_class.new(client)
     id = resolver.resolve('Срезы/Светлый/55', autocreate: false)
@@ -55,7 +49,7 @@ RSpec.describe Insales::ResolveCollectionId do
       is_active: true
     )
 
-    allow(client).to receive(:get_collections).and_return(double(status: 200, body: []))
+    allow(client).to receive(:collections_all).and_return(double(status: 200, body: []))
 
     resolver = described_class.new(client)
     id = resolver.resolve('Срезы/Светлый', autocreate: false)
@@ -65,11 +59,11 @@ RSpec.describe Insales::ResolveCollectionId do
   end
 
   it 'creates missing collections when autocreate is enabled' do
-    allow(client).to receive(:get_collections).and_return(double(status: 200, body: []))
-    allow(client).to receive(:create_collection)
+    allow(client).to receive(:collections_all).and_return(double(status: 200, body: []))
+    allow(client).to receive(:collection_create)
       .with(title: 'Срезы', parent_id: nil)
       .and_return(double(status: 201, body: { 'collection' => { 'id' => 10, 'title' => 'Срезы', 'parent_id' => nil } }))
-    allow(client).to receive(:create_collection)
+    allow(client).to receive(:collection_create)
       .with(title: 'Светлый', parent_id: 10)
       .and_return(double(status: 201, body: { 'collection' => { 'id' => 11, 'title' => 'Светлый', 'parent_id' => 10 } }))
 
