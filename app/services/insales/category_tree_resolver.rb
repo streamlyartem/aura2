@@ -2,7 +2,7 @@
 
 module Insales
   class CategoryTreeResolver
-    CACHE_KEY = 'insales:categories:index'
+    CACHE_KEY = 'insales:collections:index'
     CACHE_TTL = 10.minutes
 
     def initialize(client = Insales::InsalesClient.new)
@@ -18,8 +18,8 @@ module Insales
 
       parent_id = nil
       parts.each do |name|
-        candidate = (index[parent_id] || []).find do |category|
-          category['title'].to_s.casecmp(name).zero?
+        candidate = (index[parent_id] || []).find do |collection|
+          collection['title'].to_s.casecmp(name).zero?
         end
         return nil unless candidate
 
@@ -33,13 +33,13 @@ module Insales
       index = category_index
       return [] if index.empty?
 
-      categories = index.values.flatten
-      by_id = categories.index_by { |category| category['id'] }
+      collections = index.values.flatten
+      by_id = collections.index_by { |collection| collection['id'] }
 
-      categories.map do |category|
+      collections.map do |collection|
         {
-          id: category['id'],
-          path: build_path(category, by_id)
+          id: collection['id'],
+          path: build_path(collection, by_id)
         }
       end
     end
@@ -50,24 +50,24 @@ module Insales
 
     def category_index
       Rails.cache.fetch(CACHE_KEY, expires_in: CACHE_TTL) do
-        categories = fetch_categories
-        categories.group_by { |category| category['parent_id'] }
+        collections = fetch_collections
+        collections.group_by { |collection| collection['parent_id'] }
       end
     end
 
-    def fetch_categories
-      response = client.get('/admin/categories.json')
+    def fetch_collections
+      response = client.get('/admin/collections.json')
       return [] unless response_success?(response)
 
-      parse_categories(response.body)
+      parse_collections(response.body)
     rescue StandardError => e
-      Rails.logger.warn("[InSales][Category] Fetch categories failed: #{e.class} #{e.message}")
+      Rails.logger.warn("[InSales][Collection] Fetch collections failed: #{e.class} #{e.message}")
       []
     end
 
-    def build_path(category, by_id)
+    def build_path(collection, by_id)
       names = []
-      current = category
+      current = collection
       while current
         names << current['title'].to_s
         parent_id = current['parent_id']
@@ -76,10 +76,10 @@ module Insales
       names.reverse
     end
 
-    def parse_categories(body)
+    def parse_collections(body)
       return body if body.is_a?(Array)
-      return body['categories'] if body.is_a?(Hash) && body['categories'].is_a?(Array)
-      return [body['category']] if body.is_a?(Hash) && body['category'].is_a?(Hash)
+      return body['collections'] if body.is_a?(Hash) && body['collections'].is_a?(Array)
+      return [body['collection']] if body.is_a?(Hash) && body['collection'].is_a?(Hash)
       return [body] if body.is_a?(Hash)
 
       []

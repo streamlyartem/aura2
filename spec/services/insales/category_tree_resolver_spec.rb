@@ -11,8 +11,8 @@ RSpec.describe Insales::CategoryTreeResolver do
       { 'id' => 2, 'title' => 'Светлый', 'parent_id' => 1 },
       { 'id' => 3, 'title' => '55', 'parent_id' => 2 }
     ]
-    allow(client).to receive(:get).with('/admin/categories.json')
-      .and_return(double(status: 200, body: { 'categories' => categories }))
+    allow(client).to receive(:get).with('/admin/collections.json')
+      .and_return(double(status: 200, body: { 'collections' => categories }))
 
     resolver = described_class.new(client)
 
@@ -25,8 +25,8 @@ RSpec.describe Insales::CategoryTreeResolver do
       { 'id' => 2, 'title' => 'Светлый', 'parent_id' => 1 },
       { 'id' => 3, 'title' => '55', 'parent_id' => 2 }
     ]
-    allow(client).to receive(:get).with('/admin/categories.json')
-      .and_return(double(status: 200, body: { 'categories' => categories }))
+    allow(client).to receive(:get).with('/admin/collections.json')
+      .and_return(double(status: 200, body: { 'collections' => categories }))
 
     resolver = described_class.new(client)
 
@@ -35,8 +35,8 @@ RSpec.describe Insales::CategoryTreeResolver do
   end
 
   it 'returns nil when path not found' do
-    allow(client).to receive(:get).with('/admin/categories.json')
-      .and_return(double(status: 200, body: { 'categories' => [] }))
+    allow(client).to receive(:get).with('/admin/collections.json')
+      .and_return(double(status: 200, body: { 'collections' => [] }))
 
     resolver = described_class.new(client)
 

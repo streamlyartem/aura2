@@ -146,8 +146,9 @@ module Insales
       price = product.retail_price&.to_f
       quantity = total_stock(product)
 
-      category_id = resolved_category_id(product)
-      collection_ids = include_collection ? collection_ids_array(collection_id) : nil
+      collection_id_from_mapping = resolved_collection_id(product)
+      category_id = default_category_id
+      collection_ids = include_collection ? collection_ids_array(collection_id, collection_id_from_mapping) : nil
 
       {
         product: {
@@ -168,8 +169,9 @@ module Insales
     end
 
     def update_payload(product, include_collection: true, collection_id: nil, product_field_values: [])
-      category_id = resolved_category_id(product)
-      collection_ids = include_collection ? collection_ids_array(collection_id) : nil
+      collection_id_from_mapping = resolved_collection_id(product)
+      category_id = default_category_id
+      collection_ids = include_collection ? collection_ids_array(collection_id, collection_id_from_mapping) : nil
 
       {
         product: {
@@ -182,9 +184,13 @@ module Insales
       }
     end
 
-    def collection_ids_array(override)
+    def collection_ids_array(override, mapped = nil)
+      ids = []
+      ids << mapped.to_i if mapped.present?
       id = override.presence || InsalesSetting.first&.default_collection_id
-      id.present? ? [id.to_i] : nil
+      ids << id.to_i if id.present?
+      ids.uniq!
+      ids.presence
     end
 
     def variant_payload(product)
@@ -234,12 +240,14 @@ module Insales
     end
 
     def assign_to_collection(insales_product_id, override)
-      id = override.presence || InsalesSetting.first&.default_collection_id
-      return if id.blank?
+      ids = collection_ids_array(override)
+      return if ids.blank?
       return unless collection_assignment_enabled?
 
-      Rails.logger.info("[InSales] Assign product to collection #{id}")
-      client.post("/admin/collections/#{id}/products.json", { product_id: insales_product_id })
+      ids.each do |id|
+        Rails.logger.info("[InSales] Assign product to collection #{id}")
+        client.post("/admin/collections/#{id}/products.json", { product_id: insales_product_id })
+      end
     end
 
     def collection_assignment_enabled?
@@ -254,13 +262,17 @@ module Insales
       ProductStock.where(product_id: product.id).sum(:stock).to_f
     end
 
-    def resolved_category_id(product)
+    def resolved_collection_id(product)
       mapping_id = category_resolver.category_id_for(product)
       return mapping_id if mapping_id.present?
 
+      nil
+    end
+
+    def default_category_id
       fallback = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
       if fallback.blank?
-        Rails.logger.warn("[InSales][Category] Missing mapping for product=#{product.id} path=#{product.path_name}")
+        Rails.logger.warn("[InSales][Category] Missing default category_id for export")
       end
       fallback
     end

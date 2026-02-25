@@ -12,8 +12,8 @@ RSpec.describe Insales::CategoryMappingSync do
       { 'id' => 3, 'title' => '55', 'parent_id' => 2 },
       { 'id' => 4, 'title' => 'Ленты', 'parent_id' => nil }
     ]
-    allow(client).to receive(:get).with('/admin/categories.json')
-      .and_return(double(status: 200, body: { 'categories' => categories }))
+    allow(client).to receive(:get).with('/admin/collections.json')
+      .and_return(double(status: 200, body: { 'collections' => categories }))
 
     result = described_class.new(client).call
 
