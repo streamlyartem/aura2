@@ -12,13 +12,14 @@ module Insales
       product = Product.includes(:images).find_by(id: product_id)
       return Result.new(status: 'skipped', action: 'missing_product', message: 'Product not found') unless product
 
-      stock_sum = ProductStock.where(product_id: product.id).sum(:stock).to_f
-      free_stock_sum = ProductStock.where(product_id: product.id).sum(:free_stock).to_f
+      store_name = MoyskladClient::TEST_STORE_NAME
+      stock_sum = ProductStock.where(product_id: product.id, store_name: store_name).sum(:stock).to_f
+      free_stock_sum = ProductStock.where(product_id: product.id, store_name: store_name).sum(:free_stock).to_f
       in_stock = free_stock_sum.positive? || stock_sum.positive?
       has_media = product.images.any? { |image| image.file.attached? }
 
       Rails.logger.info(
-        "[InSalesSync][Trigger] product=#{product.id} reason=#{reason} " \
+        "[InSalesSync][Trigger] product=#{product.id} reason=#{reason} store=#{store_name} " \
         "in_stock=#{in_stock} stock_sum=#{stock_sum} free_stock_sum=#{free_stock_sum} has_media=#{has_media}"
       )
 

@@ -123,6 +123,23 @@ RSpec.describe Insales::SyncProductTrigger do
       )
     end
 
+    it 'ignores stock from other stores' do
+      create(:product_stock, product: product, stock: 5, store_name: 'Другой склад')
+      mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 321, insales_variant_id: 456)
+
+      allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
+      allow(client).to receive(:put).and_return(double(status: 200, body: {}))
+
+      result = service.call(product_id: product.id, reason: 'stock_changed')
+
+      expect(result.status).to eq('success')
+      expect(result.action).to eq('unpublish')
+      expect(client).to have_received(:put).with(
+        "/admin/products/#{mapping.insales_product_id}.json",
+        { product: { collection_ids: [], is_hidden: true } }
+      )
+    end
+
     it 'returns error when export has errors' do
       create(:product_stock, product: product, stock: 1, store_name: 'Тест')
       InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 222, insales_variant_id: 333)
