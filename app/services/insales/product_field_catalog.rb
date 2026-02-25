@@ -72,7 +72,7 @@ module Insales
       @field_ids_by_key = nil
     end
 
-    def product_field_values_attributes(product)
+    def product_field_values_attributes(product, existing_value_ids_by_field_id = {})
       field_ids = ensure_field_ids!
 
       FIELD_DEFINITIONS.each_with_object([]) do |definition, result|
@@ -82,10 +82,13 @@ module Insales
         field_id = field_ids[definition.key]
         next if field_id.blank?
 
-        result << {
+        attribute = {
           product_field_id: field_id,
           value: value
         }
+        existing_id = existing_value_ids_by_field_id[field_id.to_s]
+        attribute[:id] = existing_id if existing_id.present?
+        result << attribute
       end
     rescue StandardError => e
       raise if Rails.env.test?

@@ -50,7 +50,7 @@ RSpec.describe Insales::ExportProducts do
 
       allow(Insales::ProductFieldCatalog).to receive(:new).with(client).and_return(catalog)
       allow(catalog).to receive(:product_field_values_attributes).and_return([
-        { product_field_id: 42, value: 'X' }
+        { product_field_id: 42, value: 'X', id: 77 }
       ])
     end
 
@@ -72,8 +72,12 @@ RSpec.describe Insales::ExportProducts do
 
       allow(client).to receive(:put).with(
         "/admin/products/#{mapping.insales_product_id}.json",
-        hash_including(product: hash_including(product_field_values_attributes: [{ product_field_id: 42, value: 'X' }]))
+        hash_including(product: hash_including(product_field_values_attributes: [{ product_field_id: 42, value: 'X', id: 77 }]))
       ).and_return(double(status: 200, body: {}))
+
+      allow(client).to receive(:get).with(
+        "/admin/products/#{mapping.insales_product_id}.json"
+      ).and_return(double(status: 200, body: { 'product' => { 'product_field_values' => [{ 'id' => 77, 'product_field_id' => 42 }] } }))
 
       allow(client).to receive(:put).with(
         "/admin/variants/#{mapping.insales_variant_id}.json",
@@ -89,7 +93,7 @@ RSpec.describe Insales::ExportProducts do
 
       expect(client).to have_received(:put).with(
         "/admin/products/#{mapping.insales_product_id}.json",
-        hash_including(product: hash_including(product_field_values_attributes: [{ product_field_id: 42, value: 'X' }]))
+        hash_including(product: hash_including(product_field_values_attributes: [{ product_field_id: 42, value: 'X', id: 77 }]))
       )
       expect(client).to have_received(:put).with(
         "/admin/variants/#{mapping.insales_variant_id}.json",

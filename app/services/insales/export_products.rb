@@ -36,10 +36,19 @@ module Insales
 
     def export_product(product, dry_run, result, collection_id)
       mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
+      existing_field_value_ids = if dry_run || !product_fields_enabled? || mapping.blank?
+                                   {}
+                                 else
+                                   fetch_existing_field_value_ids(mapping.insales_product_id)
+                                 end
+
       product_field_values = if dry_run || !product_fields_enabled?
                                []
+                             elsif existing_field_value_ids.nil?
+                               Rails.logger.warn("[InSales][Fields] Skip fields for product=#{product.id} insales_product_id=#{mapping&.insales_product_id} because existing values fetch failed")
+                               []
                              else
-                               product_field_catalog.product_field_values_attributes(product)
+                               product_field_catalog.product_field_values_attributes(product, existing_field_value_ids)
                              end
       if product_fields_enabled? && !dry_run && product_field_values.empty?
         Rails.logger.warn("[InSales][Fields] No fields prepared for product=#{product.id} sku=#{product.sku}")
@@ -198,6 +207,31 @@ module Insales
       extract_variant_id(response.body)
     end
 
+    def fetch_existing_field_value_ids(insales_product_id)
+      response = client.get("/admin/products/#{insales_product_id}.json")
+      unless response_success?(response)
+        Rails.logger.warn(
+          "[InSales][Fields] GET /admin/products/#{insales_product_id}.json failed " \
+          "status=#{response&.status} body=#{truncate_body(response&.body)}"
+        )
+        return nil
+      end
+
+      values = extract_product_field_values(response.body)
+      values.each_with_object({}) do |value, map|
+        field_id = value['product_field_id'] || value.dig('product_field', 'id')
+        value_id = value['id']
+        next if field_id.blank? || value_id.blank?
+
+        map[field_id.to_s] = value_id
+      end
+    rescue StandardError => e
+      Rails.logger.warn(
+        "[InSales][Fields] Extract existing values failed insales_product_id=#{insales_product_id}: #{e.class} #{e.message}"
+      )
+      nil
+    end
+
     def assign_to_collection(insales_product_id, override)
       id = override.presence || InsalesSetting.first&.default_collection_id
       return if id.blank?
@@ -245,6 +279,14 @@ module Insales
 
       variants = body['variants'] || body.dig('product', 'variants')
       variants&.first&.[]('id')
+    end
+
+    def extract_product_field_values(body)
+      return body if body.is_a?(Array)
+      return body['product_field_values'] if body.is_a?(Hash) && body['product_field_values'].is_a?(Array)
+      return body.dig('product', 'product_field_values') if body.is_a?(Hash) && body.dig('product', 'product_field_values').is_a?(Array)
+
+      []
     end
 
     def collection_ids_rejected?(response)
