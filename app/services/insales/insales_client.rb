@@ -59,6 +59,13 @@ module Insales
     end
 
     def create_collect(product_id:, collection_id:)
+      response = post(
+        '/admin/collects.json',
+        { collect: { product_id: product_id, collection_id: collection_id } }
+      )
+      return response unless response&.status.to_i == 404
+
+      # Backward compatibility for older InSales API behavior on some shops.
       post("/admin/collections/#{collection_id}/products.json", { product_id: product_id })
     end
 
