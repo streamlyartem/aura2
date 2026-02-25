@@ -39,7 +39,7 @@ ActiveAdmin.register InsalesSetting do
     f.semantic_errors(*f.object.errors.attribute_names)
 
     store_names = begin
-      MoyskladClient.new.stores_list.map { |store| store['name'].to_s }
+      MoyskladClient.new.store_names
     rescue StandardError => e
       Rails.logger.warn "[InSalesSettings] Fetch Moysklad stores failed: #{e.class} - #{e.message}"
       []
