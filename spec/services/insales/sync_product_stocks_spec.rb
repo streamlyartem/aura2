@@ -27,7 +27,11 @@ RSpec.describe Insales::SyncProductStocks do
 
   it 'syncs one product and verifies' do
     product = create(:product, name: 'Sync Product', sku: 'SKU-3000', retail_price: 19.0)
+    zero_product = create(:product, name: 'Zero Stock', sku: 'SKU-3001', retail_price: 10.0)
+    negative_product = create(:product, name: 'Negative Stock', sku: 'SKU-3002', retail_price: 10.0)
     create(:product_stock, product: product, stock: 2, store_name: 'Тест')
+    create(:product_stock, product: zero_product, stock: 0, store_name: 'Тест')
+    create(:product_stock, product: negative_product, stock: -1, store_name: 'Тест')
     InsalesProductMapping.create!(
       aura_product_id: product.id,
       insales_product_id: 10,
@@ -86,6 +90,17 @@ RSpec.describe Insales::SyncProductStocks do
           verified_storefront: true
         )
       )
+
+    allow_any_instance_of(Insales::VerifyProduct).to receive(:call)
+      .and_return(double(ok: true, message: nil))
+
+    expect(Insales::ExportProducts).to receive(:call)
+      .with(product_id: product.id, dry_run: false)
+      .and_return(Insales::ExportProducts::Result.new(processed: 1, created: 0, updated: 1, errors: 0))
+    expect(Insales::ExportProducts).not_to receive(:call)
+      .with(product_id: zero_product.id, dry_run: false)
+    expect(Insales::ExportProducts).not_to receive(:call)
+      .with(product_id: negative_product.id, dry_run: false)
 
     result = described_class.new.call(store_name: 'Тест')
 

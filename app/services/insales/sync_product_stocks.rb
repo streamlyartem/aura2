@@ -42,6 +42,7 @@ module Insales
 
       Rails.logger.info("[InSalesSync] Start sync for store '#{store_name}'")
       stock_by_product = ProductStock.where(store_name: store_name).group(:product_id).sum(:stock)
+      stock_by_product = stock_by_product.select { |_product_id, stock| stock.to_f > 0 }
       product_ids = stock_by_product.keys
       Rails.logger.info("[InSalesSync] Products in stock: #{product_ids.size}")
 
