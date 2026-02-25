@@ -145,7 +145,7 @@ module Insales
       price = product.retail_price&.to_f
       quantity = total_stock(product)
 
-      category_id = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
+      category_id = resolved_category_id(product)
       collection_ids = include_collection ? collection_ids_array(collection_id) : nil
 
       {
@@ -167,7 +167,7 @@ module Insales
     end
 
     def update_payload(product, include_collection: true, collection_id: nil, product_field_values: [])
-      category_id = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
+      category_id = resolved_category_id(product)
       collection_ids = include_collection ? collection_ids_array(collection_id) : nil
 
       {
@@ -251,6 +251,17 @@ module Insales
 
     def total_stock(product)
       ProductStock.where(product_id: product.id).sum(:stock).to_f
+    end
+
+    def resolved_category_id(product)
+      mapping_id = Insales::CategoryMappingResolver.new.category_id_for(product)
+      return mapping_id if mapping_id.present?
+
+      fallback = InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID']
+      if fallback.blank?
+        Rails.logger.warn("[InSales][Category] Missing mapping for product=#{product.id} path=#{product.path_name}")
+      end
+      fallback
     end
 
     def response_success?(response)

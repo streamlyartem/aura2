@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_25_161000) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_25_163500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -75,6 +75,18 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_161000) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["object_type", "object_id"], name: "index_images_on_object"
+  end
+
+  create_table "insales_category_mappings", force: :cascade do |t|
+    t.string "product_type", null: false
+    t.string "tone"
+    t.integer "length"
+    t.boolean "ombre"
+    t.string "structure"
+    t.bigint "insales_category_id", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["product_type", "tone", "length", "ombre", "structure"], name: "index_insales_category_mappings_on_key", unique: true
   end
 
   create_table "insales_image_mappings", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
