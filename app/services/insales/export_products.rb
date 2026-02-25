@@ -69,6 +69,7 @@ module Insales
         end
 
         unless response_success?(update_response)
+          log_response('update_product_failed', product, update_response)
           result.errors += 1
           return
         end
@@ -79,10 +80,12 @@ module Insales
           if response_success?(variant_response)
             mapping.update!(insales_variant_id: variant_id)
           else
+            log_response('update_variant_failed', product, variant_response)
             result.errors += 1
             return
           end
         else
+          Rails.logger.warn("[InSales] Variant id missing for product=#{product.id} insales_product_id=#{mapping.insales_product_id}")
           result.errors += 1
           return
         end
@@ -115,9 +118,11 @@ module Insales
             assign_to_collection(insales_id, collection_id)
             result.created += 1
           else
+            log_response('create_product_missing_id', product, create_response)
             result.errors += 1
           end
         else
+          log_response('create_product_failed', product, create_response)
           result.errors += 1
         end
       end
@@ -216,6 +221,17 @@ module Insales
 
     def response_success?(response)
       response && (200..299).cover?(response.status)
+    end
+
+    def log_response(label, product, response)
+      Rails.logger.warn(
+        "[InSales] #{label} product=#{product.id} " \
+        "status=#{response&.status} body=#{truncate_body(response&.body)}"
+      )
+    end
+
+    def truncate_body(body)
+      body.to_s.byteslice(0, 300)
     end
 
     def extract_product_id(body)
