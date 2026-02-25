@@ -175,6 +175,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_222408) do
     t.jsonb "allowed_store_names", default: [], null: false
     t.jsonb "cached_store_names", default: [], null: false
     t.datetime "cached_store_names_synced_at"
+    t.boolean "skip_products_without_sku", default: false, null: false
+    t.boolean "skip_products_with_nonpositive_stock", default: false, null: false
   end
 
   create_table "insales_stock_sync_states", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

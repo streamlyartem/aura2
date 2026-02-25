@@ -8,6 +8,10 @@ module Insales
       new.call(product_id: product_id, dry_run: dry_run, collection_id: collection_id)
     end
 
+    def self.skip_reason_for(product)
+      new.skip_reason_for(product)
+    end
+
     def initialize(client = Insales::InsalesClient.new)
       @client = client
       @product_field_catalog = Insales::ProductFieldCatalog.new(client)
@@ -36,6 +40,12 @@ module Insales
     attr_reader :client, :product_field_catalog
 
     def export_product(product, dry_run, result, collection_id)
+      reason = skip_reason_for(product)
+      if reason
+        log_skip(product, reason)
+        return
+      end
+
       mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
       existing_field_value_ids = if dry_run || !product_fields_enabled? || mapping.blank?
                                    {}
@@ -284,6 +294,26 @@ module Insales
       store_names = InsalesSetting.first&.allowed_store_names_list
       store_names = [MoyskladClient::TEST_STORE_NAME] if store_names.blank?
       ProductStock.where(product_id: product.id, store_name: store_names).sum(:stock).to_f
+    end
+
+    def skip_reason_for(product)
+      setting = InsalesSetting.first
+      return nil unless setting
+
+      sku_value = product.sku.presence || product.code
+      if setting.skip_products_without_sku && sku_value.blank?
+        return 'skipped_no_sku'
+      end
+
+      if setting.skip_products_with_nonpositive_stock && total_stock(product).to_f <= 0
+        return 'skipped_nonpositive_stock'
+      end
+
+      nil
+    end
+
+    def log_skip(product, reason)
+      Rails.logger.info("[InSales][Skip] product=#{product.id} reason=#{reason}")
     end
 
     def resolved_collection_id(product)

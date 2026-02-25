@@ -9,7 +9,21 @@ class InsalesSetting < ApplicationRecord
   validate :single_record
 
   def self.ransackable_attributes(_auth_object = nil)
-    %w[allowed_store_names base_url cached_store_names cached_store_names_synced_at category_id created_at default_collection_id id image_url_mode login updated_at]
+    %w[
+      allowed_store_names
+      base_url
+      cached_store_names
+      cached_store_names_synced_at
+      category_id
+      created_at
+      default_collection_id
+      id
+      image_url_mode
+      login
+      skip_products_without_sku
+      skip_products_with_nonpositive_stock
+      updated_at
+    ]
   end
 
   def allowed_store_names_list

@@ -86,6 +86,11 @@ RSpec.describe Insales::ExportProducts do
         hash_including(variant: hash_including(quantity: 5.0))
       ).and_return(double(status: 200, body: {}))
 
+      allow(client).to receive(:get).with(
+        '/admin/collects.json',
+        { product_id: mapping.insales_product_id }
+      ).and_return(double(status: 200, body: []))
+
       allow(client).to receive(:post).with(
         "/admin/collections/999/products.json",
         { product_id: mapping.insales_product_id }
@@ -110,6 +115,10 @@ RSpec.describe Insales::ExportProducts do
       allow(client).to receive(:post).with('/admin/products.json', anything).and_return(
         double(status: 201, body: { 'product' => { 'id' => 909, 'variants' => [{ 'id' => 808 }] } })
       )
+      allow(client).to receive(:get).with(
+        '/admin/collects.json',
+        { product_id: 909 }
+      ).and_return(double(status: 200, body: []))
       allow(client).to receive(:post).with(
         "/admin/collections/999/products.json",
         { product_id: 909 }
@@ -146,6 +155,10 @@ RSpec.describe Insales::ExportProducts do
       allow(client).to receive(:post).with('/admin/products.json', anything).and_return(
         double(status: 201, body: { 'product' => { 'id' => 909, 'variants' => [{ 'id' => 808 }] } })
       )
+      allow(client).to receive(:get).with(
+        '/admin/collects.json',
+        { product_id: 909 }
+      ).and_return(double(status: 200, body: []))
       allow(client).to receive(:post).with(
         "/admin/collections/999/products.json",
         { product_id: 909 }
@@ -158,5 +171,51 @@ RSpec.describe Insales::ExportProducts do
       expect(InsalesProductMapping.find_by(aura_product_id: product.id).insales_variant_id).to eq(808)
       expect(InsalesProductMapping.where(insales_product_id: 101)).to be_empty
     end
+  end
+end
+
+RSpec.describe Insales::ExportProducts do
+  let(:client) { instance_double(Insales::InsalesClient) }
+
+  before do
+    InsalesSetting.create!(
+      base_url: 'https://example.myinsales.ru',
+      login: 'user',
+      password: 'pass',
+      category_id: '777',
+      default_collection_id: '999',
+      image_url_mode: 'service_url',
+      allowed_store_names: ['A']
+    )
+  end
+
+  it 'skips products without sku when setting enabled' do
+    product = create(:product, sku: nil, code: nil)
+    create(:product_stock, product: product, stock: 5, store_name: 'A')
+    InsalesSetting.first.update!(skip_products_without_sku: true)
+
+    expect(client).not_to receive(:post)
+    expect(client).not_to receive(:put)
+
+    result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
+
+    expect(result.created).to eq(0)
+    expect(result.updated).to eq(0)
+    expect(result.errors).to eq(0)
+  end
+
+  it 'skips products with nonpositive stock when setting enabled' do
+    product = create(:product, sku: 'SKU-ZERO')
+    create(:product_stock, product: product, stock: 0, store_name: 'A')
+    InsalesSetting.first.update!(skip_products_with_nonpositive_stock: true)
+
+    expect(client).not_to receive(:post)
+    expect(client).not_to receive(:put)
+
+    result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
+
+    expect(result.created).to eq(0)
+    expect(result.updated).to eq(0)
+    expect(result.errors).to eq(0)
   end
 end

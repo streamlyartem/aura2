@@ -53,6 +53,11 @@ module Insales
       Product.where(id: product_ids).find_each do |product|
 
         result.processed += 1
+        skip_reason = Insales::ExportProducts.skip_reason_for(product)
+        if skip_reason
+          Rails.logger.info("[InSalesSync] Skip product #{product.id} reason=#{skip_reason}")
+          next
+        end
         quantity = stock_by_product[product.id].to_f
 
         export_result = Insales::ExportProducts.call(product_id: product.id, dry_run: false)
