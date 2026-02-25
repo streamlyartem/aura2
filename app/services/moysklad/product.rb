@@ -8,6 +8,7 @@ module Moysklad
 
     def initialize(ms_product_payload)
       attributes = ms_product_payload['attributes']
+      sale_prices = Array(ms_product_payload['salePrices'])
       ms_product_payload.dig('meta', 'uuidHref')
 
       @id = ms_product_payload['id']
@@ -23,20 +24,25 @@ module Moysklad
       @sku = ms_product_payload['article']
       @code = ms_product_payload['code']
       @barcodes = ms_product_payload['barcodes']
-      @purchase_price = ms_product_payload.dig('buyPrice', 'value')
-      @retail_price = ms_product_payload['salePrices'].find do |price|
-        price['priceType']['name'] == 'Цена продажи'
-      end&.dig('value')
-      @small_wholesale_price = ms_product_payload['salePrices'].find do |price|
-        price['priceType']['name'] == 'мелкий опт'
-      end&.dig('value')
-      @large_wholesale_price = ms_product_payload['salePrices'].find do |price|
-        price['priceType']['name'] == 'крупный опт'
-      end&.dig('value')
-      @five_hundred_plus_wholesale_price = ms_product_payload['salePrices'].find do |price|
-        price['priceType']['name'] == 'Опт 500+'
-      end&.dig('value')
-      @min_price = ms_product_payload.dig('minPrice', 'value')
+      @purchase_price = normalize_price(ms_product_payload.dig('buyPrice', 'value'))
+      @retail_price = extract_price(sale_prices, 'Цена продажи')
+      @small_wholesale_price = extract_price(sale_prices, 'мелкий опт')
+      @large_wholesale_price = extract_price(sale_prices, 'крупный опт')
+      @five_hundred_plus_wholesale_price = extract_price(sale_prices, 'Опт 500+')
+      @min_price = normalize_price(ms_product_payload.dig('minPrice', 'value'))
+    end
+
+    private
+
+    def extract_price(sale_prices, price_name)
+      raw = sale_prices.find { |price| price.dig('priceType', 'name') == price_name }&.dig('value')
+      normalize_price(raw)
+    end
+
+    def normalize_price(value)
+      return nil if value.nil?
+
+      value.to_f / 100.0
     end
   end
 end
