@@ -14,7 +14,8 @@ RSpec.describe Insales::SyncProductTrigger do
       password: 'password',
       category_id: '1',
       default_collection_id: '2',
-      image_url_mode: 'service_url'
+      image_url_mode: 'service_url',
+      allowed_store_names: ['Тест']
     )
   end
 

@@ -15,7 +15,14 @@ RSpec.describe Insales::SyncProductMedia do
     stub_const('Insales::SyncProductMedia::STOREFRONT_VERIFY_ATTEMPTS', 1)
     stub_const('Insales::SyncProductMedia::VERIFY_RETRY_DELAY', 0)
 
-    InsalesSetting.create!(base_url: base_url, login: 'login', password: 'password', category_id: '1', image_url_mode: 'service_url')
+    InsalesSetting.create!(
+      base_url: base_url,
+      login: 'login',
+      password: 'password',
+      category_id: '1',
+      image_url_mode: 'service_url',
+      allowed_store_names: ['Тест']
+    )
     InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: insales_product_id)
     Rails.application.routes.default_url_options[:host] = 'example.test'
 

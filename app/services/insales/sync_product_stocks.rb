@@ -24,7 +24,7 @@ module Insales
       @client = client
     end
 
-    def call(store_name: 'Тест')
+    def call(store_names: nil)
       result = Result.new(
         processed: 0,
         created: 0,
@@ -40,8 +40,10 @@ module Insales
         last_error_message: nil
       )
 
-      Rails.logger.info("[InSalesSync] Start sync for store '#{store_name}'")
-      stock_by_product = ProductStock.where(store_name: store_name).group(:product_id).sum(:stock)
+      store_names = normalize_store_names(store_names)
+      store_label = store_names.join(', ')
+      Rails.logger.info("[InSalesSync] Start sync for stores '#{store_label}'")
+      stock_by_product = ProductStock.where(store_name: store_names).group(:product_id).sum(:stock)
       stock_by_product = stock_by_product.select { |_product_id, stock| stock.to_f > 0 }
       product_ids = stock_by_product.keys
       Rails.logger.info("[InSalesSync] Products in stock: #{product_ids.size}")
@@ -155,6 +157,13 @@ module Insales
 
     def response_success?(response)
       response && (200..299).cover?(response.status)
+    end
+
+    def normalize_store_names(store_names)
+      names = Array(store_names.presence || InsalesSetting.first&.allowed_store_names)
+      names = names.map(&:to_s).map(&:strip).reject(&:blank?).uniq
+      names = [MoyskladClient::TEST_STORE_NAME] if names.empty?
+      names
     end
 
     def log_media(message)

@@ -14,7 +14,8 @@ RSpec.describe Insales::VerifyProduct do
       password: password,
       category_id: '123',
       default_collection_id: '555',
-      image_url_mode: 'service_url'
+      image_url_mode: 'service_url',
+      allowed_store_names: ['Тест']
     )
   end
 

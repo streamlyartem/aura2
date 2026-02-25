@@ -4,36 +4,36 @@ ActiveAdmin.register_page 'InSales Stock Sync' do
   menu label: 'InSales Stock Sync', priority: 6
 
   page_action :sync_now, method: :post do
-    store_name = params[:store_name].presence || 'Тест'
-    Insales::SyncProductStocksJob.perform_later(store_name: store_name)
-    redirect_to admin_insales_stock_sync_path(store_name: store_name),
-                notice: "Запущена синхронизация склада #{store_name}. Обновите страницу через несколько секунд."
+    settings = InsalesSetting.first
+    store_names = settings&.allowed_store_names_list
+    store_names = [MoyskladClient::TEST_STORE_NAME] if store_names.blank?
+    Insales::SyncProductStocksJob.perform_later(store_names: store_names)
+    redirect_to admin_insales_stock_sync_path,
+                notice: "Запущена синхронизация складов: #{store_names.join(', ')}. Обновите страницу через несколько секунд."
   end
 
   content title: 'Синхронизация остатков (InSales)' do
     store_names = ProductStock.distinct.order(:store_name).pluck(:store_name)
-    preferred_store = params[:store_name].presence || 'Тест'
-    store_name = store_names.include?(preferred_store) ? preferred_store : (store_names.first || 'Тест')
+    settings = InsalesSetting.first
+    allowed_store_names = settings&.allowed_store_names_list
+    allowed_store_names = [MoyskladClient::TEST_STORE_NAME] if allowed_store_names.blank?
 
-    stock_scope = ProductStock.where(store_name: store_name)
+    stock_scope = ProductStock.where(store_name: allowed_store_names)
     products_with_stock = stock_scope.select(:product_id).distinct.count
     total_stocks = stock_scope.count
 
     products_with_insales_mapping = InsalesProductMapping.count
     images_with_insales_mapping = InsalesImageMapping.count
-    settings = InsalesSetting.first
-    state = InsalesStockSyncState.find_by(store_name: store_name)
-    last_run = InsalesSyncRun.where(store_name: store_name).order(created_at: :desc).first
+    state = InsalesStockSyncState.find_by(store_name: allowed_store_names.join(', '))
+    last_run = InsalesSyncRun.where(store_name: allowed_store_names.join(', ')).order(created_at: :desc).first
 
     panel 'Синхронизация остатков (InSales)' do
       div class: 'mb-4' do
         form action: admin_insales_stock_sync_sync_now_path, method: :post do
           input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-          label 'Склад'
-          select name: 'store_name' do
-            store_names.each do |name|
-              option name, value: name, selected: name == store_name
-            end
+          div class: 'mb-2' do
+            label 'Активные склады'
+            span allowed_store_names.join(', ')
           end
           div class: 'mt-3' do
             input type: 'submit', value: 'Синхронизировать', class: 'button'

@@ -10,11 +10,13 @@ ActiveAdmin.register_page 'Insales Sync' do
   end
 
   page_action :sync_now, method: :post do
-    store_name = params[:store_name].presence || 'Тест'
+    settings = InsalesSetting.first
+    store_names = settings&.allowed_store_names_list
+    store_names = [MoyskladClient::TEST_STORE_NAME] if store_names.blank?
 
-    Insales::SyncProductStocksJob.perform_later(store_name: store_name)
+    Insales::SyncProductStocksJob.perform_later(store_names: store_names)
 
-    redirect_to admin_insales_sync_path(store_name: store_name), notice: "Запущена синхронизация склада #{store_name}"
+    redirect_to admin_insales_sync_path, notice: "Запущена синхронизация складов: #{store_names.join(', ')}"
   end
 
   page_action :ensure_moysklad_webhooks, method: :post do
@@ -39,18 +41,18 @@ ActiveAdmin.register_page 'Insales Sync' do
 
   content title: 'InSales Sync' do
     store_names = ProductStock.distinct.order(:store_name).pluck(:store_name)
-    preferred_store = params[:store_name].presence || 'Тест'
-    store_name = store_names.include?(preferred_store) ? preferred_store : (store_names.first || 'Тест')
+    settings = InsalesSetting.first
+    allowed_store_names = settings&.allowed_store_names_list
+    allowed_store_names = [MoyskladClient::TEST_STORE_NAME] if allowed_store_names.blank?
 
-    stock_scope = ProductStock.where(store_name: store_name)
+    stock_scope = ProductStock.where(store_name: allowed_store_names)
 
     products_with_stock = stock_scope.select(:product_id).distinct.count
     total_stocks = stock_scope.count
 
     products_with_insales_mapping = InsalesProductMapping.count
     images_with_insales_mapping = InsalesImageMapping.count
-    settings = InsalesSetting.first
-    state = InsalesStockSyncState.find_by(store_name: store_name)
+    state = InsalesStockSyncState.find_by(store_name: allowed_store_names.join(', '))
     webhook_token = ENV['MOYSKLAD_WEBHOOK_TOKEN'].to_s
     webhook_host = ENV['APP_HOST'].presence || ENV['RAILS_HOST'].presence || Rails.application.routes.default_url_options[:host]
     webhook_base = ENV['MOYSKLAD_WEBHOOK_URL'].presence || (webhook_host.present? ? "https://#{webhook_host}/api/moysklad/webhooks" : '—')
@@ -61,11 +63,9 @@ ActiveAdmin.register_page 'Insales Sync' do
       div class: 'mb-4' do
         form action: url_for(action: :sync_now), method: :post do
           input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-          label 'Склад'
-          select name: 'store_name' do
-            store_names.each do |name|
-              option name, value: name, selected: name == store_name
-            end
+          div class: 'mb-2' do
+            label 'Активные склады'
+            span allowed_store_names.join(', ')
           end
           input type: 'submit', value: 'Синхронизировать', class: 'button'
         end

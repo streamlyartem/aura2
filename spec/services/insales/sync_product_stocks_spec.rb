@@ -17,7 +17,8 @@ RSpec.describe Insales::SyncProductStocks do
       password: password,
       category_id: '777',
       default_collection_id: '999',
-      image_url_mode: 'service_url'
+      image_url_mode: 'service_url',
+      allowed_store_names: ['Тест']
     )
   end
 
@@ -102,7 +103,7 @@ RSpec.describe Insales::SyncProductStocks do
     expect(Insales::ExportProducts).not_to receive(:call)
       .with(product_id: negative_product.id, dry_run: false)
 
-    result = described_class.new.call(store_name: 'Тест')
+    result = described_class.new.call(store_names: ['Тест'])
 
     expect(result.processed).to eq(1)
     expect(result.errors).to eq(0)

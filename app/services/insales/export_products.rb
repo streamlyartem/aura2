@@ -259,7 +259,9 @@ module Insales
     end
 
     def total_stock(product)
-      ProductStock.where(product_id: product.id).sum(:stock).to_f
+      store_names = InsalesSetting.first&.allowed_store_names_list
+      store_names = [MoyskladClient::TEST_STORE_NAME] if store_names.blank?
+      ProductStock.where(product_id: product.id, store_name: store_names).sum(:stock).to_f
     end
 
     def resolved_collection_id(product)

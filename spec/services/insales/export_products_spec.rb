@@ -13,7 +13,8 @@ RSpec.describe Insales::ExportProducts do
       password: 'pass',
       category_id: '777',
       default_collection_id: '999',
-      image_url_mode: 'service_url'
+      image_url_mode: 'service_url',
+      allowed_store_names: ['Тест']
     )
 
     service = described_class.new
@@ -40,7 +41,8 @@ RSpec.describe Insales::ExportProducts do
         password: 'pass',
         category_id: '777',
         default_collection_id: '999',
-        image_url_mode: 'service_url'
+        image_url_mode: 'service_url',
+        allowed_store_names: ['A', 'B']
       )
 
       @previous_export_fields = ENV['INSALES_EXPORT_PRODUCT_FIELDS']

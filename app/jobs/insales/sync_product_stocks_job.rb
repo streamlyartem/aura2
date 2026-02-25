@@ -4,11 +4,13 @@ module Insales
   class SyncProductStocksJob < ApplicationJob
     queue_as :default
 
-    def perform(store_name: 'Тест')
-      Rails.logger.info("[InSalesSync] Job started store=#{store_name}")
-      run = InsalesSyncRun.create!(store_name: store_name, started_at: Time.current, status: 'running')
-      upsert_status(store_name, nil, running: true)
-      result = Insales::SyncProductStocks.new.call(store_name: store_name)
+    def perform(store_names: nil)
+      store_names = normalize_store_names(store_names)
+      store_label = store_names.join(', ')
+      Rails.logger.info("[InSalesSync] Job started stores=#{store_label}")
+      run = InsalesSyncRun.create!(store_name: store_label, started_at: Time.current, status: 'running')
+      upsert_status(store_label, nil, running: true)
+      result = Insales::SyncProductStocks.new.call(store_names: store_names)
       run.update!(
         total_products: result.processed,
         processed: result.processed,
@@ -29,16 +31,16 @@ module Insales
         finished_at: Time.current,
         status: result.errors.positive? ? 'error' : 'success'
       )
-      upsert_status(store_name, result)
-      Rails.logger.info("[InSalesSync] Job finished store=#{store_name} status=#{run.status}")
+      upsert_status(store_label, result)
+      Rails.logger.info("[InSalesSync] Job finished stores=#{store_label} status=#{run.status}")
     rescue StandardError => e
-      Rails.logger.error("[InSalesSync] Job failed store=#{store_name}: #{e.class} - #{e.message}")
+      Rails.logger.error("[InSalesSync] Job failed stores=#{store_names}: #{e.class} - #{e.message}")
       run&.update!(
         status: 'error',
         finished_at: Time.current,
         error_details: format_error(e)
       )
-      upsert_status(store_name, nil, error: e)
+      upsert_status(store_label || '—', nil, error: e)
       raise
     end
 
@@ -80,6 +82,13 @@ module Insales
       end
 
       status.save!
+    end
+
+    def normalize_store_names(store_names)
+      names = Array(store_names.presence || InsalesSetting.first&.allowed_store_names)
+      names = names.map(&:to_s).map(&:strip).reject(&:blank?).uniq
+      names = [MoyskladClient::TEST_STORE_NAME] if names.empty?
+      names
     end
   end
 end

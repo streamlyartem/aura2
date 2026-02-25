@@ -12,14 +12,14 @@ module Insales
       product = Product.includes(:images).find_by(id: product_id)
       return Result.new(status: 'skipped', action: 'missing_product', message: 'Product not found') unless product
 
-      store_name = MoyskladClient::TEST_STORE_NAME
-      stock_sum = ProductStock.where(product_id: product.id, store_name: store_name).sum(:stock).to_f
-      free_stock_sum = ProductStock.where(product_id: product.id, store_name: store_name).sum(:free_stock).to_f
+      store_names = allowed_store_names
+      stock_sum = ProductStock.where(product_id: product.id, store_name: store_names).sum(:stock).to_f
+      free_stock_sum = ProductStock.where(product_id: product.id, store_name: store_names).sum(:free_stock).to_f
       in_stock = free_stock_sum.positive? || stock_sum.positive?
       has_media = product.images.any? { |image| image.file.attached? }
 
       Rails.logger.info(
-        "[InSalesSync][Trigger] product=#{product.id} reason=#{reason} store=#{store_name} " \
+        "[InSalesSync][Trigger] product=#{product.id} reason=#{reason} stores=#{store_names.join(', ')} " \
         "in_stock=#{in_stock} stock_sum=#{stock_sum} free_stock_sum=#{free_stock_sum} has_media=#{has_media}"
       )
 
@@ -103,6 +103,12 @@ module Insales
 
     def success?(response)
       response && (200..299).cover?(response.status)
+    end
+
+    def allowed_store_names
+      names = InsalesSetting.first&.allowed_store_names_list || []
+      names = [MoyskladClient::TEST_STORE_NAME] if names.empty?
+      names
     end
   end
 end

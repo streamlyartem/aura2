@@ -5,7 +5,7 @@ ActiveAdmin.register InsalesSetting do
 
   actions :index, :new, :create, :edit, :update
 
-  permit_params :base_url, :login, :password, :category_id, :default_collection_id, :image_url_mode
+  permit_params :base_url, :login, :password, :category_id, :default_collection_id, :image_url_mode, allowed_store_names: []
 
   controller do
     def index
@@ -38,6 +38,8 @@ ActiveAdmin.register InsalesSetting do
   form do |f|
     f.semantic_errors(*f.object.errors.attribute_names)
 
+    store_names = ProductStock.distinct.order(:store_name).pluck(:store_name)
+
     f.inputs 'InSales Settings' do
       f.input :base_url
       f.input :login
@@ -45,6 +47,11 @@ ActiveAdmin.register InsalesSetting do
       f.input :category_id
       f.input :default_collection_id
       f.input :image_url_mode, as: :select, collection: %w[service_url rails_url], include_blank: false
+      f.input :allowed_store_names,
+              as: :select,
+              collection: store_names,
+              input_html: { multiple: true },
+              hint: 'Склады, которые участвуют в экспорте в InSales. Если пусто — используется "Тест".'
     end
 
     f.actions
