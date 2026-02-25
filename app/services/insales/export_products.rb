@@ -78,6 +78,13 @@ module Insales
           )
         end
 
+        if update_response&.status.to_i == 404
+          Rails.logger.warn("[InSales] Stale mapping detected for product=#{product.id} insales_product_id=#{mapping.insales_product_id}, recreating")
+          mapping.destroy!
+          create_product(product, payload, collection_id, product_field_values, result)
+          return
+        end
+
         unless response_success?(update_response)
           log_response('update_product_failed', product, update_response)
           result.errors += 1
@@ -103,38 +110,7 @@ module Insales
         assign_to_collection(mapping.insales_product_id, collection_id)
         result.updated += 1
       else
-        create_response = client.post('/admin/products.json', payload)
-        if collection_ids_rejected?(create_response)
-          create_response = client.post(
-            '/admin/products.json',
-            build_payload(
-              product,
-              include_collection: false,
-              collection_id: collection_id,
-              product_field_values: product_field_values
-            )
-          )
-        end
-
-        if response_success?(create_response)
-          insales_id = extract_product_id(create_response.body)
-          variant_id = extract_variant_id(create_response.body)
-          if insales_id
-            InsalesProductMapping.create!(
-              aura_product_id: product.id,
-              insales_product_id: insales_id,
-              insales_variant_id: variant_id
-            )
-            assign_to_collection(insales_id, collection_id)
-            result.created += 1
-          else
-            log_response('create_product_missing_id', product, create_response)
-            result.errors += 1
-          end
-        else
-          log_response('create_product_failed', product, create_response)
-          result.errors += 1
-        end
+        create_product(product, payload, collection_id, product_field_values, result)
       end
     rescue StandardError => e
       result.errors += 1
@@ -247,6 +223,41 @@ module Insales
       ids.each do |id|
         Rails.logger.info("[InSales] Assign product to collection #{id}")
         client.post("/admin/collections/#{id}/products.json", { product_id: insales_product_id })
+      end
+    end
+
+    def create_product(product, payload, collection_id, product_field_values, result)
+      create_response = client.post('/admin/products.json', payload)
+      if collection_ids_rejected?(create_response)
+        create_response = client.post(
+          '/admin/products.json',
+          build_payload(
+            product,
+            include_collection: false,
+            collection_id: collection_id,
+            product_field_values: product_field_values
+          )
+        )
+      end
+
+      if response_success?(create_response)
+        insales_id = extract_product_id(create_response.body)
+        variant_id = extract_variant_id(create_response.body)
+        if insales_id
+          InsalesProductMapping.create!(
+            aura_product_id: product.id,
+            insales_product_id: insales_id,
+            insales_variant_id: variant_id
+          )
+          assign_to_collection(insales_id, collection_id)
+          result.created += 1
+        else
+          log_response('create_product_missing_id', product, create_response)
+          result.errors += 1
+        end
+      else
+        log_response('create_product_failed', product, create_response)
+        result.errors += 1
       end
     end
 

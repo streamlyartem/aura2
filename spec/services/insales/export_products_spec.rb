@@ -123,5 +123,40 @@ RSpec.describe Insales::ExportProducts do
       expect(mapping.insales_product_id).to eq(909)
       expect(mapping.insales_variant_id).to eq(808)
     end
+
+    it 'recreates mapping when existing InSales product is missing (404)' do
+      product = create(:product, name: 'Stale Product', sku: 'SKU-STALE', retail_price: 5.0)
+      create(:product_stock, product: product, stock: 2, store_name: 'A')
+
+      mapping = InsalesProductMapping.create!(
+        aura_product_id: product.id,
+        insales_product_id: 101,
+        insales_variant_id: 202
+      )
+
+      allow(client).to receive(:get).with(
+        "/admin/products/#{mapping.insales_product_id}.json"
+      ).and_return(double(status: 200, body: { 'product' => { 'product_field_values' => [] } }))
+
+      allow(client).to receive(:put).with(
+        "/admin/products/#{mapping.insales_product_id}.json",
+        anything
+      ).and_return(double(status: 404, body: { 'message' => 'Not found' }))
+
+      allow(client).to receive(:post).with('/admin/products.json', anything).and_return(
+        double(status: 201, body: { 'product' => { 'id' => 909, 'variants' => [{ 'id' => 808 }] } })
+      )
+      allow(client).to receive(:post).with(
+        "/admin/collections/999/products.json",
+        { product_id: 909 }
+      ).and_return(double(status: 200, body: {}))
+
+      result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
+
+      expect(result.created).to eq(1)
+      expect(InsalesProductMapping.find_by(aura_product_id: product.id).insales_product_id).to eq(909)
+      expect(InsalesProductMapping.find_by(aura_product_id: product.id).insales_variant_id).to eq(808)
+      expect(InsalesProductMapping.where(insales_product_id: 101)).to be_empty
+    end
   end
 end
