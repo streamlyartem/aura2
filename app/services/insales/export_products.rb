@@ -279,7 +279,16 @@ module Insales
       return unless collection_assignment_enabled?
 
       resolver = Insales::ResolveCollectionId.new(client)
-      collection_id = resolver.resolve(product.path_name)
+      collection_id = begin
+        resolver.resolve(product.path_name)
+      rescue StandardError => e
+        Rails.logger.warn(
+          "[InSales][Collections] Resolve failed product=#{product.id} path=#{product.path_name.inspect} " \
+          "error=#{e.class} #{e.message}"
+        )
+        nil
+      end
+      collection_id = InsalesSetting.first&.default_collection_id if collection_id.blank?
       return if collection_id.blank?
 
       attacher = Insales::AttachProductToCollection.new(client)

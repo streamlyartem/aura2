@@ -86,14 +86,13 @@ RSpec.describe Insales::ExportProducts do
         hash_including(variant: hash_including(quantity: 5.0))
       ).and_return(double(status: 200, body: {}))
 
-      allow(client).to receive(:get).with(
-        '/admin/collects.json',
-        { product_id: mapping.insales_product_id }
+      allow(client).to receive(:collects_by_product).with(
+        product_id: mapping.insales_product_id
       ).and_return(double(status: 200, body: []))
 
-      allow(client).to receive(:post).with(
-        "/admin/collections/999/products.json",
-        { product_id: mapping.insales_product_id }
+      allow(client).to receive(:collect_create).with(
+        product_id: mapping.insales_product_id,
+        collection_id: 999
       ).and_return(double(status: 200, body: {}))
 
       described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
@@ -115,13 +114,12 @@ RSpec.describe Insales::ExportProducts do
       allow(client).to receive(:post).with('/admin/products.json', anything).and_return(
         double(status: 201, body: { 'product' => { 'id' => 909, 'variants' => [{ 'id' => 808 }] } })
       )
-      allow(client).to receive(:get).with(
-        '/admin/collects.json',
-        { product_id: 909 }
+      allow(client).to receive(:collects_by_product).with(
+        product_id: 909
       ).and_return(double(status: 200, body: []))
-      allow(client).to receive(:post).with(
-        "/admin/collections/999/products.json",
-        { product_id: 909 }
+      allow(client).to receive(:collect_create).with(
+        product_id: 909,
+        collection_id: 999
       ).and_return(double(status: 200, body: {}))
 
       result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
@@ -155,13 +153,12 @@ RSpec.describe Insales::ExportProducts do
       allow(client).to receive(:post).with('/admin/products.json', anything).and_return(
         double(status: 201, body: { 'product' => { 'id' => 909, 'variants' => [{ 'id' => 808 }] } })
       )
-      allow(client).to receive(:get).with(
-        '/admin/collects.json',
-        { product_id: 909 }
+      allow(client).to receive(:collects_by_product).with(
+        product_id: 909
       ).and_return(double(status: 200, body: []))
-      allow(client).to receive(:post).with(
-        "/admin/collections/999/products.json",
-        { product_id: 909 }
+      allow(client).to receive(:collect_create).with(
+        product_id: 909,
+        collection_id: 999
       ).and_return(double(status: 200, body: {}))
 
       result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
