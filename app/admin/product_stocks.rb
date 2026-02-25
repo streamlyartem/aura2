@@ -7,7 +7,11 @@ ActiveAdmin.register ProductStock do
 
   controller do
     def scoped_collection
-      super.includes(:product)
+      scope = super.includes(:product)
+      settings = InsalesSetting.first
+      allowed = settings&.allowed_store_names_list
+      allowed = [MoyskladClient::TEST_STORE_NAME] if allowed.blank?
+      scope.where(store_name: allowed)
     end
   end
 
