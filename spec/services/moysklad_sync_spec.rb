@@ -80,8 +80,8 @@ RSpec.describe MoyskladSync do
     include_context 'with moysklad stocks mock'
 
     context 'when matching products exist' do
-      let!(:product_one) { create(:product, ms_id: 'e91210f9-9166-11f0-0a80-0ef200165e2f', weight: 0) } # from fixture
-      let!(:product_two) { create(:product, ms_id: '2fdc2bec-9166-11f0-0a80-0ef200164c50', weight: 0) } # from fixture
+      let!(:product_one) { create(:product, ms_id: 'e91210f9-9166-11f0-0a80-0ef200165e2f', weight: 0, retail_price: 180) } # from fixture
+      let!(:product_two) { create(:product, ms_id: '2fdc2bec-9166-11f0-0a80-0ef200164c50', weight: 0, retail_price: 144) } # from fixture
 
       before do
         product_one
@@ -92,11 +92,18 @@ RSpec.describe MoyskladSync do
         expect { import_products }.to change(ProductStock, :count).by(2)
       end
 
-      it 'keeps product weight equal to imported stock value' do
+      it 'does not rewrite product weight while importing stocks' do
         import_products
 
-        expect(product_one.reload.weight.to_f).to eq(102.0)
-        expect(product_two.reload.weight.to_f).to eq(86.0)
+        expect(product_one.reload.weight.to_f).to eq(0.0)
+        expect(product_two.reload.weight.to_f).to eq(0.0)
+      end
+
+      it 'does not rewrite product prices while importing stocks' do
+        import_products
+
+        expect(product_one.reload.retail_price.to_f).to eq(180.0)
+        expect(product_two.reload.retail_price.to_f).to eq(144.0)
       end
     end
 

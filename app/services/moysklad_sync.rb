@@ -88,8 +88,6 @@ class MoyskladSync
         synced_at: Time.current
       )
       product_stock.save!
-      # In this domain stock value is used as current effective weight on storefront cards.
-      product.update_column(:weight, new_stock) if row[:store_name] == MoyskladClient::TEST_STORE_NAME && product.weight.to_f != new_stock
       changed_product_ids << product.id
     end
 
