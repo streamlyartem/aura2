@@ -5,10 +5,9 @@ ActiveAdmin.register InsalesCatalogItem do
 
   actions :index, :show
   includes :product
+  config.filters = false
 
-  scope :all, default: true
-  scope :ready
-  scope :skipped
+  scope :ready, default: true
   scope :error
 
   action_item :prepare_catalog, only: :index do
