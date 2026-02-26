@@ -74,9 +74,92 @@ ActiveAdmin.register InsalesSetting do
       f.input :allowed_store_names,
               as: :select,
               collection: store_names,
-              input_html: { multiple: true },
-              hint: 'Склады, которые участвуют в экспорте в InSales. Если пусто — используется "Тест".'
+              label: 'Подключенные склады на продажу',
+              input_html: {
+                multiple: true,
+                class: 'store-names-multiselect',
+                size: [store_names.size, 10].min,
+                data: { chips_target: 'insales-allowed-store-names-chips' }
+              },
+              hint: 'Выберите склады из списка. Выбранные склады отображаются ниже как теги. Если пусто — используется "Тест".'
+      para '', id: 'insales-allowed-store-names-chips', class: 'insales-store-chips'
     end
+
+    f.template.concat(
+      f.template.javascript_tag(<<~JS)
+        (() => {
+          const initStoreChips = () => {
+            document.querySelectorAll('select.store-names-multiselect').forEach((select) => {
+              if (select.dataset.chipsInitialized === '1') return;
+
+              const targetId = select.dataset.chipsTarget;
+              if (!targetId) return;
+
+              const chipsContainer = document.getElementById(targetId);
+              if (!chipsContainer) return;
+
+              const render = () => {
+                const selected = Array.from(select.selectedOptions).map((option) => option.textContent.trim()).filter(Boolean);
+                chipsContainer.innerHTML = '';
+
+                if (selected.length === 0) {
+                  const empty = document.createElement('span');
+                  empty.className = 'insales-store-chip-empty';
+                  empty.textContent = 'Склады не выбраны';
+                  chipsContainer.appendChild(empty);
+                  return;
+                }
+
+                selected.forEach((name) => {
+                  const chip = document.createElement('span');
+                  chip.className = 'insales-store-chip';
+                  chip.textContent = name;
+                  chipsContainer.appendChild(chip);
+                });
+              };
+
+              select.addEventListener('change', render);
+              select.dataset.chipsInitialized = '1';
+              render();
+            });
+          };
+
+          document.addEventListener('turbo:load', initStoreChips);
+          document.addEventListener('DOMContentLoaded', initStoreChips);
+        })();
+      JS
+    )
+
+    f.template.concat(
+      f.template.content_tag(
+        :style,
+        <<~CSS.html_safe
+          .insales-store-chips {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+          }
+
+          .insales-store-chip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            background: #eef2ff;
+            color: #1f2937;
+            font-size: 12px;
+            line-height: 1.2;
+            border: 1px solid #c7d2fe;
+          }
+
+          .insales-store-chip-empty {
+            color: #6b7280;
+            font-size: 12px;
+          }
+        CSS
+      )
+    )
 
     f.actions
   end
