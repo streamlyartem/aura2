@@ -23,4 +23,15 @@ RSpec.describe 'Admin MoySklad Stores', type: :request do
     expect(response).to have_http_status(:found)
     expect(MoyskladStore.order(:name).pluck(:name)).to eq(['Москва Бауманская', 'Тест'])
   end
+
+  it 'applies checkbox selection after submit' do
+    first = create(:moysklad_store, name: 'Тест', selected_for_import: true)
+    second = create(:moysklad_store, name: 'Москва Бауманская', selected_for_import: false)
+
+    post '/admin/moysklad_stores/apply_selection', params: { selected_store_ids: [second.id] }
+
+    expect(response).to have_http_status(:found)
+    expect(first.reload.selected_for_import).to eq(false)
+    expect(second.reload.selected_for_import).to eq(true)
+  end
 end

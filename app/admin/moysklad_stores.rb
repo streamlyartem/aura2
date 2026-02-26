@@ -1,52 +1,56 @@
 # frozen_string_literal: true
 
-ActiveAdmin.register MoyskladStore do
+ActiveAdmin.register_page 'MoySklad Stores' do
   menu label: 'Склады МС', parent: 'МойСклад', priority: 3
 
-  actions :index, :edit, :update
-  config.batch_actions = false
-  config.filters = false
-
-  permit_params :selected_for_import
-
-  action_item :refresh, only: :index do
-    link_to 'Обновить список', refresh_admin_moysklad_stores_path, method: :post
-  end
-
-  collection_action :refresh, method: :post do
+  page_action :refresh, method: :post do
     names = MoyskladStore.refresh_from_moysklad!
     redirect_to admin_moysklad_stores_path, notice: "Список складов обновлён: #{names.size}"
   rescue StandardError => e
     redirect_to admin_moysklad_stores_path, alert: "Не удалось обновить список складов: #{e.class} - #{e.message}"
   end
 
-  member_action :toggle_selected, method: :post do
-    resource.update!(selected_for_import: ActiveModel::Type::Boolean.new.cast(params[:selected]))
-    redirect_to admin_moysklad_stores_path, notice: 'Выбор склада обновлён'
+  page_action :apply_selection, method: :post do
+    selected_ids = Array(params[:selected_store_ids]).map(&:to_s).uniq
+
+    MoyskladStore.update_all(selected_for_import: false)
+    MoyskladStore.where(id: selected_ids).update_all(selected_for_import: true) if selected_ids.any?
+
+    redirect_to admin_moysklad_stores_path, notice: 'Выбор складов сохранён'
   end
 
-  index do
-    id_column
-    column :name
-    column 'Импортировать' do |store|
-      form action: toggle_selected_admin_moysklad_store_path(store), method: :post, style: 'margin:0' do
+  content title: 'Склады МС' do
+    stores = MoyskladStore.order(:name).to_a
+    selected_count = stores.count(&:selected_for_import?)
+
+    div class: 'mb-4' do
+      form action: url_for(action: :refresh), method: :post do
         input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-        input type: 'hidden', name: 'selected', value: (!store.selected_for_import?).to_s
-        input type: 'checkbox', checked: store.selected_for_import?, onchange: 'this.form.submit();'
+        input type: 'submit', value: 'Обновить список', class: 'button'
       end
     end
-    column :last_seen_at
-    column :updated_at
-    actions defaults: false do |store|
-      item 'Редактировать', edit_admin_moysklad_store_path(store)
-    end
-  end
 
-  form do |f|
-    f.inputs do
-      f.input :name, input_html: { disabled: true }
-      f.input :selected_for_import, label: 'Использовать для импорта'
+    div class: 'mb-4' do
+      span "Всего складов: #{stores.size}. Выбрано для импорта: #{selected_count}."
     end
-    f.actions
+
+    form action: url_for(action: :apply_selection), method: :post do
+      input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
+
+      table_for stores do
+        column 'Выбрать' do |store|
+          input type: 'checkbox',
+                name: 'selected_store_ids[]',
+                value: store.id,
+                checked: store.selected_for_import?
+        end
+        column('Склад') { |store| store.name }
+        column('Обновлён') { |store| store.updated_at }
+      end
+
+      div class: 'mt-4' do
+        input type: 'submit', value: 'Применить', class: 'button'
+      end
+    end
   end
 end
