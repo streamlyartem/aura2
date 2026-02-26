@@ -9,7 +9,7 @@ module Moysklad
     class UnauthorizedError < RequestError; end
 
     DEFAULT_OPEN_TIMEOUT = 5
-    DEFAULT_TIMEOUT = 60
+    DEFAULT_TIMEOUT = 120
     MAX_RETRIES = 3
     RETRYABLE_STATUSES = [429, 500, 502, 503, 504].freeze
 

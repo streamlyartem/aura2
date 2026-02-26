@@ -10,7 +10,7 @@ class MoyskladSync
   def import_products
     count = 0
 
-    @client.each_product do |ms_product_payload|
+    @client.each_product(limit: products_page_limit) do |ms_product_payload|
       ms_product = Moysklad::Product.new(ms_product_payload)
 
       if ms_product.sku.blank?
@@ -101,6 +101,13 @@ class MoyskladSync
   end
 
   private
+
+  def products_page_limit
+    value = ENV['MOYSKLAD_PRODUCTS_PAGE_LIMIT'].to_i
+    return value if value.positive?
+
+    1000
+  end
 
   def stock_changed?(product_stock, stock, free_stock, reserve)
     product_stock.stock.to_f != stock ||
