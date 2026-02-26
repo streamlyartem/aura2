@@ -8,6 +8,11 @@ module Moysklad
     class NotFoundError < RequestError; end
     class UnauthorizedError < RequestError; end
 
+    DEFAULT_OPEN_TIMEOUT = 5
+    DEFAULT_TIMEOUT = 60
+    MAX_RETRIES = 3
+    RETRYABLE_STATUSES = [429, 500, 502, 503, 504].freeze
+
     attr_reader :config, :connection
 
     def initialize(config = Config.new)
@@ -16,19 +21,19 @@ module Moysklad
     end
 
     def get(path, params = {})
-      response = connection.get(path, params)
+      response = with_retries { connection.get(path, params) }
       handle_response(response, raise_on_not_found: false)
       response
     end
 
     def post(path, body = {})
-      response = connection.post(path, body)
+      response = with_retries { connection.post(path, body) }
       handle_response(response)
       response
     end
 
     def put(path, body = {})
-      response = connection.put(path, body)
+      response = with_retries { connection.put(path, body) }
       handle_response(response)
       response
     end
@@ -62,9 +67,38 @@ module Moysklad
         f.request :json
         # Only add authentication if credentials are provided
         f.request :authorization, :basic, config.username, config.password if config.username && config.password
-        f.response :logger, Rails.logger, bodies: true
+        f.response :logger, Rails.logger, bodies: ENV['MOYSKLAD_HTTP_DEBUG'].to_s == '1'
         f.response :json
+        f.options.open_timeout = DEFAULT_OPEN_TIMEOUT
+        f.options.timeout = DEFAULT_TIMEOUT
       end
+    end
+
+    def with_retries
+      attempts = 0
+
+      loop do
+        attempts += 1
+        response = yield
+        return response unless retryable_status?(response.status) && attempts < MAX_RETRIES
+
+        sleep retry_delay(attempts, response.status)
+      rescue Faraday::TimeoutError, Faraday::ConnectionFailed, Net::ReadTimeout => e
+        raise e unless attempts < MAX_RETRIES
+
+        Rails.logger.warn("[Moysklad] request retry=#{attempts} error=#{e.class}: #{e.message}")
+        sleep retry_delay(attempts, nil)
+      end
+    end
+
+    def retryable_status?(status)
+      RETRYABLE_STATUSES.include?(status.to_i)
+    end
+
+    def retry_delay(attempt, status)
+      return 2.0 if status.to_i == 429
+
+      0.5 * (2**(attempt - 1))
     end
 
     def handle_response(response, raise_on_not_found: true)
