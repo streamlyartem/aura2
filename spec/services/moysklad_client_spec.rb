@@ -75,6 +75,41 @@ RSpec.describe MoyskladClient do
         }
       end)
     end
+
+    it 'loads stock report in pages to avoid huge single response' do
+      first_page = {
+        'meta' => { 'size' => 1001, 'limit' => 1000, 'offset' => 0 },
+        'rows' => [
+          { 'meta' => { 'href' => 'https://api.moysklad.ru/api/remap/1.2/entity/product/p-1' }, 'code' => '1', 'article' => '1', 'stock' => 2, 'freeStock' => 2, 'reserve' => 0 }
+        ]
+      }
+      second_page = {
+        'meta' => { 'size' => 1001, 'limit' => 1000, 'offset' => 1000 },
+        'rows' => [
+          { 'meta' => { 'href' => 'https://api.moysklad.ru/api/remap/1.2/entity/product/p-2' }, 'code' => '2', 'article' => '2', 'stock' => 3, 'freeStock' => 3, 'reserve' => 0 }
+        ]
+      }
+
+      stub_request(:get, "#{MoyskladClient::BASE_URL}/report/stock/all")
+        .with(query: hash_including(
+          'filter' => "store=#{MoyskladClient::TEST_NAMES_HREF[MoyskladClient::TEST_STORE_NAME]}",
+          'limit' => '1000',
+          'offset' => '0'
+        ))
+        .to_return(status: 200, body: first_page.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      stub_request(:get, "#{MoyskladClient::BASE_URL}/report/stock/all")
+        .with(query: hash_including(
+          'filter' => "store=#{MoyskladClient::TEST_NAMES_HREF[MoyskladClient::TEST_STORE_NAME]}",
+          'limit' => '1000',
+          'offset' => '1000'
+        ))
+        .to_return(status: 200, body: second_page.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      result = service.stocks_for_store
+      expect(result.size).to eq(2)
+      expect(result.map { |row| row[:code] }).to contain_exactly('1', '2')
+    end
   end
 
   describe '#create_demand' do

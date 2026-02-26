@@ -29,7 +29,7 @@ shared_context 'with moysklad stocks mock' do
   let(:stocks_filtered_by_store_json) { file_fixture('moysklad/stocks_filtered_by_store.json') }
 
   before do
-    stub_request(:get, "#{MoyskladClient::BASE_URL}/report/stock/all?filter=store=https://api.moysklad.ru/api/remap/1.2/entity/store/d2a971ca-9164-11f0-0a80-19cb0021b994")
+    stub_request(:get, "#{MoyskladClient::BASE_URL}/report/stock/all?filter=store=https://api.moysklad.ru/api/remap/1.2/entity/store/d2a971ca-9164-11f0-0a80-19cb0021b994&limit=1000&offset=0")
       .to_return(status: 200, body: stocks_filtered_by_store_json, headers: { 'Content-Type' => 'application/json' })
   end
 end
