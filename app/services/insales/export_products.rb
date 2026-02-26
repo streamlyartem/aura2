@@ -129,8 +129,8 @@ module Insales
 
     def build_payload(product, include_collection: true, collection_id: nil, product_field_values: [])
       sku = product.sku.presence || product.code
-      price = product.retail_price&.to_f
-      quantity = total_stock(product)
+      price = unit_price_for_insales(product)
+      quantity = available_quantity_for_insales(product)
 
       collection_id_from_mapping = resolved_collection_id(product)
       category_id = default_category_id
@@ -181,8 +181,8 @@ module Insales
 
     def variant_payload(product)
       sku = product.sku.presence || product.code
-      price = product.retail_price&.to_f
-      quantity = total_stock(product)
+      price = unit_price_for_insales(product)
+      quantity = available_quantity_for_insales(product)
 
       {
         variant: {
@@ -314,7 +314,7 @@ module Insales
         return 'skipped_no_sku'
       end
 
-      if setting.skip_products_with_nonpositive_stock && total_stock(product).to_f <= 0
+      if setting.skip_products_with_nonpositive_stock && available_quantity_for_insales(product).to_i <= 0
         return 'skipped_nonpositive_stock'
       end
 
@@ -385,6 +385,36 @@ module Insales
       return false unless [400, 422].include?(response.status)
 
       response.body.to_s.include?('collection_ids')
+    end
+
+    def unit_price_for_insales(product)
+      cents =
+        if product.weight_unit?
+          retail_price_type = PriceType.find_by(code: 'retail')
+          per_g_cents = if retail_price_type
+                          VariantPrice.find_by(variant_id: product.id, price_type_id: retail_price_type.id)&.price_per_g_cents
+                        end
+          if per_g_cents.present? && product.unit_weight_g.to_d.positive?
+            (per_g_cents.to_i * product.unit_weight_g.to_d).round
+          else
+            (product.retail_price.to_d * 100).round
+          end
+        else
+          (product.retail_price.to_d * 100).round
+        end
+
+      cents.to_f / 100.0
+    end
+
+    def available_quantity_for_insales(product)
+      if product.weight_unit?
+        unit_weight = product.unit_weight_g.to_d
+        return 0 if unit_weight <= 0
+
+        (total_stock(product).to_d / unit_weight).floor
+      else
+        product.ms_stock_qty.to_i.positive? ? product.ms_stock_qty.to_i : total_stock(product).floor
+      end
     end
   end
 end

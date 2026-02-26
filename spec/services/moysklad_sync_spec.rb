@@ -30,12 +30,12 @@ RSpec.describe MoyskladSync do
           sku: sku,
           code: sku,
           barcodes: [{ 'code128' => '1905432613387' }, { 'ean13' => '2000000337920' }],
-          purchase_price: 118.35,
-          retail_price: 180.0,
-          small_wholesale_price: 162.0,
-          large_wholesale_price: 144.0,
-          five_hundred_plus_wholesale_price: 126.0,
-          min_price: 126.0
+          purchase_price: 13_018.5,
+          retail_price: 19_800.0,
+          small_wholesale_price: 17_820.0,
+          large_wholesale_price: 15_840.0,
+          five_hundred_plus_wholesale_price: 13_860.0,
+          min_price: 13_860.0
         )
       end
     end

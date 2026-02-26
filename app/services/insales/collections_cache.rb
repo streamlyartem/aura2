@@ -48,6 +48,9 @@ module Insales
     end
 
     def ttl
+      value = ENV['INS_SALES_COLLECTIONS_CACHE_TTL'].to_i
+      return value.seconds if value.positive?
+
       DEFAULT_TTL
     end
   end

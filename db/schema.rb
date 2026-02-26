@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_25_222408) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_25_233941) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -262,6 +262,36 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_222408) do
     t.index ["started_at"], name: "index_moysklad_sync_runs_on_started_at"
   end
 
+  create_table "price_types", force: :cascade do |t|
+    t.string "code", null: false
+    t.string "ms_price_type_id"
+    t.string "currency", default: "RUB", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["code"], name: "index_price_types_on_code", unique: true
+  end
+
+  create_table "pricing_rulesets", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "channel", null: false
+    t.string "name", null: false
+    t.boolean "is_active", default: true, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["channel", "is_active"], name: "index_pricing_rulesets_on_channel_and_is_active"
+  end
+
+  create_table "pricing_tiers", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "pricing_ruleset_id", null: false
+    t.integer "min_eligible_weight_g", null: false
+    t.integer "max_eligible_weight_g"
+    t.string "price_type_code", null: false
+    t.integer "priority", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["pricing_ruleset_id", "priority"], name: "index_pricing_tiers_on_pricing_ruleset_id_and_priority"
+    t.index ["pricing_ruleset_id"], name: "index_pricing_tiers_on_pricing_ruleset_id"
+  end
+
   create_table "product_stocks", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "product_id", null: false
     t.string "store_name", null: false
@@ -296,6 +326,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_222408) do
     t.decimal "min_price", precision: 10, scale: 2
     t.uuid "ms_id"
     t.string "structure"
+    t.string "unit_type", default: "weight", null: false
+    t.decimal "unit_weight_g", precision: 10, scale: 3
+    t.integer "ms_stock_g"
+    t.integer "ms_stock_qty"
   end
 
   create_table "solid_cache_entries", force: :cascade do |t|
@@ -430,10 +464,22 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_222408) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "variant_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "variant_id", null: false
+    t.bigint "price_type_id", null: false
+    t.integer "price_per_g_cents"
+    t.integer "price_per_piece_cents"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["price_type_id"], name: "index_variant_prices_on_price_type_id"
+    t.index ["variant_id", "price_type_id"], name: "index_variant_prices_on_variant_id_and_price_type_id", unique: true
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "insales_image_mappings", "images", column: "aura_image_id"
   add_foreign_key "insales_product_mappings", "products", column: "aura_product_id"
+  add_foreign_key "pricing_tiers", "pricing_rulesets"
   add_foreign_key "product_stocks", "products"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
@@ -441,4 +487,6 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_25_222408) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "variant_prices", "price_types"
+  add_foreign_key "variant_prices", "products", column: "variant_id"
 end
