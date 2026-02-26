@@ -10,7 +10,7 @@ module Moysklad
         'report/stock/all'
       end
 
-      def for_store(store_href, limit: DEFAULT_PAGE_LIMIT)
+      def for_store(store_href, limit: default_page_limit)
         offset = 0
         rows = []
 
@@ -28,6 +28,15 @@ module Moysklad
         end
 
         rows.select { |row| row['stock'].to_f.positive? }
+      end
+
+      private
+
+      def default_page_limit
+        value = ENV['MOYSKLAD_STOCKS_PAGE_LIMIT'].to_i
+        return value if value.positive?
+
+        DEFAULT_PAGE_LIMIT
       end
     end
   end
