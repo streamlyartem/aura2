@@ -4,7 +4,7 @@ ActiveAdmin.register MoyskladStore do
   menu label: 'Склады МС', parent: 'МойСклад', priority: 3
 
   actions :index, :edit, :update
-  config.batch_actions = true
+  config.batch_actions = false
   config.filters = false
 
   permit_params :selected_for_import
@@ -25,18 +25,7 @@ ActiveAdmin.register MoyskladStore do
     redirect_to admin_moysklad_stores_path, notice: 'Выбор склада обновлён'
   end
 
-  batch_action :select_for_import do |ids|
-    batch_action_collection.find(ids).each { |store| store.update(selected_for_import: true) }
-    redirect_to collection_path, notice: 'Склады отмечены для импорта'
-  end
-
-  batch_action :unselect_for_import do |ids|
-    batch_action_collection.find(ids).each { |store| store.update(selected_for_import: false) }
-    redirect_to collection_path, notice: 'Склады сняты с импорта'
-  end
-
   index do
-    selectable_column
     id_column
     column :name
     column 'Импортировать' do |store|
