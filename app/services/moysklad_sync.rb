@@ -10,51 +10,47 @@ class MoyskladSync
   def import_products
     count = 0
 
-    @client.each_product(limit: products_page_limit) do |ms_product_payload|
-      ms_product = Moysklad::Product.new(ms_product_payload)
+    # Product import must not depend on InSales settings and should not fan-out
+    # integration jobs while backfilling data from MoySklad.
+    Current.set(skip_insales_product_sync: true) do
+      @client.each_product(limit: products_page_limit) do |ms_product_payload|
+        ms_product = Moysklad::Product.new(ms_product_payload)
+        weight = ms_product.weight&.to_f
+        weight_unit = weight.to_f.positive?
 
-      if ms_product.sku.blank?
-        Rails.logger.info "[MoyskladSync] Skip product without article ms_id=#{ms_product.id}"
-        next
+        product = Product.find_or_initialize_by(ms_id: ms_product.id)
+
+        product.assign_attributes(
+          ms_id: ms_product.id,
+          name: ms_product.name,
+          batch_number: ms_product.batch_number,
+          path_name: ms_product.path_name,
+          weight: weight,
+          length: ms_product.length&.to_f,
+          color: ms_product.color,
+          tone: ms_product.tone,
+          ombre: ms_product.ombre.nil? ? false : ms_product.ombre,
+          structure: ms_product.structure,
+          sku: ms_product.sku,
+          code: ms_product.code,
+          barcodes: ms_product.barcodes,
+          purchase_price: ms_product.purchase_price&.to_f,
+          retail_price: ms_product.retail_price&.to_f,
+          small_wholesale_price: ms_product.small_wholesale_price&.to_f,
+          large_wholesale_price: ms_product.large_wholesale_price&.to_f,
+          five_hundred_plus_wholesale_price: ms_product.five_hundred_plus_wholesale_price&.to_f,
+          min_price: ms_product.min_price&.to_f
+        )
+        product.unit_type = weight_unit ? 'weight' : 'piece'
+        product.unit_weight_g = weight_unit ? weight : nil
+        product.ms_stock_g = weight_unit ? weight.to_i : nil
+
+        product.save!
+        Pricing::SyncVariantPrices.call(product: product, ms_product: ms_product)
+
+        count += 1
+        Rails.logger.info "[MoyskladSync] Imported ##{count} #{product.sku}" if (count % 100).zero?
       end
-
-      if ms_product.weight.to_f <= 0
-        Rails.logger.info "[MoyskladSync] Skip product with non-positive weight ms_id=#{ms_product.id} weight=#{ms_product.weight.inspect}"
-        next
-      end
-
-      product = Product.find_or_initialize_by(ms_id: ms_product.id)
-
-      product.assign_attributes(
-        ms_id: ms_product.id,
-        name: ms_product.name,
-        batch_number: ms_product.batch_number,
-        path_name: ms_product.path_name,
-        weight: ms_product.weight&.to_f,
-        length: ms_product.length&.to_f,
-        color: ms_product.color,
-        tone: ms_product.tone,
-        ombre: ms_product.ombre,
-        structure: ms_product.structure,
-        sku: ms_product.sku,
-        code: ms_product.code,
-        barcodes: ms_product.barcodes,
-        purchase_price: ms_product.purchase_price&.to_f,
-        retail_price: ms_product.retail_price&.to_f,
-        small_wholesale_price: ms_product.small_wholesale_price&.to_f,
-        large_wholesale_price: ms_product.large_wholesale_price&.to_f,
-        five_hundred_plus_wholesale_price: ms_product.five_hundred_plus_wholesale_price&.to_f,
-        min_price: ms_product.min_price&.to_f
-      )
-      product.unit_type = 'weight'
-      product.unit_weight_g = ms_product.weight&.to_f
-      product.ms_stock_g = ms_product.weight&.to_i
-
-      product.save!
-      Pricing::SyncVariantPrices.call(product: product, ms_product: ms_product)
-
-      count += 1
-      Rails.logger.info "[MoyskladSync] Imported ##{count} #{product.sku}" if (count % 100).zero?
     end
 
     Rails.logger.info "[MoyskladSync] Import finished, total: #{count}"

@@ -41,7 +41,7 @@ RSpec.describe MoyskladSync do
     end
 
     context 'when product missing article or non-positive weight' do
-      it 'skips such products' do
+      it 'imports such products too' do
         bad_payloads = [
           { 'id' => 'skip-1', 'name' => 'No Article', 'article' => nil, 'pathName' => 'Срезы/Светлый/55', 'weight' => 10, 'attributes' => [], 'salePrices' => [], 'buyPrice' => { 'value' => 0 }, 'minPrice' => { 'value' => 0 } },
           { 'id' => 'skip-2', 'name' => 'Zero Weight', 'article' => 'SKU-ZERO', 'pathName' => 'Срезы/Светлый/55', 'weight' => 0, 'attributes' => [], 'salePrices' => [], 'buyPrice' => { 'value' => 0 }, 'minPrice' => { 'value' => 0 } }
@@ -51,7 +51,13 @@ RSpec.describe MoyskladSync do
           bad_payloads.each(&block)
         end
 
-        expect { import_products }.not_to change(Product, :count)
+        expect { import_products }.to change(Product, :count).by(2)
+
+        imported_without_article = Product.find_by(name: 'No Article')
+        imported_zero_weight = Product.find_by(name: 'Zero Weight')
+
+        expect(imported_without_article).to have_attributes(unit_type: 'weight')
+        expect(imported_zero_weight).to have_attributes(unit_type: 'piece', unit_weight_g: nil)
       end
     end
 

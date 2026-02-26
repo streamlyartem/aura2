@@ -39,5 +39,14 @@ RSpec.describe Product do
         product.touch
       end.not_to have_enqueued_job(Insales::SyncProductTriggerJob)
     end
+
+    it 'does not enqueue trigger while moysklad import flag is set' do
+      ActiveJob::Base.queue_adapter = :test
+      ActiveJob::Base.queue_adapter.enqueued_jobs.clear
+
+      expect do
+        Current.set(skip_insales_product_sync: true) { create(:product) }
+      end.not_to have_enqueued_job(Insales::SyncProductTriggerJob)
+    end
   end
 end
