@@ -46,6 +46,7 @@ module Insales
       stock_by_product = ProductStock.where(store_name: store_names).group(:product_id).sum(:stock)
       stock_by_product = stock_by_product.select { |_product_id, stock| stock.to_f > 0 }
       product_ids = stock_by_product.keys
+      catalog_quantities = InsalesCatalogItem.ready.where(product_id: product_ids).pluck(:product_id, :export_quantity).to_h
       Rails.logger.info("[InSalesSync] Products in stock: #{product_ids.size}")
 
       variants = []
@@ -58,12 +59,19 @@ module Insales
           Rails.logger.info("[InSalesSync] Skip product #{product.id} reason=#{skip_reason}")
           next
         end
-        quantity = stock_by_product[product.id].to_f
+        quantity = catalog_quantities[product.id]
+        if quantity.nil?
+          result.errors += 1
+          result.last_error_message = 'catalog not prepared'
+          Rails.logger.warn("[InSalesSync] Skip product #{product.id} reason=catalog_not_prepared")
+          next
+        end
 
         export_result = Insales::ExportProducts.call(product_id: product.id, dry_run: false)
         result.created += export_result.created
         result.updated += export_result.updated
         result.errors += export_result.errors
+        next if export_result.errors.to_i.positive?
 
         mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
         unless mapping
@@ -94,7 +102,7 @@ module Insales
         variant_id = mapping.insales_variant_id || fetch_variant_id(mapping.insales_product_id)
         if variant_id
           mapping.update!(insales_variant_id: variant_id) if mapping.insales_variant_id != variant_id
-          variants << { id: variant_id, quantity: quantity }
+          variants << { id: variant_id, quantity: quantity.to_i }
         else
           result.errors += 1
           Rails.logger.warn("[InSalesSync] Missing variant for product #{product.id}")

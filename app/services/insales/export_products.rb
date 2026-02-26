@@ -19,7 +19,11 @@ module Insales
     end
 
     def call(product_id:, dry_run:, collection_id:)
-      scope = product_id.present? ? Product.where(id: product_id) : Product.all
+      scope = if product_id.present?
+                Product.where(id: product_id)
+              else
+                Product.where(id: InsalesCatalogItem.ready.select(:product_id))
+              end
       result = Result.new(processed: 0, created: 0, updated: 0, errors: 0)
 
       scope.find_each do |product|
@@ -46,6 +50,13 @@ module Insales
         return
       end
 
+      catalog_item = ready_catalog_item_for(product)
+      unless catalog_item
+        result.errors += 1
+        Rails.logger.warn("[InSales] catalog not prepared product=#{product.id}")
+        return
+      end
+
       mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
       existing_field_value_ids = if dry_run || !product_fields_enabled? || mapping.blank?
                                    {}
@@ -64,7 +75,12 @@ module Insales
       if product_fields_enabled? && !dry_run && product_field_values.empty?
         Rails.logger.warn("[InSales][Fields] No fields prepared for product=#{product.id} sku=#{product.sku}")
       end
-      payload = build_payload(product, collection_id: collection_id, product_field_values: product_field_values)
+      payload = build_payload(
+        product,
+        collection_id: collection_id,
+        product_field_values: product_field_values,
+        catalog_item: catalog_item
+      )
 
       if dry_run
         mapping ? result.updated += 1 : result.created += 1
@@ -74,7 +90,12 @@ module Insales
       if mapping
         update_response = client.put(
           "/admin/products/#{mapping.insales_product_id}.json",
-          update_payload(product, collection_id: collection_id, product_field_values: product_field_values)
+          update_payload(
+            product,
+            collection_id: collection_id,
+            product_field_values: product_field_values,
+            catalog_item: catalog_item
+          )
         )
         if collection_ids_rejected?(update_response)
           update_response = client.put(
@@ -83,7 +104,8 @@ module Insales
               product,
               include_collection: false,
               collection_id: collection_id,
-              product_field_values: product_field_values
+              product_field_values: product_field_values,
+              catalog_item: catalog_item
             )
           )
         end
@@ -91,7 +113,7 @@ module Insales
         if update_response&.status.to_i == 404
           Rails.logger.warn("[InSales] Stale mapping detected for product=#{product.id} insales_product_id=#{mapping.insales_product_id}, recreating")
           mapping.destroy!
-          create_product(product, payload, collection_id, product_field_values, result)
+          create_product(product, payload, collection_id, product_field_values, catalog_item, result)
           return
         end
 
@@ -103,7 +125,7 @@ module Insales
 
         variant_id = mapping.insales_variant_id || fetch_variant_id(mapping.insales_product_id)
         if variant_id
-          variant_response = client.put("/admin/variants/#{variant_id}.json", variant_payload(product))
+          variant_response = client.put("/admin/variants/#{variant_id}.json", variant_payload(product, catalog_item: catalog_item))
           if response_success?(variant_response)
             mapping.update!(insales_variant_id: variant_id)
           else
@@ -120,17 +142,17 @@ module Insales
         sync_collection_assignment(product, mapping.insales_product_id)
         result.updated += 1
       else
-        create_product(product, payload, collection_id, product_field_values, result)
+        create_product(product, payload, collection_id, product_field_values, catalog_item, result)
       end
     rescue StandardError => e
       result.errors += 1
       Rails.logger.error("[InSales] Product export failed for #{product.id}: #{e.class} - #{e.message}")
     end
 
-    def build_payload(product, include_collection: true, collection_id: nil, product_field_values: [])
+    def build_payload(product, include_collection: true, collection_id: nil, product_field_values: [], catalog_item:)
       sku = product.sku.presence || product.code
-      price = product.retail_price&.to_f
-      quantity = total_stock(product)
+      price = catalog_price(catalog_item)
+      quantity = catalog_quantity(catalog_item)
 
       collection_id_from_mapping = resolved_collection_id(product)
       category_id = default_category_id
@@ -154,7 +176,7 @@ module Insales
       }
     end
 
-    def update_payload(product, include_collection: true, collection_id: nil, product_field_values: [])
+    def update_payload(product, include_collection: true, collection_id: nil, product_field_values: [], catalog_item:)
       collection_id_from_mapping = resolved_collection_id(product)
       category_id = default_category_id
       collection_ids = include_collection ? collection_ids_array(collection_id, collection_id_from_mapping) : nil
@@ -179,10 +201,10 @@ module Insales
       ids.presence
     end
 
-    def variant_payload(product)
+    def variant_payload(product, catalog_item:)
       sku = product.sku.presence || product.code
-      price = product.retail_price&.to_f
-      quantity = total_stock(product)
+      price = catalog_price(catalog_item)
+      quantity = catalog_quantity(catalog_item)
 
       {
         variant: {
@@ -236,7 +258,7 @@ module Insales
       end
     end
 
-    def create_product(product, payload, collection_id, product_field_values, result)
+    def create_product(product, payload, collection_id, product_field_values, catalog_item, result)
       create_response = client.post('/admin/products.json', payload)
       if collection_ids_rejected?(create_response)
         create_response = client.post(
@@ -245,7 +267,8 @@ module Insales
             product,
             include_collection: false,
             collection_id: collection_id,
-            product_field_values: product_field_values
+            product_field_values: product_field_values,
+            catalog_item: catalog_item
           )
         )
       end
@@ -357,6 +380,24 @@ module Insales
 
     def truncate_body(body)
       body.to_s.byteslice(0, 300)
+    end
+
+    def ready_catalog_item_for(product)
+      item = InsalesCatalogItem.find_by(product_id: product.id)
+      return item if item&.status == 'ready'
+
+      nil
+    end
+
+    def catalog_price(catalog_item)
+      cents = catalog_item.prices_cents&.dig('retail')
+      raise ArgumentError, 'catalog retail price missing' if cents.blank?
+
+      (cents.to_d / 100).to_f
+    end
+
+    def catalog_quantity(catalog_item)
+      catalog_item.export_quantity.to_i
     end
 
     def extract_product_id(body)

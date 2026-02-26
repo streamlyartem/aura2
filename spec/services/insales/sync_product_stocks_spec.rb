@@ -33,6 +33,13 @@ RSpec.describe Insales::SyncProductStocks do
     create(:product_stock, product: product, stock: 2, store_name: 'Тест')
     create(:product_stock, product: zero_product, stock: 0, store_name: 'Тест')
     create(:product_stock, product: negative_product, stock: -1, store_name: 'Тест')
+    InsalesCatalogItem.create!(
+      product: product,
+      export_quantity: 1,
+      prices_cents: { 'retail' => 1900 },
+      status: 'ready',
+      prepared_at: Time.current
+    )
     InsalesProductMapping.create!(
       aura_product_id: product.id,
       insales_product_id: 10,
