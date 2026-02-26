@@ -42,11 +42,13 @@ module Insales
 
       store_names = normalize_store_names(store_names)
       store_label = store_names.join(', ')
+      settings = InsalesSetting.first
+      category_resolver = Insales::CategoryResolver.new(client)
       Rails.logger.info("[InSalesSync] Start sync for stores '#{store_label}'")
       stock_by_product = ProductStock.where(store_name: store_names).group(:product_id).sum(:stock)
       stock_by_product = stock_by_product.select { |_product_id, stock| stock.to_f > 0 }
       product_ids = stock_by_product.keys
-      catalog_quantities = InsalesCatalogItem.ready.where(product_id: product_ids).pluck(:product_id, :export_quantity).to_h
+      catalog_items = InsalesCatalogItem.ready.where(product_id: product_ids).index_by(&:product_id)
       Rails.logger.info("[InSalesSync] Products in stock: #{product_ids.size}")
 
       variants = []
@@ -59,7 +61,8 @@ module Insales
           Rails.logger.info("[InSalesSync] Skip product #{product.id} reason=#{skip_reason}")
           next
         end
-        quantity = catalog_quantities[product.id]
+        catalog_item = catalog_items[product.id]
+        quantity = catalog_item&.export_quantity
         if quantity.nil?
           result.errors += 1
           result.last_error_message = 'catalog not prepared'
@@ -112,9 +115,10 @@ module Insales
           product: product,
           insales_product_id: mapping.insales_product_id,
           insales_variant_id: mapping.insales_variant_id,
-          expected_category_id: Insales::CategoryResolver.new(client).category_id_for(product) ||
-            InsalesSetting.first&.category_id || ENV['INSALES_CATEGORY_ID'],
-          expected_collection_id: InsalesSetting.first&.default_collection_id
+          expected_category_id: nil,
+          expected_collection_id: category_resolver.category_id_for(product) || settings&.default_collection_id,
+          expected_price: catalog_price(catalog_item),
+          expected_quantity: quantity.to_i
         )
 
         unless verify_result.ok
@@ -177,6 +181,13 @@ module Insales
       names = names.map(&:to_s).map(&:strip).reject(&:blank?).uniq
       names = [MoyskladClient::TEST_STORE_NAME] if names.empty?
       names
+    end
+
+    def catalog_price(catalog_item)
+      cents = catalog_item.prices_cents&.dig('retail')
+      return nil if cents.blank?
+
+      (cents.to_d / 100).to_f
     end
 
     def log_media(message)

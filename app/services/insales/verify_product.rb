@@ -16,7 +16,7 @@ module Insales
       @client = client
     end
 
-    def call(product:, insales_product_id:, insales_variant_id: nil, expected_category_id: nil, expected_collection_id: nil)
+    def call(product:, insales_product_id:, insales_variant_id: nil, expected_category_id: nil, expected_collection_id: nil, expected_price: nil, expected_quantity: nil)
       response = client.get("/admin/products/#{insales_product_id}.json")
       return fail_result("GET product failed status=#{response&.status}") unless success?(response)
 
@@ -41,7 +41,12 @@ module Insales
       sku_expected = product.sku.presence || product.code
       sku_ok = variants.any? { |v| v['sku'].to_s == sku_expected.to_s }
 
-      stock_verify = verify_variant(variant_id, product)
+      stock_verify = verify_variant(
+        variant_id,
+        product,
+        expected_price: expected_price,
+        expected_quantity: expected_quantity
+      )
 
       unless title_ok && category_ok && collection_ok && sku_ok && stock_verify[:ok]
         message = build_failure_message(title_ok, category_ok, collection_ok, sku_ok, stock_verify)
@@ -64,7 +69,7 @@ module Insales
 
     attr_reader :client
 
-    def verify_variant(variant_id, product)
+    def verify_variant(variant_id, product, expected_price: nil, expected_quantity: nil)
       return { ok: true, skipped_reason: 'variant_id_missing' } if variant_id.blank?
 
       response = client.get("/admin/variants/#{variant_id}.json")
@@ -72,8 +77,8 @@ module Insales
 
       body = response.body['variant'] || response.body
       sku_expected = product.sku.presence || product.code
-      price_expected = product.retail_price&.to_f
-      quantity_expected = total_stock(product)
+      price_expected = expected_price.nil? ? product.retail_price&.to_f : expected_price.to_f
+      quantity_expected = expected_quantity.nil? ? total_stock(product) : expected_quantity.to_f
 
       sku_ok = body['sku'].to_s == sku_expected.to_s
       price_ok = price_expected.nil? || normalized_price(body['price']) == normalized_price(price_expected)

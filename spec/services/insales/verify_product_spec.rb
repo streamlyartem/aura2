@@ -47,4 +47,40 @@ RSpec.describe Insales::VerifyProduct do
 
     expect(result.ok).to be(true)
   end
+
+  it 'uses explicit expected price and quantity when provided' do
+    product_response = {
+      'product' => {
+        'title' => product.name,
+        'category_id' => nil,
+        'collection_ids' => [],
+        'variants' => [{ 'id' => 55, 'sku' => product.sku }]
+      }
+    }
+    variant_response = {
+      'variant' => {
+        'id' => 55,
+        'sku' => product.sku,
+        'price' => 19.0,
+        'quantity' => 1
+      }
+    }
+
+    allow(client).to receive(:get)
+      .with('/admin/products/1.json')
+      .and_return(double(status: 200, body: product_response))
+    allow(client).to receive(:get)
+      .with('/admin/variants/55.json')
+      .and_return(double(status: 200, body: variant_response))
+
+    result = described_class.new(client).call(
+      product: product,
+      insales_product_id: 1,
+      insales_variant_id: 55,
+      expected_price: 19.0,
+      expected_quantity: 1
+    )
+
+    expect(result.ok).to be(true)
+  end
 end

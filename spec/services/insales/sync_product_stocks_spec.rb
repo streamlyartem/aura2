@@ -99,7 +99,9 @@ RSpec.describe Insales::SyncProductStocks do
         )
       )
 
-    allow_any_instance_of(Insales::VerifyProduct).to receive(:call)
+    verify_product = instance_double(Insales::VerifyProduct)
+    allow(Insales::VerifyProduct).to receive(:new).and_return(verify_product)
+    allow(verify_product).to receive(:call)
       .and_return(double(ok: true, message: nil))
 
     expect(Insales::ExportProducts).to receive(:call)
@@ -113,7 +115,15 @@ RSpec.describe Insales::SyncProductStocks do
     result = described_class.new.call(store_names: ['Тест'])
 
     expect(result.processed).to eq(1)
-    expect(result.errors).to eq(0)
+    expect(result.errors).to eq(0), "last_error_message=#{result.last_error_message.inspect}"
     expect(result.verify_failures).to eq(0)
+    expect(verify_product).to have_received(:call).with(
+      hash_including(
+        product: product,
+        expected_category_id: nil,
+        expected_price: 19.0,
+        expected_quantity: 1
+      )
+    )
   end
 end
