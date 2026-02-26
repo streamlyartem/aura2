@@ -3,7 +3,7 @@
 module Moysklad
   class ImportProductsJob < ApplicationJob
     queue_as :default
-    retry_on Faraday::TimeoutError, Faraday::ConnectionFailed, Net::ReadTimeout, wait: :exponentially_longer, attempts: 3
+    retry_on Faraday::TimeoutError, Faraday::ConnectionFailed, Net::ReadTimeout, wait: 30.seconds, attempts: 3
 
     def perform
       run = MoyskladSyncRun.create!(run_type: 'import_products', started_at: Time.current, status: 'running')
