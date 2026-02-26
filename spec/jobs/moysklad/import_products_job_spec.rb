@@ -15,7 +15,12 @@ RSpec.describe Moysklad::ImportProductsJob, type: :job do
 
       described_class.perform_now
 
-      expect(sync).to have_received(:import_products)
+      expect(sync).to have_received(:import_products).with(
+        hash_including(
+          full_import: true,
+          store_names: []
+        )
+      )
       expect(MoyskladSyncRun.order(:created_at).last).to have_attributes(
         run_type: 'import_products',
         status: 'success',
@@ -27,7 +32,7 @@ RSpec.describe Moysklad::ImportProductsJob, type: :job do
       allow(sync).to receive(:import_products).and_return({ processed: 10, stopped: true })
       allow(described_class).to receive(:with_singleton_lock).and_yield.and_return(true)
 
-      described_class.perform_now
+      described_class.perform_now(store_names: ['Тест'], full_import: false)
 
       expect(MoyskladSyncRun.order(:created_at).last).to have_attributes(
         run_type: 'import_products',
@@ -59,8 +64,11 @@ RSpec.describe Moysklad::ImportProductsJob, type: :job do
       allow(described_class).to receive(:queued_or_running?).and_return(false)
       allow(described_class).to receive(:with_singleton_lock).and_yield.and_return(true)
 
-      expect(described_class.enqueue_once).to be(true)
-      expect(described_class).to have_received(:perform_later).once
+      expect(described_class.enqueue_once(store_names: ['Тест'], full_import: false)).to be(true)
+      expect(described_class).to have_received(:perform_later).with(
+        store_names: ['Тест'],
+        full_import: false
+      ).once
     end
 
     it 'does not enqueue when job is already queued' do

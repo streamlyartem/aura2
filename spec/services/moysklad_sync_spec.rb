@@ -72,6 +72,29 @@ RSpec.describe MoyskladSync do
         expect { import_products }.to change { existing_product.reload.name }.from('Old Name').to('Срезы Темный 55/2')
       end
     end
+
+    context 'when importing products only for selected stores' do
+      let(:client) { instance_double(MoyskladClient) }
+      let(:payload) { JSON.parse(file_fixture('moysklad/products.json').read).fetch('rows').first }
+      let(:ms_id) { payload.fetch('id') }
+      let(:stock_row) { { product_meta: { 'href' => "#{MoyskladClient::BASE_URL}/entity/product/#{ms_id}" } } }
+      let(:service) { described_class.new(client) }
+
+      before do
+        allow(client).to receive(:stocks_for_store).with(store_name: 'Тест').and_return([stock_row])
+        allow(client).to receive(:product).with(ms_id).and_return(payload)
+        allow(client).to receive(:each_product)
+      end
+
+      it 'imports products from selected stores without full scan' do
+        expect do
+          service.import_products(store_names: ['Тест'], full_import: false)
+        end.to change(Product, :count).by(1)
+
+        expect(client).not_to have_received(:each_product)
+        expect(Product.find_by(ms_id: ms_id)&.sku).to eq('1905432613387')
+      end
+    end
   end
 
   describe '#import_stocks' do

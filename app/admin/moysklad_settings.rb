@@ -9,11 +9,37 @@ ActiveAdmin.register_page 'MoySklad Settings' do
   end
 
   page_action :import_products, method: :post do
-    if Moysklad::ImportProductsJob.enqueue_once
-      redirect_to admin_moysklad_settings_path, notice: 'Запущен импорт товаров из MoySklad'
-    else
-      redirect_to admin_moysklad_settings_path, notice: 'Импорт уже запущен или находится в очереди'
+    settings = InsalesSetting.first
+    selected_store_names = settings&.allowed_store_names_list || []
+
+    if selected_store_names.empty?
+      redirect_to admin_moysklad_settings_path, alert: 'Выберите хотя бы один склад в "Настройки InSales".'
+      next
     end
+
+    all_store_names = begin
+      MoyskladClient.new.store_names
+    rescue StandardError => e
+      Rails.logger.warn("[MoyskladSettings] Failed to load MoySklad stores: #{e.class} - #{e.message}")
+      []
+    end
+    all_store_names = Array(all_store_names).map(&:to_s).map(&:strip).reject(&:blank?).uniq
+    full_import = all_store_names.present? && (all_store_names - selected_store_names).empty?
+
+    notice = if Moysklad::ImportProductsJob.enqueue_once(
+      store_names: selected_store_names,
+      full_import: full_import
+    )
+               if full_import
+                 'Запущен полный импорт товаров из MoySklad (выбраны все склады)'
+               else
+                 "Запущен импорт товаров по выбранным складам: #{selected_store_names.join(', ')}"
+               end
+             else
+               'Импорт уже запущен или находится в очереди'
+             end
+
+    redirect_to admin_moysklad_settings_path, notice: notice
   end
 
   page_action :stop_import, method: :post do

@@ -11,13 +11,13 @@ module Moysklad
     LOCK_NAME = 'moysklad_import_products'
 
     class << self
-      def enqueue_once
+      def enqueue_once(store_names: nil, full_import: true)
         enqueued = false
 
         locked = with_singleton_lock do
           next if queued_or_running? || running_import_exists?
 
-          perform_later
+          perform_later(store_names: store_names, full_import: full_import)
           enqueued = true
         end
 
@@ -60,12 +60,22 @@ module Moysklad
       end
     end
 
-    def perform
+    def perform(store_names: nil, full_import: true)
+      selected_store_names = normalize_store_names(store_names)
       locked = self.class.with_singleton_lock do
-        run = MoyskladSyncRun.create!(run_type: 'import_products', started_at: Time.current, status: 'running')
+        run = MoyskladSyncRun.create!(
+          run_type: 'import_products',
+          started_at: Time.current,
+          status: 'running',
+          meta: { store_names: selected_store_names, full_import: full_import }
+        )
         Rails.logger.info('[Moysklad] Import products job started')
 
-        result = MoyskladSync.new.import_products(stop_requested: stop_requested_checker(run.id))
+        result = MoyskladSync.new.import_products(
+          stop_requested: stop_requested_checker(run.id),
+          store_names: selected_store_names,
+          full_import: full_import
+        )
 
         run.update!(
           processed: result[:processed],
@@ -97,12 +107,17 @@ module Moysklad
         created: nil,
         updated: nil,
         error_count: 0,
-        last_error: 'Skipped: import already running'
+        last_error: 'Skipped: import already running',
+        meta: { store_names: selected_store_names, full_import: full_import }
       )
       Rails.logger.info('[Moysklad] Import products job skipped: lock_not_acquired')
     end
 
     private
+
+    def normalize_store_names(store_names)
+      Array(store_names).map(&:to_s).map(&:strip).reject(&:blank?).uniq
+    end
 
     def stop_requested_checker(run_id)
       lambda do

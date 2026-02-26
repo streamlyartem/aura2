@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'set'
+
 class MoyskladSync
   include MoyskladHelper
 
@@ -9,46 +11,26 @@ class MoyskladSync
 
   STOP_CHECK_EVERY = 25
 
-  def import_products(stop_requested: nil)
+  def import_products(stop_requested: nil, store_names: nil, full_import: true)
     count = 0
+    mode = full_import ? 'full' : 'selected_stores'
+    selected_store_names = normalize_store_names(store_names)
+    selected_store_names = @client.store_names if full_import
 
     # Product import must not depend on InSales settings and should not fan-out
     # integration jobs while backfilling data from MoySklad.
     stopped = Current.set(skip_insales_product_sync: true) do
       catch(:stop_import) do
-        @client.each_product(limit: products_page_limit) do |ms_product_payload|
+        each_product_payload(
+          full_import: full_import,
+          store_names: selected_store_names
+        ) do |ms_product_payload|
           if should_stop_import?(stop_requested, count)
             Rails.logger.info("[MoyskladSync] Stop requested, import interrupted at #{count} products")
             throw :stop_import, true
           end
 
-          ms_product = Moysklad::Product.new(ms_product_payload)
-
-          product = Product.find_or_initialize_by(ms_id: ms_product.id)
-
-          product.assign_attributes(
-            ms_id: ms_product.id,
-            name: ms_product.name,
-            batch_number: ms_product.batch_number,
-            path_name: ms_product.path_name,
-            weight: ms_product.weight&.to_f,
-            length: ms_product.length&.to_f,
-            color: ms_product.color,
-            tone: ms_product.tone,
-            ombre: ms_product.ombre.nil? ? false : ms_product.ombre,
-            structure: ms_product.structure,
-            sku: ms_product.sku,
-            code: ms_product.code,
-            barcodes: ms_product.barcodes,
-            purchase_price: ms_product.purchase_price&.to_f,
-            retail_price: ms_product.retail_price&.to_f,
-            small_wholesale_price: ms_product.small_wholesale_price&.to_f,
-            large_wholesale_price: ms_product.large_wholesale_price&.to_f,
-            five_hundred_plus_wholesale_price: ms_product.five_hundred_plus_wholesale_price&.to_f,
-            min_price: ms_product.min_price&.to_f
-          )
-
-          product.save!
+          product = upsert_product(ms_product_payload)
 
           count += 1
           Rails.logger.info "[MoyskladSync] Imported ##{count} #{product.sku}" if (count % 100).zero?
@@ -58,7 +40,7 @@ class MoyskladSync
       end
     end
 
-    Rails.logger.info "[MoyskladSync] Import finished, total: #{count}, stopped=#{stopped}"
+    Rails.logger.info "[MoyskladSync] Import finished mode=#{mode} stores=#{selected_store_names.join(', ')} total=#{count} stopped=#{stopped}"
     { processed: count, stopped: stopped }
   end
 
@@ -127,5 +109,62 @@ class MoyskladSync
     end
 
     store_rows
+  end
+
+  def each_product_payload(full_import:, store_names:)
+    return @client.each_product(limit: products_page_limit) { |payload| yield payload } if full_import
+
+    product_ids_for_store_names(store_names).each do |product_id|
+      yield @client.product(product_id)
+    rescue StandardError => e
+      Rails.logger.warn("[MoyskladSync] Skip product #{product_id}: #{e.class} - #{e.message}")
+    end
+  end
+
+  def product_ids_for_store_names(store_names)
+    ids = Set.new
+
+    store_names.each do |store_name|
+      @client.stocks_for_store(store_name: store_name).each do |row|
+        href = row.dig(:product_meta, 'href')
+        id = extract_uuid(href)
+        ids << id if id.present?
+      end
+    end
+
+    ids.to_a.sort
+  end
+
+  def upsert_product(ms_product_payload)
+    ms_product = Moysklad::Product.new(ms_product_payload)
+
+    product = Product.find_or_initialize_by(ms_id: ms_product.id)
+    product.assign_attributes(
+      ms_id: ms_product.id,
+      name: ms_product.name,
+      batch_number: ms_product.batch_number,
+      path_name: ms_product.path_name,
+      weight: ms_product.weight&.to_f,
+      length: ms_product.length&.to_f,
+      color: ms_product.color,
+      tone: ms_product.tone,
+      ombre: ms_product.ombre.nil? ? false : ms_product.ombre,
+      structure: ms_product.structure,
+      sku: ms_product.sku,
+      code: ms_product.code,
+      barcodes: ms_product.barcodes,
+      purchase_price: ms_product.purchase_price&.to_f,
+      retail_price: ms_product.retail_price&.to_f,
+      small_wholesale_price: ms_product.small_wholesale_price&.to_f,
+      large_wholesale_price: ms_product.large_wholesale_price&.to_f,
+      five_hundred_plus_wholesale_price: ms_product.five_hundred_plus_wholesale_price&.to_f,
+      min_price: ms_product.min_price&.to_f
+    )
+    product.save!
+    product
+  end
+
+  def normalize_store_names(store_names)
+    Array(store_names).map(&:to_s).map(&:strip).reject(&:blank?).uniq
   end
 end
