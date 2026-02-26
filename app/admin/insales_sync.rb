@@ -26,9 +26,13 @@ ActiveAdmin.register_page 'Insales Sync' do
   end
 
   page_action :import_moysklad_products, method: :post do
-    Moysklad::ImportProductsJob.perform_later
+    notice = if Moysklad::ImportProductsJob.enqueue_once
+               'Импорт товаров из MoySklad запущен'
+             else
+               'Импорт уже запущен или находится в очереди'
+             end
 
-    redirect_to admin_insales_sync_path(store_name: params[:store_name].presence), notice: 'Импорт товаров из MoySklad запущен'
+    redirect_to admin_insales_sync_path(store_name: params[:store_name].presence), notice: notice
   end
 
   action_item :ensure_moysklad_webhooks, only: :index do

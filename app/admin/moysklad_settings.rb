@@ -9,8 +9,11 @@ ActiveAdmin.register_page 'MoySklad Settings' do
   end
 
   page_action :import_products, method: :post do
-    Moysklad::ImportProductsJob.perform_later
-    redirect_to admin_moysklad_settings_path, notice: 'Запущен импорт товаров из MoySklad'
+    if Moysklad::ImportProductsJob.enqueue_once
+      redirect_to admin_moysklad_settings_path, notice: 'Запущен импорт товаров из MoySklad'
+    else
+      redirect_to admin_moysklad_settings_path, notice: 'Импорт уже запущен или находится в очереди'
+    end
   end
 
   content title: 'MoySklad Settings' do
