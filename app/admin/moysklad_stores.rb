@@ -39,10 +39,16 @@ ActiveAdmin.register_page 'MoySklad Stores' do
 
       table_for stores do
         column 'Выбрать' do |store|
-          input type: 'checkbox',
-                name: 'selected_store_ids[]',
-                value: store.id,
-                checked: store.selected_for_import?
+          if store.selected_for_import?
+            input type: 'checkbox',
+                  name: 'selected_store_ids[]',
+                  value: store.id,
+                  checked: 'checked'
+          else
+            input type: 'checkbox',
+                  name: 'selected_store_ids[]',
+                  value: store.id
+          end
         end
         column('Склад') { |store| store.name }
         column('Обновлён') { |store| store.updated_at }
