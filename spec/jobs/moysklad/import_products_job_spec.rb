@@ -4,7 +4,7 @@ require 'rails_helper'
 
 RSpec.describe Moysklad::ImportProductsJob, type: :job do
   describe '#perform' do
-    let(:sync) { instance_double(MoyskladSync, import_products: 42) }
+    let(:sync) { instance_double(MoyskladSync, import_products: { processed: 42, stopped: false }) }
 
     before do
       allow(MoyskladSync).to receive(:new).and_return(sync)
@@ -20,6 +20,20 @@ RSpec.describe Moysklad::ImportProductsJob, type: :job do
         run_type: 'import_products',
         status: 'success',
         processed: 42
+      )
+    end
+
+    it 'marks run as stopped when stop requested' do
+      allow(sync).to receive(:import_products).and_return({ processed: 10, stopped: true })
+      allow(described_class).to receive(:with_singleton_lock).and_yield.and_return(true)
+
+      described_class.perform_now
+
+      expect(MoyskladSyncRun.order(:created_at).last).to have_attributes(
+        run_type: 'import_products',
+        status: 'stopped',
+        processed: 10,
+        last_error: 'Stopped by user'
       )
     end
 
@@ -51,6 +65,15 @@ RSpec.describe Moysklad::ImportProductsJob, type: :job do
 
     it 'does not enqueue when job is already queued' do
       allow(described_class).to receive(:queued_or_running?).and_return(true)
+      allow(described_class).to receive(:with_singleton_lock).and_yield.and_return(true)
+
+      expect(described_class.enqueue_once).to be(false)
+      expect(described_class).not_to have_received(:perform_later)
+    end
+
+    it 'does not enqueue when previous import is still running' do
+      MoyskladSyncRun.create!(run_type: 'import_products', status: 'running', started_at: Time.current)
+      allow(described_class).to receive(:queued_or_running?).and_return(false)
       allow(described_class).to receive(:with_singleton_lock).and_yield.and_return(true)
 
       expect(described_class.enqueue_once).to be(false)

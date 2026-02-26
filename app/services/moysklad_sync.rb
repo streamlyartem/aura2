@@ -7,48 +7,59 @@ class MoyskladSync
     @client = client
   end
 
-  def import_products
+  STOP_CHECK_EVERY = 25
+
+  def import_products(stop_requested: nil)
     count = 0
 
     # Product import must not depend on InSales settings and should not fan-out
     # integration jobs while backfilling data from MoySklad.
-    Current.set(skip_insales_product_sync: true) do
-      @client.each_product(limit: products_page_limit) do |ms_product_payload|
-        ms_product = Moysklad::Product.new(ms_product_payload)
+    stopped = Current.set(skip_insales_product_sync: true) do
+      catch(:stop_import) do
+        @client.each_product(limit: products_page_limit) do |ms_product_payload|
+          if should_stop_import?(stop_requested, count)
+            Rails.logger.info("[MoyskladSync] Stop requested, import interrupted at #{count} products")
+            throw :stop_import, true
+          end
 
-        product = Product.find_or_initialize_by(ms_id: ms_product.id)
+          ms_product = Moysklad::Product.new(ms_product_payload)
 
-        product.assign_attributes(
-          ms_id: ms_product.id,
-          name: ms_product.name,
-          batch_number: ms_product.batch_number,
-          path_name: ms_product.path_name,
-          weight: ms_product.weight&.to_f,
-          length: ms_product.length&.to_f,
-          color: ms_product.color,
-          tone: ms_product.tone,
-          ombre: ms_product.ombre.nil? ? false : ms_product.ombre,
-          structure: ms_product.structure,
-          sku: ms_product.sku,
-          code: ms_product.code,
-          barcodes: ms_product.barcodes,
-          purchase_price: ms_product.purchase_price&.to_f,
-          retail_price: ms_product.retail_price&.to_f,
-          small_wholesale_price: ms_product.small_wholesale_price&.to_f,
-          large_wholesale_price: ms_product.large_wholesale_price&.to_f,
-          five_hundred_plus_wholesale_price: ms_product.five_hundred_plus_wholesale_price&.to_f,
-          min_price: ms_product.min_price&.to_f
-        )
+          product = Product.find_or_initialize_by(ms_id: ms_product.id)
 
-        product.save!
+          product.assign_attributes(
+            ms_id: ms_product.id,
+            name: ms_product.name,
+            batch_number: ms_product.batch_number,
+            path_name: ms_product.path_name,
+            weight: ms_product.weight&.to_f,
+            length: ms_product.length&.to_f,
+            color: ms_product.color,
+            tone: ms_product.tone,
+            ombre: ms_product.ombre.nil? ? false : ms_product.ombre,
+            structure: ms_product.structure,
+            sku: ms_product.sku,
+            code: ms_product.code,
+            barcodes: ms_product.barcodes,
+            purchase_price: ms_product.purchase_price&.to_f,
+            retail_price: ms_product.retail_price&.to_f,
+            small_wholesale_price: ms_product.small_wholesale_price&.to_f,
+            large_wholesale_price: ms_product.large_wholesale_price&.to_f,
+            five_hundred_plus_wholesale_price: ms_product.five_hundred_plus_wholesale_price&.to_f,
+            min_price: ms_product.min_price&.to_f
+          )
 
-        count += 1
-        Rails.logger.info "[MoyskladSync] Imported ##{count} #{product.sku}" if (count % 100).zero?
+          product.save!
+
+          count += 1
+          Rails.logger.info "[MoyskladSync] Imported ##{count} #{product.sku}" if (count % 100).zero?
+        end
+
+        false
       end
     end
 
-    Rails.logger.info "[MoyskladSync] Import finished, total: #{count}"
-    count
+    Rails.logger.info "[MoyskladSync] Import finished, total: #{count}, stopped=#{stopped}"
+    { processed: count, stopped: stopped }
   end
 
   def import_stocks
@@ -92,6 +103,13 @@ class MoyskladSync
     return value if value.positive?
 
     1000
+  end
+
+  def should_stop_import?(stop_requested, processed_count)
+    return false unless stop_requested
+    return false unless (processed_count % STOP_CHECK_EVERY).zero?
+
+    stop_requested.call
   end
 
   def stock_changed?(product_stock, stock, free_stock, reserve)

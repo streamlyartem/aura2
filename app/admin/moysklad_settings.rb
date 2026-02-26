@@ -16,6 +16,21 @@ ActiveAdmin.register_page 'MoySklad Settings' do
     end
   end
 
+  page_action :stop_import, method: :post do
+    running_run = MoyskladSyncRun.imports.running.order(created_at: :desc).first
+
+    notice = if running_run.nil?
+               'Сейчас нет активного импорта'
+             elsif running_run.stop_requested?
+               'Запрос на остановку уже отправлен'
+             else
+               running_run.update!(stop_requested_at: Time.current)
+               'Запрос на остановку импорта отправлен'
+             end
+
+    redirect_to admin_moysklad_settings_path, notice: notice
+  end
+
   content title: 'MoySklad Settings' do
     webhook_token = ENV['MOYSKLAD_WEBHOOK_TOKEN'].to_s
     webhook_host = ENV['APP_HOST'].presence || ENV['RAILS_HOST'].presence || Rails.application.routes.default_url_options[:host]
@@ -25,6 +40,17 @@ ActiveAdmin.register_page 'MoySklad Settings' do
 
     last_webhooks_run = MoyskladSyncRun.where(run_type: 'webhooks').order(created_at: :desc).first
     last_import_run = MoyskladSyncRun.where(run_type: 'import_products').order(created_at: :desc).first
+    running_import_run = MoyskladSyncRun.imports.running.order(created_at: :desc).first
+
+    sync_run_time = lambda do |run|
+      next '—' unless run&.status == 'running' && run.started_at.present?
+
+      "#{(Time.current - run.started_at).to_i} sec"
+    end
+
+    last_sync_run_at = lambda do |run|
+      run&.finished_at || run&.started_at || '—'
+    end
 
     panel 'Управление вебхуками' do
       div class: 'mb-4' do
@@ -36,8 +62,9 @@ ActiveAdmin.register_page 'MoySklad Settings' do
 
       table_for [
         ['MoySklad Webhook URL', webhook_hint],
-        ['Last sync run', last_webhooks_run&.finished_at || '—'],
+        ['Last sync run', last_sync_run_at.call(last_webhooks_run)],
         ['Status', last_webhooks_run&.status || '—'],
+        ['Sync run time', sync_run_time.call(last_webhooks_run)],
         ['Processed', last_webhooks_run&.processed || '—'],
         ['Created', last_webhooks_run&.created || '—'],
         ['Errors', last_webhooks_run&.error_count || '—'],
@@ -56,9 +83,22 @@ ActiveAdmin.register_page 'MoySklad Settings' do
         end
       end
 
+      if running_import_run.present?
+        div class: 'mb-4' do
+          form action: url_for(action: :stop_import), method: :post do
+            input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
+            input type: 'submit',
+                  value: (running_import_run.stop_requested? ? 'Остановка запрошена' : 'Остановить импорт'),
+                  class: 'button',
+                  disabled: running_import_run.stop_requested?
+          end
+        end
+      end
+
       table_for [
-        ['Last sync run', last_import_run&.finished_at || '—'],
+        ['Last sync run', last_sync_run_at.call(last_import_run)],
         ['Status', last_import_run&.status || '—'],
+        ['Sync run time', sync_run_time.call(last_import_run)],
         ['Processed', last_import_run&.processed || '—'],
         ['Errors', last_import_run&.error_count || '—'],
         ['Last error', last_import_run&.status == 'failed' ? (last_import_run.last_error.presence || '—') : '—'],
