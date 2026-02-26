@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'MoySklad Settings' do
-  menu label: 'Настройки МС', priority: 6
+  menu label: 'Настройки МС', parent: 'МойСклад', priority: 2
 
   page_action :ensure_webhooks, method: :post do
     Moysklad::EnsureWebhooksJob.perform_later
@@ -9,11 +9,10 @@ ActiveAdmin.register_page 'MoySklad Settings' do
   end
 
   page_action :import_products, method: :post do
-    settings = InsalesSetting.first
-    selected_store_names = settings&.allowed_store_names_list || []
+    selected_store_names = MoyskladStore.selected_names
 
     if selected_store_names.empty?
-      redirect_to admin_moysklad_settings_path, alert: 'Выберите хотя бы один склад в "Настройки InSales".'
+      redirect_to admin_moysklad_settings_path, alert: 'Выберите хотя бы один склад в разделе "Склады МС".'
       next
     end
 
@@ -21,9 +20,15 @@ ActiveAdmin.register_page 'MoySklad Settings' do
       MoyskladClient.new.store_names
     rescue StandardError => e
       Rails.logger.warn("[MoyskladSettings] Failed to load MoySklad stores: #{e.class} - #{e.message}")
-      []
+      MoyskladStore.all_names
     end
     all_store_names = Array(all_store_names).map(&:to_s).map(&:strip).reject(&:blank?).uniq
+
+    if all_store_names.empty?
+      redirect_to admin_moysklad_settings_path, alert: 'Список складов пуст. Нажмите "Обновить список" в разделе "Склады МС".'
+      next
+    end
+
     full_import = all_store_names.present? && (all_store_names - selected_store_names).empty?
 
     notice = if Moysklad::ImportProductsJob.enqueue_once(
@@ -67,6 +72,7 @@ ActiveAdmin.register_page 'MoySklad Settings' do
     last_webhooks_run = MoyskladSyncRun.where(run_type: 'webhooks').order(created_at: :desc).first
     last_import_run = MoyskladSyncRun.where(run_type: 'import_products').order(created_at: :desc).first
     running_import_run = MoyskladSyncRun.imports.running.order(created_at: :desc).first
+    selected_store_names = MoyskladStore.selected_names
 
     sync_run_time = lambda do |run|
       next '—' unless run&.status == 'running' && run.started_at.present?
@@ -125,6 +131,7 @@ ActiveAdmin.register_page 'MoySklad Settings' do
         ['Last sync run', last_sync_run_at.call(last_import_run)],
         ['Status', last_import_run&.status || '—'],
         ['Sync run time', sync_run_time.call(last_import_run)],
+        ['Склады для импорта', selected_store_names.present? ? selected_store_names.join(', ') : '—'],
         ['Processed', last_import_run&.processed || '—'],
         ['Errors', last_import_run&.error_count || '—'],
         ['Last error', last_import_run&.status == 'failed' ? (last_import_run.last_error.presence || '—') : '—'],

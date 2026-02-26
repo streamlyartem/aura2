@@ -259,6 +259,16 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_26_234000) do
     t.index ["store_name"], name: "index_insales_sync_statuses_on_store_name", unique: true
   end
 
+  create_table "moysklad_stores", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "name", null: false
+    t.boolean "selected_for_import", default: false, null: false
+    t.datetime "last_seen_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["name"], name: "index_moysklad_stores_on_name", unique: true
+    t.index ["selected_for_import"], name: "index_moysklad_stores_on_selected_for_import"
+  end
+
   create_table "moysklad_sync_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.string "run_type", null: false
     t.datetime "started_at"

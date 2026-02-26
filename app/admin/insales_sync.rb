@@ -26,10 +26,23 @@ ActiveAdmin.register_page 'Insales Sync' do
   end
 
   page_action :import_moysklad_products, method: :post do
-    notice = if Moysklad::ImportProductsJob.enqueue_once
-               'Импорт товаров из MoySklad запущен'
+    selected_store_names = MoyskladStore.selected_names
+
+    notice = if selected_store_names.blank?
+               'Выберите склады в разделе "Склады МС"'
              else
-               'Импорт уже запущен или находится в очереди'
+               all_store_names = begin
+                 MoyskladClient.new.store_names
+               rescue StandardError
+                 MoyskladStore.all_names
+               end
+               full_import = (Array(all_store_names).map(&:to_s).map(&:strip).reject(&:blank?) - selected_store_names).empty?
+
+               if Moysklad::ImportProductsJob.enqueue_once(store_names: selected_store_names, full_import: full_import)
+                 'Импорт товаров из MoySklad запущен'
+               else
+                 'Импорт уже запущен или находится в очереди'
+               end
              end
 
     redirect_to admin_insales_sync_path(store_name: params[:store_name].presence), notice: notice

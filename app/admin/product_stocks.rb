@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register ProductStock do
-  menu label: 'Остатки из МС', priority: 8
+  menu label: 'Остатки из МС', parent: 'МойСклад', priority: 4
 
   actions :index, :show
   config.batch_actions = false
