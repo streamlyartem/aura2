@@ -3,7 +3,7 @@
 require 'rails_helper'
 
 RSpec.describe Moysklad::Product do
-  it 'converts per-gram money fields from MoySklad and scales by product weight' do
+  it 'normalizes money fields from MoySklad minor units' do
     payload = {
       'id' => 'ms-1',
       'name' => 'Test Product',
@@ -24,11 +24,11 @@ RSpec.describe Moysklad::Product do
 
     product = described_class.new(payload)
 
-    expect(product.purchase_price).to eq(12_221.55)
-    expect(product.retail_price).to eq(17_325.0)
-    expect(product.small_wholesale_price).to eq(16_038.0)
-    expect(product.large_wholesale_price).to eq(14_256.0)
-    expect(product.five_hundred_plus_wholesale_price).to eq(12_474.0)
-    expect(product.min_price).to eq(17_325.0)
+    expect(product.purchase_price).to eq(123.45)
+    expect(product.retail_price).to eq(175.0)
+    expect(product.small_wholesale_price).to eq(162.0)
+    expect(product.large_wholesale_price).to eq(144.0)
+    expect(product.five_hundred_plus_wholesale_price).to eq(126.0)
+    expect(product.min_price).to eq(175.0)
   end
 end

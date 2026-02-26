@@ -9,18 +9,18 @@ module Moysklad
         data = fetch_entity_data
         return unless data
 
-        ms_product = ::Moysklad::Product.new(data)
-        if ms_product.sku.blank?
-          Rails.logger.info "[Moysklad Webhook] Skip product without article ms_id=#{ms_product.id}"
-          return
-        end
+      ms_product = ::Moysklad::Product.new(data)
+      if ms_product.sku.blank?
+        Rails.logger.info "[Moysklad Webhook] Skip product without article ms_id=#{ms_product.id}"
+        return
+      end
 
-        if ms_product.weight.to_f <= 0
-          Rails.logger.info "[Moysklad Webhook] Skip product with non-positive weight ms_id=#{ms_product.id} weight=#{ms_product.weight.inspect}"
-          return
-        end
+      if ms_product.weight.to_f <= 0
+        Rails.logger.info "[Moysklad Webhook] Skip product with non-positive weight ms_id=#{ms_product.id} weight=#{ms_product.weight.inspect}"
+        return
+      end
 
-        product = ::Product.create!(
+      product = ::Product.create!(
           ms_id: ms_product.id,
           name: ms_product.name,
           sku: ms_product.sku,
@@ -39,12 +39,8 @@ module Moysklad
           small_wholesale_price: ms_product.small_wholesale_price.to_f,
           large_wholesale_price: ms_product.large_wholesale_price.to_f,
           five_hundred_plus_wholesale_price: ms_product.five_hundred_plus_wholesale_price.to_f,
-          min_price: ms_product.min_price.to_f,
-          unit_type: 'weight',
-          unit_weight_g: ms_product.weight.to_f,
-          ms_stock_g: ms_product.weight.to_i
+          min_price: ms_product.min_price.to_f
         )
-        Pricing::SyncVariantPrices.call(product: product, ms_product: ms_product)
 
         Rails.logger.info "[Moysklad Webhook] Product #{product.id} created from Moysklad"
       end

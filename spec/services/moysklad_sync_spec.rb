@@ -30,12 +30,12 @@ RSpec.describe MoyskladSync do
           sku: sku,
           code: sku,
           barcodes: [{ 'code128' => '1905432613387' }, { 'ean13' => '2000000337920' }],
-          purchase_price: 13_018.5,
-          retail_price: 19_800.0,
-          small_wholesale_price: 17_820.0,
-          large_wholesale_price: 15_840.0,
-          five_hundred_plus_wholesale_price: 13_860.0,
-          min_price: 13_860.0
+          purchase_price: 118.35,
+          retail_price: 180.0,
+          small_wholesale_price: 162.0,
+          large_wholesale_price: 144.0,
+          five_hundred_plus_wholesale_price: 126.0,
+          min_price: 126.0
         )
       end
     end
@@ -56,8 +56,8 @@ RSpec.describe MoyskladSync do
         imported_without_article = Product.find_by(name: 'No Article')
         imported_zero_weight = Product.find_by(name: 'Zero Weight')
 
-        expect(imported_without_article).to have_attributes(unit_type: 'weight')
-        expect(imported_zero_weight).to have_attributes(unit_type: 'piece', unit_weight_g: nil)
+        expect(imported_without_article).to have_attributes(weight: 10.0, sku: nil)
+        expect(imported_zero_weight).to have_attributes(weight: 0.0, sku: 'SKU-ZERO')
       end
     end
 

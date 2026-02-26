@@ -15,8 +15,6 @@ class MoyskladSync
     Current.set(skip_insales_product_sync: true) do
       @client.each_product(limit: products_page_limit) do |ms_product_payload|
         ms_product = Moysklad::Product.new(ms_product_payload)
-        weight = ms_product.weight&.to_f
-        weight_unit = weight.to_f.positive?
 
         product = Product.find_or_initialize_by(ms_id: ms_product.id)
 
@@ -25,7 +23,7 @@ class MoyskladSync
           name: ms_product.name,
           batch_number: ms_product.batch_number,
           path_name: ms_product.path_name,
-          weight: weight,
+          weight: ms_product.weight&.to_f,
           length: ms_product.length&.to_f,
           color: ms_product.color,
           tone: ms_product.tone,
@@ -41,12 +39,8 @@ class MoyskladSync
           five_hundred_plus_wholesale_price: ms_product.five_hundred_plus_wholesale_price&.to_f,
           min_price: ms_product.min_price&.to_f
         )
-        product.unit_type = weight_unit ? 'weight' : 'piece'
-        product.unit_weight_g = weight_unit ? weight : nil
-        product.ms_stock_g = weight_unit ? weight.to_i : nil
 
         product.save!
-        Pricing::SyncVariantPrices.call(product: product, ms_product: ms_product)
 
         count += 1
         Rails.logger.info "[MoyskladSync] Imported ##{count} #{product.sku}" if (count % 100).zero?
@@ -84,12 +78,7 @@ class MoyskladSync
       )
       product_stock.save!
       # In this domain stock value is used as current effective weight on storefront cards.
-      if row[:store_name] == MoyskladClient::TEST_STORE_NAME
-        updates = {}
-        updates[:weight] = new_stock if product.weight.to_f != new_stock
-        updates[:ms_stock_g] = new_stock.to_i if product.ms_stock_g.to_i != new_stock.to_i
-        product.update_columns(updates) if updates.present?
-      end
+      product.update_column(:weight, new_stock) if row[:store_name] == MoyskladClient::TEST_STORE_NAME && product.weight.to_f != new_stock
       changed_product_ids << product.id
     end
 

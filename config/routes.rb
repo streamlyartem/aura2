@@ -31,12 +31,6 @@ Rails.application.routes.draw do
     get 'images/:image_id', to: 'images#show'
   end
 
-  namespace :integrations do
-    namespace :insales do
-      post :external_discount, to: 'external_discounts#create'
-    end
-  end
-
   # Defines the root path route ("/")
   root 'admin/products#index'
 end
