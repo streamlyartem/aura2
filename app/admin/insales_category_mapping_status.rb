@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'InSales Category Status' do
-  menu label: 'InSales Category Status', priority: 8
+  menu parent: 'InSales', label: 'InSales Category Status', priority: 6
 
   content title: 'InSales Category Status' do
     last_run = InsalesCategorySyncRun.order(created_at: :desc).first

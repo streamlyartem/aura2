@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'InSales Stock Sync' do
-  menu label: 'InSales Stock Sync', priority: 6
+  menu parent: 'InSales', label: 'InSales Stock Sync', priority: 3
 
   page_action :sync_now, method: :post do
     settings = InsalesSetting.first

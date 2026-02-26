@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register Product do
+  menu label: 'Все товары из МС', priority: 9
+
   # Specify parameters which should be permitted for assignment
   permit_params images_attributes: %i[id file _destroy]
 

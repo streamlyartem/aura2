@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register InsalesSetting do
-  menu label: 'InSales Settings', priority: 5
+  menu label: 'Настройки InSales', priority: 5
 
   actions :index, :new, :create, :edit, :update
 

@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'MoySklad Settings' do
-  menu label: 'MoySklad Settings', priority: 6
+  menu label: 'Настройки МС', priority: 6
 
   page_action :ensure_webhooks, method: :post do
     Moysklad::EnsureWebhooksJob.perform_later

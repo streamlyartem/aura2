@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register InsalesCategoryMapping do
-  menu label: 'InSales Category Mappings', priority: 7
+  menu parent: 'InSales', label: 'InSales Category Mappings', priority: 4
 
   permit_params :product_type, :tone, :length, :ombre, :structure, :insales_category_id, :aura_key, :aura_key_type,
                 :insales_collection_title, :comment, :is_active
