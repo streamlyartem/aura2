@@ -4,6 +4,14 @@ module Insales
   class ProductFieldCatalog
     FieldDefinition = Struct.new(:key, :title, :extractor, keyword_init: true)
     DEFAULT_FIELD_TYPE = 'ProductField::TextArea'
+    DEFAULT_ENABLED_FIELD_KEYS = %i[
+      aura_product_type
+      aura_weight_g
+      aura_ombre
+      aura_price_retail
+      aura_price_small_wholesale
+      aura_price_large_wholesale
+    ].freeze
 
     FIELD_DEFINITIONS = [
       FieldDefinition.new(
@@ -71,6 +79,7 @@ module Insales
         }
       )
     ].freeze
+    FIELD_DEFINITIONS_BY_KEY = FIELD_DEFINITIONS.index_by(&:key).freeze
 
     def initialize(client)
       @client = client
@@ -82,7 +91,7 @@ module Insales
       field_ids = {} unless field_ids.is_a?(Hash)
       existing_value_ids_by_field_id = {} unless existing_value_ids_by_field_id.is_a?(Hash)
 
-      FIELD_DEFINITIONS.each_with_object([]) do |definition, result|
+      active_field_definitions.each_with_object([]) do |definition, result|
         value = normalize_value(definition.extractor.call(product))
         next if value.blank?
 
@@ -109,6 +118,7 @@ module Insales
     attr_reader :client
 
     def ensure_field_ids!
+      return {} if active_field_definitions.empty?
       return @field_ids_by_key if @field_ids_by_key.present?
 
       cached = normalize_cached_field_ids(Rails.cache.read(fields_cache_key))
@@ -119,7 +129,7 @@ module Insales
         return (@field_ids_by_key = cached) if cached.present?
 
         existing_by_title = fetch_existing_fields
-        missing = FIELD_DEFINITIONS.select { |field| existing_by_title[field.title].blank? }
+        missing = active_field_definitions.select { |field| existing_by_title[field.title].blank? }
 
         missing.each do |field|
           response = client.post(
@@ -137,7 +147,7 @@ module Insales
           existing_by_title[field.title] = created_id if created_id.present?
         end
 
-        @field_ids_by_key = FIELD_DEFINITIONS.to_h do |field|
+        @field_ids_by_key = active_field_definitions.to_h do |field|
           [field.key, existing_by_title[field.title]]
         end
 
@@ -223,7 +233,23 @@ module Insales
     end
 
     def fields_cache_key
-      'insales:product_fields:v1'
+      "insales:product_fields:v2:#{active_field_definitions.map(&:key).join(',')}"
+    end
+
+    def active_field_definitions
+      @active_field_definitions ||= begin
+        keys = configured_field_keys
+        FIELD_DEFINITIONS.select { |definition| keys.include?(definition.key) }
+      end
+    end
+
+    def configured_field_keys
+      raw_keys = ENV.fetch('INSALES_PRODUCT_FIELD_KEYS', '').to_s
+      return DEFAULT_ENABLED_FIELD_KEYS if raw_keys.blank?
+
+      parsed_keys = raw_keys.split(',').map { |value| value.strip.to_sym }.uniq
+      selected_keys = parsed_keys.select { |key| FIELD_DEFINITIONS_BY_KEY.key?(key) }
+      selected_keys.presence || DEFAULT_ENABLED_FIELD_KEYS
     end
 
     def with_fields_lock
