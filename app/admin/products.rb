@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register Product do
-  menu label: 'Все товары из МС', parent: 'МойСклад', priority: 5
+  menu label: 'Все товары из МС', parent: 'МойСклад', priority: 5,
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/products') }
 
   # Specify parameters which should be permitted for assignment
   permit_params images_attributes: %i[id file _destroy]

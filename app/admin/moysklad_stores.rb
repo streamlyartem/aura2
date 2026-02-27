@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'MoySklad Stores' do
-  menu label: 'Склады МС', parent: 'МойСклад', priority: 3
+  menu label: 'Склады МС', parent: 'МойСклад', priority: 3,
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/moysklad_stores') }
 
   page_action :refresh, method: :post do
     names = MoyskladStore.refresh_from_moysklad!

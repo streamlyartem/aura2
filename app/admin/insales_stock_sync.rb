@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'InSales Stock Sync' do
-  menu parent: 'InSales', label: 'InSales Stock Sync', priority: 3
+  menu parent: 'InSales', label: 'InSales Stock Sync', priority: 3,
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/insales_stock_sync') }
 
   page_action :sync_now, method: :post do
     settings = InsalesSetting.first

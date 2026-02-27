@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register InsalesSetting do
-  menu label: 'Настройки InSales', priority: 5
+  menu label: 'Настройки InSales', priority: 5,
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/insales_settings') }
 
   actions :index, :new, :create, :edit, :update
 

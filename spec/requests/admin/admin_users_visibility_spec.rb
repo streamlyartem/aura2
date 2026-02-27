@@ -36,4 +36,16 @@ RSpec.describe 'Admin Users visibility', type: :request do
     follow_redirect!
     expect(response.body).to include('У вас нет доступа к этому разделу.')
   end
+
+  it 'hides non-selected sections in menu' do
+    sign_out super_admin
+    restricted_admin = create(:admin_user, allowed_admin_paths: ['/admin/dashboard'])
+    sign_in restricted_admin, scope: :admin_user
+
+    get '/admin/dashboard'
+
+    expect(response).to have_http_status(:ok)
+    expect(response.body).not_to include('Все товары из МС')
+    expect(response.body).not_to include('Настройки InSales')
+  end
 end

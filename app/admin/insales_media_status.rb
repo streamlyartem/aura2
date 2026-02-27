@@ -3,7 +3,8 @@
 require 'erb'
 
 ActiveAdmin.register_page 'InSales Media Status' do
-  menu parent: 'InSales', label: 'InSales Media Status', priority: 5
+  menu parent: 'InSales', label: 'InSales Media Status', priority: 5,
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/insales_media_status') }
 
   content title: 'InSales Media Status' do
     if params[:product_id].present?

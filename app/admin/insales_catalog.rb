@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register InsalesCatalogItem do
-  menu parent: 'InSales', label: 'Каталог InSales', priority: 1
+  menu parent: 'InSales', label: 'Каталог InSales', priority: 1,
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/insales_catalog_items') }
 
   actions :index, :show
   includes :product

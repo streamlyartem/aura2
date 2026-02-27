@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'MoySklad Settings' do
-  menu label: 'Настройки МС', parent: 'МойСклад', priority: 2
+  menu label: 'Настройки МС', parent: 'МойСклад', priority: 2,
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/moysklad_settings') }
 
   page_action :ensure_webhooks, method: :post do
     Moysklad::EnsureWebhooksJob.perform_later

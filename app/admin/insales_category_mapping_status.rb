@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'InSales Category Status' do
-  menu parent: 'InSales', label: 'InSales Category Status', priority: 6
+  menu parent: 'InSales', label: 'InSales Category Status', priority: 6,
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/insales_category_status') }
 
   content title: 'InSales Category Status' do
     last_run = InsalesCategorySyncRun.order(created_at: :desc).first

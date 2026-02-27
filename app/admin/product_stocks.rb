@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register ProductStock do
-  menu label: 'Остатки из МС', parent: 'МойСклад', priority: 4
+  menu label: 'Остатки из МС', parent: 'МойСклад', priority: 4,
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/product_stocks') }
 
   actions :index, :show
   config.batch_actions = false
