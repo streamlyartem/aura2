@@ -64,9 +64,7 @@ module Insales
         catalog_item = catalog_items[product.id]
         quantity = catalog_item&.export_quantity
         if quantity.nil?
-          result.errors += 1
-          result.last_error_message = 'catalog not prepared'
-          Rails.logger.warn("[InSalesSync] Skip product #{product.id} reason=catalog_not_prepared")
+          Rails.logger.info("[InSalesSync] Skip product #{product.id} reason=catalog_not_prepared")
           next
         end
 

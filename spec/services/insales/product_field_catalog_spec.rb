@@ -3,6 +3,10 @@
 require 'rails_helper'
 
 RSpec.describe Insales::ProductFieldCatalog do
+  after do
+    Rails.cache.delete('insales:product_fields:v1')
+  end
+
   let(:client) { instance_double(Insales::InsalesClient) }
   let(:catalog) { described_class.new(client) }
   let(:product) do
@@ -40,5 +44,22 @@ RSpec.describe Insales::ProductFieldCatalog do
     expect(values).to all(include(:product_field_id, :value))
     expect(values.map { |v| v[:value] }).to include('Срезы', 'Светлый', 'Да')
     expect(values.map { |v| v[:value] }).to include('0-499г: розница; 500-999г: мелкий опт; >=1000г: крупный опт')
+  end
+
+  it 'ignores corrupted cache payload and rebuilds field ids safely' do
+    Rails.cache.write('insales:product_fields:v1', true, expires_in: 10.minutes)
+
+    field_rows = described_class::FIELD_DEFINITIONS.each_with_index.map do |definition, index|
+      { 'id' => index + 1000, 'title' => definition.title }
+    end
+
+    allow(client).to receive(:get).with('/admin/product_fields.json').and_return(
+      double(status: 200, body: field_rows)
+    )
+    allow(client).to receive(:post)
+
+    expect { catalog.product_field_values_attributes(product) }.not_to raise_error
+    expect(client).to have_received(:get).with('/admin/product_fields.json').at_least(:once)
+    expect(client).not_to have_received(:post)
   end
 end

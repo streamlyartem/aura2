@@ -39,6 +39,9 @@ module Insales
         end
 
         upload_image(image, mapping.insales_product_id, result)
+      rescue ActiveStorage::FileNotFoundError => e
+        result.skipped += 1
+        Rails.logger.warn("[InSales] Image export skipped for #{image.id}: #{e.class}")
       rescue StandardError => e
         result.errors += 1
         Rails.logger.error("[InSales] Image export failed for #{image.id}: #{e.class} - #{e.message}")

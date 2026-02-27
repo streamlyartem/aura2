@@ -79,6 +79,8 @@ module Insales
 
     def product_field_values_attributes(product, existing_value_ids_by_field_id = {})
       field_ids = ensure_field_ids!
+      field_ids = {} unless field_ids.is_a?(Hash)
+      existing_value_ids_by_field_id = {} unless existing_value_ids_by_field_id.is_a?(Hash)
 
       FIELD_DEFINITIONS.each_with_object([]) do |definition, result|
         value = normalize_value(definition.extractor.call(product))
@@ -109,11 +111,11 @@ module Insales
     def ensure_field_ids!
       return @field_ids_by_key if @field_ids_by_key.present?
 
-      cached = Rails.cache.read(fields_cache_key)
+      cached = normalize_cached_field_ids(Rails.cache.read(fields_cache_key))
       return (@field_ids_by_key = cached) if cached.present?
 
       with_fields_lock do
-        cached = Rails.cache.read(fields_cache_key)
+        cached = normalize_cached_field_ids(Rails.cache.read(fields_cache_key))
         return (@field_ids_by_key = cached) if cached.present?
 
         existing_by_title = fetch_existing_fields
@@ -140,6 +142,7 @@ module Insales
         end
 
         Rails.cache.write(fields_cache_key, @field_ids_by_key, expires_in: 10.minutes)
+        @field_ids_by_key
       end
     end
 
@@ -161,12 +164,25 @@ module Insales
     end
 
     def parse_fields(body)
-      return body if body.is_a?(Array)
-      return body['product_fields'] if body.is_a?(Hash) && body['product_fields'].is_a?(Array)
+      return body.select { |item| item.is_a?(Hash) } if body.is_a?(Array)
+      return body['product_fields'].select { |item| item.is_a?(Hash) } if body.is_a?(Hash) && body['product_fields'].is_a?(Array)
       return [body['product_field']] if body.is_a?(Hash) && body['product_field'].is_a?(Hash)
       return [body] if body.is_a?(Hash)
 
       []
+    end
+
+    def normalize_cached_field_ids(value)
+      return nil unless value.is_a?(Hash)
+
+      normalized = value.each_with_object({}) do |(key, field_id), acc|
+        next if field_id.blank?
+
+        symbol_key = key.respond_to?(:to_sym) ? key.to_sym : key
+        acc[symbol_key] = field_id
+      end
+
+      normalized.presence
     end
 
     def extract_field_id(body)

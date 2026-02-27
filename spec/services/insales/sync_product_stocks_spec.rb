@@ -126,4 +126,18 @@ RSpec.describe Insales::SyncProductStocks do
       )
     )
   end
+
+  it 'skips products without prepared catalog row without counting hard error' do
+    product = create(:product, name: 'No Catalog Item', sku: 'SKU-4040')
+    create(:product_stock, product: product, stock: 5, store_name: 'Тест')
+
+    expect(Insales::ExportProducts).not_to receive(:call)
+
+    result = described_class.new.call(store_names: ['Тест'])
+
+    expect(result.processed).to eq(1)
+    expect(result.errors).to eq(0)
+    expect(result.created).to eq(0)
+    expect(result.updated).to eq(0)
+  end
 end
