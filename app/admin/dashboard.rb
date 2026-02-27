@@ -48,6 +48,8 @@ ActiveAdmin.register_page 'Dashboard' do
   end
 
   content title: proc { I18n.t('active_admin.dashboard') } do
+    InsalesSyncRun.recover_stale_runs!
+
     queue_scope = SolidQueue::Job.where(finished_at: nil)
     queue_total = queue_scope.count
     queue_ready = SolidQueue::ReadyExecution.count

@@ -5,6 +5,7 @@ ActiveAdmin.register_page 'InSales Stock Sync' do
        if: proc { current_admin_user&.can_access_admin_path?('/admin/insales_stock_sync') }
 
   page_action :sync_now, method: :post do
+    InsalesSyncRun.recover_stale_runs!
     settings = InsalesSetting.first
     store_names = settings&.allowed_store_names_list
     store_names = [MoyskladClient::TEST_STORE_NAME] if store_names.blank?
@@ -14,6 +15,8 @@ ActiveAdmin.register_page 'InSales Stock Sync' do
   end
 
   content title: 'Синхронизация остатков (InSales)' do
+    InsalesSyncRun.recover_stale_runs!
+
     store_names = ProductStock.distinct.order(:store_name).pluck(:store_name)
     settings = InsalesSetting.first
     allowed_store_names = settings&.allowed_store_names_list
