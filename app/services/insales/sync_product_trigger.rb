@@ -24,7 +24,7 @@ module Insales
       )
 
       if in_stock
-        publish_or_update(product)
+        publish_or_update(product, reason: reason)
       else
         unpublish(product)
       end
@@ -37,7 +37,7 @@ module Insales
 
     attr_reader :client
 
-    def publish_or_update(product)
+    def publish_or_update(product, reason:)
       export_result = Insales::ExportProducts.call(product_id: product.id, dry_run: false)
       mapping = InsalesProductMapping.find_by(aura_product_id: product.id)
 
@@ -45,10 +45,14 @@ module Insales
         return Result.new(status: 'error', action: 'publish', message: 'InSales mapping missing after product export')
       end
 
-      media_result = Insales::SyncProductMedia.new(client).call(
-        product: product,
-        insales_product_id: mapping.insales_product_id
-      )
+      media_result = if sync_media_for_reason?(reason)
+                       Insales::SyncProductMedia.new(client).call(
+                         product: product,
+                         insales_product_id: mapping.insales_product_id
+                       )
+                     else
+                       Struct.new(:status, :last_error).new('skipped', nil)
+                     end
 
       ensure_visible(mapping.insales_product_id)
 
@@ -109,6 +113,10 @@ module Insales
       names = InsalesSetting.first&.allowed_store_names_list || []
       names = [MoyskladClient::TEST_STORE_NAME] if names.empty?
       names
+    end
+
+    def sync_media_for_reason?(reason)
+      reason.to_s == 'media_changed'
     end
   end
 end

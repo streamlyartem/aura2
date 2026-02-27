@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_27_223000) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_27_235000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -197,6 +197,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_27_223000) do
     t.datetime "cached_store_names_synced_at"
     t.boolean "skip_products_without_sku", default: false, null: false
     t.boolean "skip_products_with_nonpositive_stock", default: false, null: false
+    t.boolean "sync_images_enabled", default: true, null: false
+    t.boolean "sync_videos_enabled", default: false, null: false
   end
 
   create_table "insales_stock_sync_states", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

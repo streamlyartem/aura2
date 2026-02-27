@@ -30,11 +30,12 @@ RSpec.describe Insales::SyncProductTrigger do
       )
 
       allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
-      media_result = double(status: 'success', last_error: nil)
-      allow_any_instance_of(Insales::SyncProductMedia).to receive(:call).and_return(media_result)
+      media_sync = instance_double(Insales::SyncProductMedia)
+      allow(Insales::SyncProductMedia).to receive(:new).and_return(media_sync)
+      allow(media_sync).to receive(:call).and_return(double(status: 'success', last_error: nil))
       allow(client).to receive(:put).and_return(double(status: 200, body: {}))
 
-      result = service.call(product_id: product.id, reason: 'test')
+      result = service.call(product_id: product.id, reason: 'media_changed')
 
       expect(result.status).to eq('success')
       expect(result.action).to eq('publish')
@@ -43,6 +44,7 @@ RSpec.describe Insales::SyncProductTrigger do
         "/admin/products/#{mapping.insales_product_id}.json",
         { product: { is_hidden: false } }
       )
+      expect(media_sync).to have_received(:call)
     end
 
     it 'unpublishes when product is sold out' do
@@ -67,11 +69,10 @@ RSpec.describe Insales::SyncProductTrigger do
       create(:product_stock, product: product, stock: 3, store_name: 'Тест')
       mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 321, insales_variant_id: 456)
       allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
-      media_result = double(status: 'success', last_error: nil)
-      allow_any_instance_of(Insales::SyncProductMedia).to receive(:call).and_return(media_result)
+      expect(Insales::SyncProductMedia).not_to receive(:new)
       allow(client).to receive(:put).and_return(double(status: 200, body: {}))
 
-      result = service.call(product_id: product.id, reason: 'media_changed')
+      result = service.call(product_id: product.id, reason: 'stock_changed')
 
       expect(result.status).to eq('success')
       expect(result.action).to eq('publish')
@@ -111,7 +112,6 @@ RSpec.describe Insales::SyncProductTrigger do
       mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 555, insales_variant_id: 666)
 
       allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
-      allow_any_instance_of(Insales::SyncProductMedia).to receive(:call).and_return(double(status: 'success', last_error: nil))
       allow(client).to receive(:put).and_return(double(status: 200, body: {}))
 
       result = service.call(product_id: product.id, reason: 'stock_changed')
@@ -146,7 +146,7 @@ RSpec.describe Insales::SyncProductTrigger do
       InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 222, insales_variant_id: 333)
 
       allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 1))
-      allow_any_instance_of(Insales::SyncProductMedia).to receive(:call).and_return(double(status: 'success', last_error: nil))
+      expect(Insales::SyncProductMedia).not_to receive(:new)
       allow(client).to receive(:put).and_return(double(status: 200, body: {}))
 
       result = service.call(product_id: product.id, reason: 'product_changed')

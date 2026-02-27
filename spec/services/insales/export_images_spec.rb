@@ -21,4 +21,24 @@ RSpec.describe Insales::ExportImages do
     expect(result.errors).to eq(0)
     expect(client).not_to have_received(:post)
   end
+
+  it 'skips non-image media files' do
+    product = create(:product)
+    create(
+      :image,
+      object: product,
+      file: FactoryHelpers.upload_file('spec/support/images/files/wrong_format.php', 'video/quicktime', binary: false)
+    )
+    InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 123, insales_variant_id: 456)
+
+    allow(client).to receive(:post)
+
+    result = described_class.new(client).call(product_id: product.id, dry_run: false)
+
+    expect(result.processed).to eq(1)
+    expect(result.uploaded).to eq(0)
+    expect(result.skipped).to eq(1)
+    expect(result.errors).to eq(0)
+    expect(client).not_to have_received(:post)
+  end
 end

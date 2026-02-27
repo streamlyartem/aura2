@@ -7,15 +7,15 @@ module Insales
   class ExportImages
     Result = Struct.new(:processed, :uploaded, :skipped, :errors, keyword_init: true)
 
-    def self.call(product_id:, dry_run: false)
-      new.call(product_id: product_id, dry_run: dry_run)
+    def self.call(product_id:, dry_run: false, media_items: nil)
+      new.call(product_id: product_id, dry_run: dry_run, media_items: media_items)
     end
 
     def initialize(client = Insales::InsalesClient.new)
       @client = client
     end
 
-    def call(product_id:, dry_run:)
+    def call(product_id:, dry_run:, media_items: nil)
       raise ArgumentError, 'product_id is required' if product_id.blank?
 
       result = Result.new(processed: 0, uploaded: 0, skipped: 0, errors: 0)
@@ -28,10 +28,16 @@ module Insales
         return result
       end
 
-      images = product.images.order(:created_at).limit(3)
+      images = Array(media_items.presence || product.images.order(:created_at).limit(3))
 
       images.each do |image|
         result.processed += 1
+
+        unless image.image?
+          result.skipped += 1
+          Rails.logger.info("[InSales] Media skipped (not image) image_id=#{image.id}")
+          next
+        end
 
         if dry_run
           result.uploaded += 1

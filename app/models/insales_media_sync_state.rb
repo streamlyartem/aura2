@@ -5,7 +5,7 @@ class InsalesMediaSyncState < ApplicationRecord
 
   belongs_to :product
 
-  STATUSES = %w[success in_progress error].freeze
+  STATUSES = %w[success in_progress skipped error].freeze
 
   validates :product_id, presence: true, uniqueness: true
   validates :status, inclusion: { in: STATUSES }

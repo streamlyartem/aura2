@@ -130,4 +130,15 @@ RSpec.describe Insales::SyncProductMedia do
     expect(result.status).to eq('success')
     expect(a_request(:delete, "#{base_url}/admin/products/#{insales_product_id}/images/#{stale_image_id}.json")).to have_been_made.once
   end
+
+  it 'skips media sync when images toggle is disabled' do
+    InsalesSetting.first.update!(sync_images_enabled: false)
+
+    result = described_class.new.call(product: product, insales_product_id: insales_product_id)
+
+    expect(result.status).to eq('skipped')
+    state = InsalesMediaSyncState.find_by(product_id: product.id)
+    expect(state.status).to eq('skipped')
+    expect(state.last_error).to eq('images_sync_disabled')
+  end
 end

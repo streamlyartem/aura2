@@ -31,7 +31,24 @@ module Insales
     end
 
     def call(product:, insales_product_id:)
-      photos = product.images.select(&:image?).sort_by(&:created_at).first(3)
+      selected_media = select_media(product)
+      photos = selected_media.select(&:image?).sort_by(&:created_at).first(3)
+
+      unless media_images_enabled?
+        state = InsalesMediaSyncState.find_or_initialize_by(product_id: product.id)
+        state.assign_attributes(
+          insales_product_id: insales_product_id,
+          photos_in_aura: photos.size,
+          photos_uploaded: 0,
+          verified_admin: false,
+          verified_storefront: false,
+          status: 'skipped',
+          last_error: 'images_sync_disabled',
+          synced_at: Time.current
+        )
+        state.save!
+        return Result.new(status: 'skipped', last_error: 'images_sync_disabled')
+      end
 
       state = InsalesMediaSyncState.find_or_initialize_by(product_id: product.id)
       state.assign_attributes(
@@ -66,7 +83,7 @@ module Insales
         return Result.new(status: 'error', last_error: cleanup_error)
       end
 
-      upload_result = Insales::ExportImages.call(product_id: product.id, dry_run: false)
+      upload_result = Insales::ExportImages.call(product_id: product.id, dry_run: false, media_items: photos)
 
       verified_admin, image_urls, admin_error = verify_admin(insales_product_id, photos.size)
       if verified_admin
@@ -369,6 +386,30 @@ module Insales
 
     def success?(response)
       response && (200..299).cover?(response.status)
+    end
+
+    def select_media(product)
+      images = media_images_enabled? ? product.images.select(&:image?) : []
+      videos = media_videos_enabled? ? product.images.select(&:video?) : []
+      if videos.any?
+        Rails.logger.info("[InSales][MEDIA] Video sync is enabled, but video upload is not supported yet. Skipping #{videos.size} items.")
+      end
+
+      (images + videos).sort_by(&:created_at).first(3)
+    end
+
+    def media_images_enabled?
+      setting = InsalesSetting.first
+      return true if setting.nil?
+
+      setting.sync_images_enabled?
+    end
+
+    def media_videos_enabled?
+      setting = InsalesSetting.first
+      return false if setting.nil?
+
+      setting.sync_videos_enabled?
     end
   end
 end

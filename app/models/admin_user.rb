@@ -12,6 +12,7 @@ class AdminUser < ApplicationRecord
     'InSales Orders' => '/admin/insales_orders',
     'InSales Sync' => '/admin/insales_sync',
     'InSales Category Mappings' => '/admin/insales_category_mappings',
+    'InSales Media' => '/admin/insales_media',
     'InSales Media Status' => '/admin/insales_media_status',
     'InSales Category Status' => '/admin/insales_category_status',
     'Склады МС' => '/admin/moysklad_stores',

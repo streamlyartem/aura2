@@ -20,6 +20,8 @@ class InsalesSetting < ApplicationRecord
       id
       image_url_mode
       login
+      sync_images_enabled
+      sync_videos_enabled
       skip_products_without_sku
       skip_products_with_nonpositive_stock
       updated_at
@@ -36,6 +38,14 @@ class InsalesSetting < ApplicationRecord
 
   def self.ransackable_associations(_auth_object = nil)
     []
+  end
+
+  def sync_images_enabled?
+    !!sync_images_enabled
+  end
+
+  def sync_videos_enabled?
+    !!sync_videos_enabled
   end
 
   private
