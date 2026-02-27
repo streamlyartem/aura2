@@ -15,11 +15,6 @@ module Moysklad
         return
       end
 
-      if ms_product.weight.to_f <= 0
-        Rails.logger.info "[Moysklad Webhook] Skip product with non-positive weight ms_id=#{ms_product.id} weight=#{ms_product.weight.inspect}"
-        return
-      end
-
       product = ::Product.find_by(ms_id: ms_product.id)
         unless product
           Rails.logger.warn "[Moysklad Webhook] Product not found locally for ms_id #{ms_product.id}"
@@ -60,7 +55,7 @@ module Moysklad
           store_name: ::MoyskladClient::TEST_STORE_NAME
         )
 
-        return if stock.stock.to_f == stock_value
+        return if stock.persisted? && stock.stock.to_f == stock_value
 
         stock.assign_attributes(
           stock: stock_value,

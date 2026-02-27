@@ -108,14 +108,17 @@ RSpec.describe 'Moysklad product webhook handlers' do
       expect { handler.handle }.not_to change { product.reload.name }
     end
 
-    it 'skips update when weight non-positive' do
+    it 'updates product when weight is non-positive to propagate sold-out stock' do
       product = create(:product, sku: payload['article'], name: 'Old name')
       handler = described_class.new(event)
       allow(handler).to receive(:fetch_entity_data).and_return(
         payload.merge('id' => product.ms_id, 'weight' => 0, 'name' => 'New name')
       )
 
-      expect { handler.handle }.not_to change { product.reload.name }
+      expect { handler.handle }.to change { product.reload.name }.from('Old name').to('New name')
+
+      stock = ProductStock.find_by(product_id: product.id, store_name: MoyskladClient::TEST_STORE_NAME)
+      expect(stock.stock.to_f).to eq(0.0)
     end
   end
 end
