@@ -51,7 +51,9 @@ module Insales
         value = normalize_value(definition.extractor.call(product), digits_only: definition.digits_only)
         next if value.blank?
 
-        property = { title: definition.title, characteristics: [value] }
+        # InSales product API expects a scalar `value` for properties_attributes.
+        # `characteristics` in request payload is ignored for most property types.
+        property = { title: definition.title, value: value }
         existing_id = existing_by_title.dig(definition.title, 'id')
         property[:id] = existing_id if existing_id.present?
         result << property

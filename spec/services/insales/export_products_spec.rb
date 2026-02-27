@@ -33,7 +33,7 @@ RSpec.describe Insales::ExportProducts do
         :build_payload,
         product,
         collection_id: nil,
-        properties_attributes: [{ title: 'Тип товара', characteristics: ['Срезы'] }],
+        properties_attributes: [{ title: 'Тип товара', value: 'Срезы' }],
         catalog_item: catalog_item
       )
 
@@ -44,7 +44,7 @@ RSpec.describe Insales::ExportProducts do
       expect(payload[:product][:variants_attributes].first[:price2]).to eq(11.0)
       expect(payload[:product][:variants_attributes].first[:price3]).to eq(9.0)
       expect(payload[:product][:variants_attributes].first[:quantity]).to eq(11)
-      expect(payload[:product][:properties_attributes]).to eq([{ title: 'Тип товара', characteristics: ['Срезы'] }])
+      expect(payload[:product][:properties_attributes]).to eq([{ title: 'Тип товара', value: 'Срезы' }])
       expect(payload[:product]).not_to have_key(:product_field_values_attributes)
     end
   end
@@ -69,8 +69,8 @@ RSpec.describe Insales::ExportProducts do
 
       allow(Insales::ProductPropertyCatalog).to receive(:new).and_return(properties_catalog)
       allow(properties_catalog).to receive(:properties_attributes).and_return([
-        { id: 77, title: 'Тип товара', characteristics: ['Срезы'] },
-        { title: 'Омбре', characteristics: ['Нет'] }
+        { id: 77, title: 'Тип товара', value: 'Срезы' },
+        { title: 'Омбре', value: 'Нет' }
       ])
     end
 

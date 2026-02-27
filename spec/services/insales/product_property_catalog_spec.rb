@@ -26,13 +26,13 @@ RSpec.describe Insales::ProductPropertyCatalog do
 
       expect(result).to eq(
         [
-          { id: 11, title: 'Тип товара', characteristics: ['Срезы'] },
-          { title: 'Тон', characteristics: ['Светлый'] },
-          { title: 'Цвет', characteristics: ['10'] },
-          { title: 'Длина (см)', characteristics: ['55'] },
-          { title: 'Вес (г)', characteristics: ['106'] },
-          { title: 'Омбре', characteristics: ['Да'] },
-          { title: 'Структура', characteristics: ['Волна'] }
+          { id: 11, title: 'Тип товара', value: 'Срезы' },
+          { title: 'Тон', value: 'Светлый' },
+          { title: 'Цвет', value: '10' },
+          { title: 'Длина (см)', value: '55' },
+          { title: 'Вес (г)', value: '106' },
+          { title: 'Омбре', value: 'Да' },
+          { title: 'Структура', value: 'Волна' }
         ]
       )
     end
@@ -51,7 +51,7 @@ RSpec.describe Insales::ProductPropertyCatalog do
 
       result = described_class.new.properties_attributes(product)
 
-      expect(result).to eq([{ title: 'Омбре', characteristics: ['Нет'] }])
+      expect(result).to eq([{ title: 'Омбре', value: 'Нет' }])
     end
   end
 end
