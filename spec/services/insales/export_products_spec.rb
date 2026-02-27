@@ -3,48 +3,55 @@
 require 'rails_helper'
 
 RSpec.describe Insales::ExportProducts do
-  it 'builds payload with sku, price, quantity from catalog item' do
-    product = create(:product, name: 'Payload Product', sku: 'SKU-2000', retail_price: 9.99)
-    catalog_item = InsalesCatalogItem.create!(
-      product: product,
-      export_quantity: 11,
-      prices_cents: { 'retail' => 1234 },
-      status: 'ready',
-      prepared_at: Time.current
-    )
+  describe '#build_payload' do
+    it 'builds payload with catalog prices, quantity and properties' do
+      product = create(:product, name: 'Payload Product', sku: 'SKU-2000', retail_price: 9.99)
+      catalog_item = InsalesCatalogItem.create!(
+        product: product,
+        export_quantity: 11,
+        prices_cents: {
+          'retail' => 1234,
+          'small_wholesale' => 1100,
+          'big_wholesale' => 900
+        },
+        status: 'ready',
+        prepared_at: Time.current
+      )
 
-    InsalesSetting.create!(
-      base_url: 'https://example.myinsales.ru',
-      login: 'user',
-      password: 'pass',
-      category_id: '777',
-      default_collection_id: '999',
-      image_url_mode: 'service_url',
-      allowed_store_names: ['Тест']
-    )
+      InsalesSetting.create!(
+        base_url: 'https://example.myinsales.ru',
+        login: 'user',
+        password: 'pass',
+        category_id: '777',
+        default_collection_id: '999',
+        image_url_mode: 'service_url',
+        allowed_store_names: ['Тест']
+      )
 
-    service = described_class.new
-    payload = service.send(
-      :build_payload,
-      product,
-      collection_id: nil,
-      product_field_values: [{ product_field_id: 1, value: 'X' }],
-      catalog_item: catalog_item
-    )
+      service = described_class.new
+      payload = service.send(
+        :build_payload,
+        product,
+        collection_id: nil,
+        properties_attributes: [{ title: 'Тип товара', characteristics: ['Срезы'] }],
+        catalog_item: catalog_item
+      )
 
-    expect(payload[:product][:title]).to eq('Payload Product')
-    expect(payload[:product][:category_id]).to eq(777)
-    expect(payload[:product][:variants_attributes].first[:sku]).to eq('SKU-2000')
-    expect(payload[:product][:variants_attributes].first[:price]).to eq(12.34)
-    expect(payload[:product][:variants_attributes].first[:quantity]).to eq(11)
-    expect(payload[:product][:product_field_values_attributes]).to eq([{ product_field_id: 1, value: 'X' }])
+      expect(payload[:product][:title]).to eq('Payload Product')
+      expect(payload[:product][:category_id]).to eq(777)
+      expect(payload[:product][:variants_attributes].first[:sku]).to eq('SKU-2000')
+      expect(payload[:product][:variants_attributes].first[:price]).to eq(12.34)
+      expect(payload[:product][:variants_attributes].first[:price2]).to eq(11.0)
+      expect(payload[:product][:variants_attributes].first[:price3]).to eq(9.0)
+      expect(payload[:product][:variants_attributes].first[:quantity]).to eq(11)
+      expect(payload[:product][:properties_attributes]).to eq([{ title: 'Тип товара', characteristics: ['Срезы'] }])
+      expect(payload[:product]).not_to have_key(:product_field_values_attributes)
+    end
   end
-end
 
-RSpec.describe Insales::ExportProducts do
   describe 'export with mapping' do
     let(:client) { instance_double(Insales::InsalesClient) }
-    let(:catalog) { instance_double(Insales::ProductFieldCatalog) }
+    let(:properties_catalog) { instance_double(Insales::ProductPropertyCatalog) }
 
     before do
       InsalesSetting.create!(
@@ -57,30 +64,32 @@ RSpec.describe Insales::ExportProducts do
         allowed_store_names: ['A', 'B']
       )
 
-      @previous_export_fields = ENV['INSALES_EXPORT_PRODUCT_FIELDS']
       @previous_assign = ENV['INSALES_ASSIGN_COLLECTIONS']
-      ENV['INSALES_EXPORT_PRODUCT_FIELDS'] = '1'
       ENV['INSALES_ASSIGN_COLLECTIONS'] = '1'
 
-      allow(Insales::ProductFieldCatalog).to receive(:new).with(client).and_return(catalog)
-      allow(catalog).to receive(:product_field_values_attributes).and_return([
-        { product_field_id: 42, value: 'X', id: 77 }
+      allow(Insales::ProductPropertyCatalog).to receive(:new).and_return(properties_catalog)
+      allow(properties_catalog).to receive(:properties_attributes).and_return([
+        { id: 77, title: 'Тип товара', characteristics: ['Срезы'] },
+        { title: 'Омбре', characteristics: ['Нет'] }
       ])
     end
 
     after do
-      ENV['INSALES_EXPORT_PRODUCT_FIELDS'] = @previous_export_fields
       ENV['INSALES_ASSIGN_COLLECTIONS'] = @previous_assign
     end
 
-    it 'updates product, variant and uses catalog price/qty' do
+    it 'updates product, variant and uses catalog prices/qty with properties_attributes' do
       product = create(:product, name: 'Export Product', sku: 'SKU-1', retail_price: 12.5)
       create(:product_stock, product: product, stock: 99, store_name: 'A')
       create(:product_stock, product: product, stock: 99, store_name: 'B')
       InsalesCatalogItem.create!(
         product: product,
         export_quantity: 7,
-        prices_cents: { 'retail' => 4321 },
+        prices_cents: {
+          'retail' => 4321,
+          'small_wholesale' => 4000,
+          'big_wholesale' => 3900
+        },
         status: 'ready',
         prepared_at: Time.current
       )
@@ -91,18 +100,25 @@ RSpec.describe Insales::ExportProducts do
         insales_variant_id: 202
       )
 
-      allow(client).to receive(:put).with(
-        "/admin/products/#{mapping.insales_product_id}.json",
-        hash_including(product: hash_including(product_field_values_attributes: [{ product_field_id: 42, value: 'X', id: 77 }]))
-      ).and_return(double(status: 200, body: {}))
-
       allow(client).to receive(:get).with(
         "/admin/products/#{mapping.insales_product_id}.json"
-      ).and_return(double(status: 200, body: { 'product' => { 'product_field_values' => [{ 'id' => 77, 'product_field_id' => 42 }] } }))
+      ).and_return(double(status: 200, body: {
+        'product' => {
+          'properties' => [
+            { 'id' => 77, 'title' => 'Тип товара', 'characteristics' => ['Срезы'] },
+            { 'id' => 90, 'title' => 'Чужое поле', 'characteristics' => ['X'] }
+          ]
+        }
+      }))
+
+      allow(client).to receive(:put).with(
+        "/admin/products/#{mapping.insales_product_id}.json",
+        anything
+      ).and_return(double(status: 200, body: {}))
 
       allow(client).to receive(:put).with(
         "/admin/variants/#{mapping.insales_variant_id}.json",
-        hash_including(variant: hash_including(price: 43.21, quantity: 7))
+        hash_including(variant: hash_including(price: 43.21, price2: 40.0, price3: 39.0, quantity: 7))
       ).and_return(double(status: 200, body: {}))
 
       allow(client).to receive(:collects_by_product).with(
@@ -118,11 +134,17 @@ RSpec.describe Insales::ExportProducts do
 
       expect(client).to have_received(:put).with(
         "/admin/products/#{mapping.insales_product_id}.json",
-        hash_including(product: hash_including(product_field_values_attributes: [{ product_field_id: 42, value: 'X', id: 77 }]))
+        satisfy do |payload|
+          product_payload = payload[:product]
+          product_payload[:properties_attributes].is_a?(Array) &&
+            product_payload[:properties_attributes].size == 2 &&
+            !product_payload.key?(:product_field_values_attributes)
+        end
       )
+
       expect(client).to have_received(:put).with(
         "/admin/variants/#{mapping.insales_variant_id}.json",
-        hash_including(variant: hash_including(price: 43.21, quantity: 7))
+        hash_including(variant: hash_including(price: 43.21, price2: 40.0, price3: 39.0, quantity: 7))
       )
     end
 
@@ -132,7 +154,11 @@ RSpec.describe Insales::ExportProducts do
       InsalesCatalogItem.create!(
         product: product,
         export_quantity: 1,
-        prices_cents: { 'retail' => 700 },
+        prices_cents: {
+          'retail' => 700,
+          'small_wholesale' => 650,
+          'big_wholesale' => 600
+        },
         status: 'ready',
         prepared_at: Time.current
       )
@@ -155,6 +181,12 @@ RSpec.describe Insales::ExportProducts do
       expect(mapping).not_to be_nil
       expect(mapping.insales_product_id).to eq(909)
       expect(mapping.insales_variant_id).to eq(808)
+      expect(client).to have_received(:post).with('/admin/products.json', satisfy do |payload|
+        product_payload = payload[:product]
+        product_payload[:variants_attributes].first[:price2] == 6.5 &&
+          product_payload[:variants_attributes].first[:price3] == 6.0 &&
+          !product_payload.key?(:product_field_values_attributes)
+      end)
     end
 
     it 'recreates mapping when existing InSales product is missing (404)' do
@@ -176,11 +208,6 @@ RSpec.describe Insales::ExportProducts do
 
       allow(client).to receive(:get).with(
         "/admin/products/#{mapping.insales_product_id}.json"
-      ).and_return(double(status: 200, body: { 'product' => { 'product_field_values' => [] } }))
-
-      allow(client).to receive(:put).with(
-        "/admin/products/#{mapping.insales_product_id}.json",
-        anything
       ).and_return(double(status: 404, body: { 'message' => 'Not found' }))
 
       allow(client).to receive(:post).with('/admin/products.json', anything).and_return(
@@ -202,65 +229,67 @@ RSpec.describe Insales::ExportProducts do
       expect(InsalesProductMapping.where(insales_product_id: 101)).to be_empty
     end
   end
-end
 
-RSpec.describe Insales::ExportProducts do
-  let(:client) { instance_double(Insales::InsalesClient) }
+  describe 'skip rules and catalog state' do
+    let(:client) { instance_double(Insales::InsalesClient) }
 
-  before do
-    InsalesSetting.create!(
-      base_url: 'https://example.myinsales.ru',
-      login: 'user',
-      password: 'pass',
-      category_id: '777',
-      default_collection_id: '999',
-      image_url_mode: 'service_url',
-      allowed_store_names: ['A']
-    )
-  end
+    before do
+      InsalesSetting.create!(
+        base_url: 'https://example.myinsales.ru',
+        login: 'user',
+        password: 'pass',
+        category_id: '777',
+        default_collection_id: '999',
+        image_url_mode: 'service_url',
+        allowed_store_names: ['A']
+      )
 
-  it 'skips products without sku when setting enabled' do
-    product = create(:product, sku: nil, code: nil)
-    create(:product_stock, product: product, stock: 5, store_name: 'A')
-    InsalesSetting.first.update!(skip_products_without_sku: true)
+      allow(Insales::ProductPropertyCatalog).to receive(:new).and_return(instance_double(Insales::ProductPropertyCatalog, properties_attributes: []))
+    end
 
-    expect(client).not_to receive(:post)
-    expect(client).not_to receive(:put)
+    it 'skips products without sku when setting enabled' do
+      product = create(:product, sku: nil, code: nil)
+      create(:product_stock, product: product, stock: 5, store_name: 'A')
+      InsalesSetting.first.update!(skip_products_without_sku: true)
 
-    result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
+      expect(client).not_to receive(:post)
+      expect(client).not_to receive(:put)
 
-    expect(result.created).to eq(0)
-    expect(result.updated).to eq(0)
-    expect(result.errors).to eq(0)
-  end
+      result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
 
-  it 'skips products with nonpositive stock when setting enabled' do
-    product = create(:product, sku: 'SKU-ZERO')
-    create(:product_stock, product: product, stock: 0, store_name: 'A')
-    InsalesSetting.first.update!(skip_products_with_nonpositive_stock: true)
+      expect(result.created).to eq(0)
+      expect(result.updated).to eq(0)
+      expect(result.errors).to eq(0)
+    end
 
-    expect(client).not_to receive(:post)
-    expect(client).not_to receive(:put)
+    it 'skips products with nonpositive stock when setting enabled' do
+      product = create(:product, sku: 'SKU-ZERO')
+      create(:product_stock, product: product, stock: 0, store_name: 'A')
+      InsalesSetting.first.update!(skip_products_with_nonpositive_stock: true)
 
-    result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
+      expect(client).not_to receive(:post)
+      expect(client).not_to receive(:put)
 
-    expect(result.created).to eq(0)
-    expect(result.updated).to eq(0)
-    expect(result.errors).to eq(0)
-  end
+      result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
 
-  it 'returns catalog not prepared error when ready catalog item is missing' do
-    product = create(:product, sku: 'SKU-CAT-1')
-    create(:product_stock, product: product, stock: 5, store_name: 'A')
+      expect(result.created).to eq(0)
+      expect(result.updated).to eq(0)
+      expect(result.errors).to eq(0)
+    end
 
-    expect(client).not_to receive(:post)
-    expect(client).not_to receive(:put)
+    it 'returns catalog not prepared error when ready catalog item is missing' do
+      product = create(:product, sku: 'SKU-CAT-1')
+      create(:product_stock, product: product, stock: 5, store_name: 'A')
 
-    result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
+      expect(client).not_to receive(:post)
+      expect(client).not_to receive(:put)
 
-    expect(result.processed).to eq(1)
-    expect(result.created).to eq(0)
-    expect(result.updated).to eq(0)
-    expect(result.errors).to eq(1)
+      result = described_class.new(client).call(product_id: product.id, dry_run: false, collection_id: nil)
+
+      expect(result.processed).to eq(1)
+      expect(result.created).to eq(0)
+      expect(result.updated).to eq(0)
+      expect(result.errors).to eq(1)
+    end
   end
 end
