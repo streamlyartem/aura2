@@ -3,6 +3,49 @@
 ActiveAdmin.register_page 'Dashboard' do
   menu priority: 1, label: proc { I18n.t('active_admin.dashboard') }
 
+  page_action :stop_syncs, method: :post do
+    now = Time.current
+    stop_message = 'Stopped manually from dashboard'
+
+    running_insales_scope = InsalesSyncRun.where(status: 'running')
+    insales_store_names = running_insales_scope.distinct.pluck(:store_name)
+    stopped_insales_runs = running_insales_scope.update_all(
+      status: 'stopped',
+      finished_at: now,
+      last_error: stop_message,
+      updated_at: now
+    )
+
+    InsalesStockSyncState.where(store_name: insales_store_names).update_all(
+      last_status: 'stopped',
+      last_error: stop_message,
+      last_run_at: now,
+      updated_at: now
+    )
+
+    stopped_moysklad_runs = MoyskladSyncRun.imports.running.update_all(
+      stop_requested_at: now,
+      updated_at: now
+    )
+
+    stoppable_job_classes = [
+      'Insales::SyncProductStocksJob',
+      'Moysklad::ImportProductsJob'
+    ]
+    jobs_scope = SolidQueue::Job.where(class_name: stoppable_job_classes, finished_at: nil)
+    job_ids = jobs_scope.pluck(:id)
+
+    if job_ids.any?
+      SolidQueue::ClaimedExecution.where(job_id: job_ids).delete_all
+      SolidQueue::ReadyExecution.where(job_id: job_ids).delete_all
+      SolidQueue::ScheduledExecution.where(job_id: job_ids).delete_all
+      SolidQueue::BlockedExecution.where(job_id: job_ids).delete_all
+      SolidQueue::Job.where(id: job_ids).update_all(finished_at: now, updated_at: now)
+    end
+
+    redirect_to admin_dashboard_path, notice: "Остановлено: InSales run=#{stopped_insales_runs}, MoySklad import=#{stopped_moysklad_runs}, jobs=#{job_ids.size}"
+  end
+
   content title: proc { I18n.t('active_admin.dashboard') } do
     queue_scope = SolidQueue::Job.where(finished_at: nil)
     queue_total = queue_scope.count
@@ -15,6 +58,13 @@ ActiveAdmin.register_page 'Dashboard' do
     running_insales_syncs = InsalesSyncRun.where(status: 'running').order(started_at: :asc).to_a
 
     panel 'Состояние системы' do
+      div class: 'mb-3' do
+        form action: admin_dashboard_stop_syncs_path, method: :post do
+          input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
+          input type: 'submit', value: 'Остановить синхронизации', class: 'button'
+        end
+      end
+
       table_for [
         ['Импорт МойСклад (running)', running_moysklad_imports.size],
         ['Синк InSales (running)', running_insales_syncs.size],
