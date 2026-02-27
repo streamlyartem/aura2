@@ -17,6 +17,7 @@ class InsalesCatalogItem < ApplicationRecord
     %w[
       created_at
       export_quantity
+      export_updated_at
       id
       last_error
       prepared_at

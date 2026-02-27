@@ -13,14 +13,14 @@ module Insales
 
       Result = Struct.new(:processed, :ready, :skipped, :errors, keyword_init: true)
 
-      def self.call
-        new.call
+      def self.call(...)
+        new.call(...)
       end
 
-      def call
+      def call(product_ids: nil, export_updated_at: nil)
         result = Result.new(processed: 0, ready: 0, skipped: 0, errors: 0)
 
-        products_scope.in_batches(of: BATCH_SIZE) do |batch_relation|
+        products_scope(product_ids: product_ids).in_batches(of: BATCH_SIZE) do |batch_relation|
           products = batch_relation.to_a
           next if products.empty?
 
@@ -30,7 +30,11 @@ module Insales
                          .sum(:stock)
 
           rows = products.map do |product|
-            attrs = build_row_attributes(product, stock_totals.fetch(product.id, 0))
+            attrs = build_row_attributes(
+              product,
+              stock_totals.fetch(product.id, 0),
+              export_updated_at: export_updated_at
+            )
             result.processed += 1
             case attrs[:status]
             when 'ready'
@@ -51,8 +55,8 @@ module Insales
 
       private
 
-      def products_scope
-        Product.select(
+      def products_scope(product_ids: nil)
+        scope = Product.select(
           :id,
           :sku,
           :code,
@@ -63,9 +67,11 @@ module Insales
           :large_wholesale_price,
           :five_hundred_plus_wholesale_price
         )
+        scope = scope.where(id: product_ids) if product_ids.present?
+        scope
       end
 
-      def build_row_attributes(product, stock_total)
+      def build_row_attributes(product, stock_total, export_updated_at: nil)
         now = Time.current
         sku_value = product.sku.presence || product.code
 
@@ -94,6 +100,7 @@ module Insales
           status: status,
           skip_reason: skip_reason,
           prepared_at: now,
+          export_updated_at: export_updated_at,
           last_error: last_error,
           created_at: now,
           updated_at: now

@@ -6,6 +6,18 @@ RSpec.describe Insales::Catalog::Prepare do
   let!(:setting) { create(:insales_setting, allowed_store_names: ['Тест']) }
 
   describe '.call' do
+    it 'recalculates only selected product_ids when filter is provided' do
+      target = create(:product, unit_type: 'weight', weight: 100, retail_price: 100, sku: 'TARGET')
+      other = create(:product, unit_type: 'weight', weight: 100, retail_price: 100, sku: 'OTHER')
+      create(:product_stock, product: target, store_name: 'Тест', stock: 10)
+      create(:product_stock, product: other, store_name: 'Тест', stock: 10)
+
+      described_class.call(product_ids: [target.id], export_updated_at: Time.current)
+
+      expect(InsalesCatalogItem.find_by(product_id: target.id)).to be_present
+      expect(InsalesCatalogItem.find_by(product_id: other.id)).to be_nil
+    end
+
     it 'calculates weight item prices in cents from per-gram prices' do
       product = create(
         :product,

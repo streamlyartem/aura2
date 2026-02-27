@@ -18,16 +18,17 @@ RSpec.describe ProductStock do
   end
 
   describe 'callbacks' do
-    it 'enqueues insales trigger job after stock change' do
+    it 'buffers stock event and enqueues processor job after stock change' do
       ActiveJob::Base.queue_adapter = :test
       product = create(:product)
 
       expect do
         create(:product_stock, product: product, store_name: 'Тест', stock: 1)
-      end.to have_enqueued_job(Insales::SyncProductTriggerJob).with(
-        product_id: product.id,
-        reason: 'stock_changed'
-      )
+      end.to have_enqueued_job(Insales::StockChangeEvents::ProcessJob)
+
+      event = StockChangeEvent.find_by(product_id: product.id)
+      expect(event).to be_present
+      expect(event.status).to eq('pending')
     end
   end
 end

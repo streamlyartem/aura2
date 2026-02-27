@@ -49,28 +49,34 @@ class MoyskladSync
 
     store_rows = build_store_rows
 
-    store_rows.each do |row|
-      ms_product_uuid = extract_uuid(row[:product_meta]['href'])
+    Current.set(skip_stock_change_processor_enqueue: true) do
+      store_rows.each do |row|
+        ms_product_uuid = extract_uuid(row[:product_meta]['href'])
 
-      Rails.logger.info "[MoyskladSync] name: #{row[:name]} - #{ms_product_uuid} store=#{row[:store_name]}"
+        Rails.logger.info "[MoyskladSync] name: #{row[:name]} - #{ms_product_uuid} store=#{row[:store_name]}"
 
-      product = Product.find_by(ms_id: ms_product_uuid)
-      next unless product
+        product = Product.find_by(ms_id: ms_product_uuid)
+        next unless product
 
-      product_stock = ProductStock.find_or_initialize_by(product_id: product.id, store_name: row[:store_name])
-      new_stock = row[:stock].to_f
-      new_free_stock = row[:free_stock].to_f
-      new_reserve = row[:reserve].to_f
-      next unless stock_changed?(product_stock, new_stock, new_free_stock, new_reserve)
+        product_stock = ProductStock.find_or_initialize_by(product_id: product.id, store_name: row[:store_name])
+        new_stock = row[:stock].to_f
+        new_free_stock = row[:free_stock].to_f
+        new_reserve = row[:reserve].to_f
+        next unless stock_changed?(product_stock, new_stock, new_free_stock, new_reserve)
 
-      product_stock.assign_attributes(
-        stock: new_stock,
-        free_stock: new_free_stock,
-        reserve: new_reserve,
-        synced_at: Time.current
-      )
-      product_stock.save!
-      changed_product_ids << product.id
+        product_stock.assign_attributes(
+          stock: new_stock,
+          free_stock: new_free_stock,
+          reserve: new_reserve,
+          synced_at: Time.current
+        )
+        product_stock.save!
+        changed_product_ids << product.id
+      end
+    end
+
+    if changed_product_ids.any?
+      Insales::StockChangeEvents::ProcessJob.perform_later
     end
 
     changed_product_ids.uniq

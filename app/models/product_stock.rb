@@ -4,7 +4,7 @@ class ProductStock < ApplicationRecord
   self.implicit_order_column = :created_at
 
   belongs_to :product
-  after_commit :enqueue_insales_sync_trigger, on: %i[create update destroy]
+  after_commit :buffer_insales_stock_change, on: %i[create update destroy]
 
   validates :store_name, presence: true
 
@@ -26,9 +26,17 @@ class ProductStock < ApplicationRecord
 
   private
 
-  def enqueue_insales_sync_trigger
+  def buffer_insales_stock_change
     return if product_id.blank?
 
-    Insales::SyncProductTriggerJob.perform_later(product_id: product_id, reason: 'stock_changed')
+    Insales::StockChangeEvents::Buffer.call(
+      product_id: product_id,
+      store_name: store_name,
+      new_stock: destroyed? ? 0 : stock.to_f,
+      event_updated_at: updated_at || Time.current
+    )
+    return if Current.skip_stock_change_processor_enqueue?
+
+    Insales::StockChangeEvents::ProcessJob.perform_later
   end
 end

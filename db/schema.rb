@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_27_181000) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_27_223000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -91,6 +91,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_27_181000) do
     t.text "last_error"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.datetime "export_updated_at"
+    t.index ["export_updated_at"], name: "index_insales_catalog_items_on_export_updated_at"
     t.index ["product_id"], name: "index_insales_catalog_items_on_product_id", unique: true
     t.index ["status"], name: "index_insales_catalog_items_on_status"
   end
@@ -494,6 +496,24 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_27_181000) do
     t.index ["key"], name: "index_solid_queue_semaphores_on_key", unique: true
   end
 
+  create_table "stock_change_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "product_id", null: false
+    t.string "priority", default: "normal", null: false
+    t.string "reason", default: "stock_changed", null: false
+    t.datetime "event_updated_at", null: false
+    t.string "status", default: "pending", null: false
+    t.datetime "locked_at"
+    t.string "locked_by"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "next_retry_at"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["priority", "status", "next_retry_at"], name: "index_stock_change_events_on_priority_status_retry"
+    t.index ["product_id"], name: "index_stock_change_events_on_product_id", unique: true
+    t.index ["status", "locked_at"], name: "index_stock_change_events_on_status_and_locked_at"
+  end
+
   create_table "variant_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
     t.uuid "variant_id", null: false
     t.bigint "price_type_id", null: false
@@ -518,6 +538,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_27_181000) do
   add_foreign_key "solid_queue_ready_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_recurring_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_scheduled_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
+  add_foreign_key "stock_change_events", "products"
   add_foreign_key "variant_prices", "price_types"
   add_foreign_key "variant_prices", "products", column: "variant_id"
 end

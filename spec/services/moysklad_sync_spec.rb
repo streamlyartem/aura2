@@ -4,6 +4,8 @@ require 'rails_helper'
 require 'services/concerns/moysklad_shared_contexts'
 
 RSpec.describe MoyskladSync do
+  include ActiveJob::TestHelper
+
   describe '#import_products' do
     subject(:import_products) { described_class.new.import_products }
 
@@ -103,6 +105,11 @@ RSpec.describe MoyskladSync do
     include_context 'with moysklad stocks mock'
 
     context 'when matching products exist' do
+      before do
+        ActiveJob::Base.queue_adapter = :test
+        clear_enqueued_jobs
+      end
+
       let!(:product_one) { create(:product, ms_id: 'e91210f9-9166-11f0-0a80-0ef200165e2f', weight: 0, retail_price: 180) } # from fixture
       let!(:product_two) { create(:product, ms_id: '2fdc2bec-9166-11f0-0a80-0ef200164c50', weight: 0, retail_price: 144) } # from fixture
 
@@ -127,6 +134,12 @@ RSpec.describe MoyskladSync do
 
         expect(product_one.reload.retail_price.to_f).to eq(180.0)
         expect(product_two.reload.retail_price.to_f).to eq(144.0)
+      end
+
+      it 'enqueues stock event processor only once for batch import' do
+        expect do
+          import_products
+        end.to have_enqueued_job(Insales::StockChangeEvents::ProcessJob).exactly(:once)
       end
     end
 
