@@ -49,4 +49,14 @@ RSpec.describe Product do
       end.not_to have_enqueued_job(Insales::SyncProductTriggerJob)
     end
   end
+
+  describe '.find_by_scanned_barcode' do
+    it 'matches barcode when scanned value has extra leading zeroes' do
+      product = create(:product, sku: '1805327132', code: '1805327132', barcodes: [{ 'code128' => '001805327132' }])
+
+      found = described_class.find_by_scanned_barcode('0001805327132')
+
+      expect(found).to eq(product)
+    end
+  end
 end

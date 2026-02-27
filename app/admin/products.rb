@@ -16,7 +16,7 @@ ActiveAdmin.register Product do
   end
 
   collection_action :check_sku, method: :get do
-    product = Product.find_by(sku: params[:sku])
+    product = Product.find_by_scanned_barcode(params[:sku])
 
     if product
       render json: { exists: true, id: product.id, edit_url: edit_admin_product_path(product) }

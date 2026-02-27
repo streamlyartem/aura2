@@ -19,6 +19,68 @@ class Product < ApplicationRecord
     []
   end
 
+  def self.find_by_scanned_barcode(raw_value)
+    candidates = barcode_candidates(raw_value)
+    return nil if candidates.empty?
+
+    product = where(sku: candidates).or(where(code: candidates)).first
+    return product if product
+
+    like_conditions = candidates.map { 'barcodes::text LIKE ?' }.join(' OR ')
+    like_values = candidates.map { |candidate| "%#{candidate}%" }
+
+    where.not(barcodes: [])
+         .where([like_conditions, *like_values])
+         .find do |candidate_product|
+      barcode_intersection?(candidate_product, candidates)
+    end
+  end
+
+  def self.barcode_candidates(raw_value)
+    value = raw_value.to_s.strip
+    return [] if value.blank?
+
+    digits = value.gsub(/\D/, '')
+    candidates = [value, digits].reject(&:blank?)
+    candidates << digits.sub(/\A0+/, '') if digits.present?
+    candidates.uniq
+  end
+
+  def self.barcode_intersection?(product, candidates)
+    candidate_set = candidates.to_set
+    normalized_candidate_set = candidates
+                               .map { |candidate| candidate.to_s.gsub(/\D/, '').sub(/\A0+/, '') }
+                               .reject(&:blank?)
+                               .to_set
+
+    values = [product.sku, product.code, *extract_barcode_values(product)]
+             .compact
+             .map(&:to_s)
+             .reject(&:blank?)
+
+    values.any? do |value|
+      normalized = value.gsub(/\D/, '')
+      stripped = normalized.sub(/\A0+/, '')
+
+      candidate_set.include?(value) ||
+        candidate_set.include?(normalized) ||
+        candidate_set.include?(stripped) ||
+        normalized_candidate_set.include?(stripped)
+    end
+  end
+
+  def self.extract_barcode_values(product)
+    barcodes = Array(product.barcodes)
+    barcodes.flat_map do |entry|
+      case entry
+      when Hash
+        entry.values
+      else
+        entry
+      end
+    end
+  end
+
   private
 
   def enqueue_insales_sync_trigger
