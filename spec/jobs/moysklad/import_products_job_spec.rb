@@ -88,6 +88,25 @@ RSpec.describe Moysklad::ImportProductsJob, type: :job do
       expect(described_class).not_to have_received(:perform_later)
     end
 
+    it 'enqueues when only stale running imports exist' do
+      stale_run = MoyskladSyncRun.create!(
+        run_type: 'import_products',
+        status: 'running',
+        started_at: 2.hours.ago
+      )
+      allow(described_class).to receive(:queued_or_running?).and_return(false)
+      allow(described_class).to receive(:with_singleton_lock).and_yield.and_return(true)
+
+      expect(described_class.enqueue_once(store_names: ['Тест'], full_import: false)).to be(true)
+      expect(described_class).to have_received(:perform_later).with(
+        store_names: ['Тест'],
+        full_import: false
+      ).once
+
+      expect(stale_run.reload.status).to eq('stopped')
+      expect(stale_run.last_error).to eq('Recovered stale running import')
+    end
+
     it 'does not enqueue when lock is not acquired' do
       allow(described_class).to receive(:with_singleton_lock).and_return(false)
 

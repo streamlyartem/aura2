@@ -9,13 +9,17 @@ module Moysklad
 
     LOCK_NAMESPACE = 53_017
     LOCK_NAME = 'moysklad_import_products'
+    STALE_RUNNING_TIMEOUT = 30.minutes
 
     class << self
       def enqueue_once(store_names: nil, full_import: true)
         enqueued = false
 
         locked = with_singleton_lock do
-          next if queued_or_running? || running_import_exists?
+          next if queued_or_running?
+
+          cleanup_stale_running_runs!
+          next if running_import_exists?
 
           perform_later(store_names: store_names, full_import: full_import)
           enqueued = true
@@ -35,6 +39,20 @@ module Moysklad
 
       def running_import_exists?
         MoyskladSyncRun.imports.running.exists?
+      end
+
+      def cleanup_stale_running_runs!
+        stale_scope = MoyskladSyncRun.imports.running
+                                    .where.not(started_at: nil)
+                                    .where('started_at < ?', STALE_RUNNING_TIMEOUT.ago)
+        updated = stale_scope.update_all(
+          status: 'stopped',
+          finished_at: Time.current,
+          last_error: 'Recovered stale running import',
+          updated_at: Time.current
+        )
+        Rails.logger.warn("[Moysklad] Marked stale running imports as stopped count=#{updated}") if updated.positive?
+        updated
       end
 
       def with_singleton_lock
