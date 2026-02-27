@@ -1,7 +1,8 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'Dashboard' do
-  menu priority: 1, label: proc { I18n.t('active_admin.dashboard') }
+  menu priority: 1, label: proc { I18n.t('active_admin.dashboard') },
+       if: proc { current_admin_user&.can_access_admin_path?('/admin/dashboard') }
 
   page_action :stop_syncs, method: :post do
     now = Time.current

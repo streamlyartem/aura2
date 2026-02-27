@@ -23,6 +23,9 @@ class Image < ApplicationRecord
   ].freeze
 
   belongs_to :object, polymorphic: true, optional: true
+  belongs_to :uploaded_by_admin_user, class_name: 'AdminUser', optional: true, inverse_of: :uploaded_images
+
+  before_validation :assign_uploaded_by_admin_user, on: :create
   after_commit :enqueue_insales_sync_trigger, on: %i[create destroy]
 
   has_one_attached :file
@@ -50,6 +53,10 @@ class Image < ApplicationRecord
   end
 
   private
+
+  def assign_uploaded_by_admin_user
+    self.uploaded_by_admin_user_id ||= Current.admin_user&.id
+  end
 
   def enqueue_insales_sync_trigger
     return unless object_type == 'Product'
