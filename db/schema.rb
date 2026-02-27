@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_26_234000) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_27_181000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -65,6 +65,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_26_234000) do
     t.datetime "remember_created_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.boolean "restrict_admin_pages", default: false, null: false
+    t.jsonb "allowed_admin_paths", default: [], null: false
     t.index ["email"], name: "index_admin_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_admin_users_on_reset_password_token", unique: true
   end
@@ -74,7 +76,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_26_234000) do
     t.uuid "object_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.bigint "uploaded_by_admin_user_id"
     t.index ["object_type", "object_id"], name: "index_images_on_object"
+    t.index ["uploaded_by_admin_user_id"], name: "index_images_on_uploaded_by_admin_user_id"
   end
 
   create_table "insales_catalog_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -503,6 +507,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_26_234000) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "images", "admin_users", column: "uploaded_by_admin_user_id"
   add_foreign_key "insales_image_mappings", "images", column: "aura_image_id"
   add_foreign_key "insales_product_mappings", "products", column: "aura_product_id"
   add_foreign_key "pricing_tiers", "pricing_rulesets"
