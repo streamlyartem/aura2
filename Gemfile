@@ -64,6 +64,8 @@ gem 'activeadmin', '>= 4.0.0.beta16'
 gem 'activeadmin_assets', '~> 1.1'
 gem 'devise'
 gem 'faraday'
+gem 'sentry-rails'
+gem 'sentry-ruby'
 
 group :development do
   gem 'database_consistency', '~> 2.0.4', require: false

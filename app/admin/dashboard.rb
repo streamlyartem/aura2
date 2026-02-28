@@ -49,6 +49,7 @@ ActiveAdmin.register_page 'Dashboard' do
 
   content title: proc { I18n.t('active_admin.dashboard') } do
     InsalesSyncRun.recover_stale_runs!
+    health = Monitoring::HealthSnapshot.call
 
     queue_scope = SolidQueue::Job.where(finished_at: nil)
     queue_total = queue_scope.count
@@ -78,6 +79,24 @@ ActiveAdmin.register_page 'Dashboard' do
         ['Очередь: blocked', queue_blocked]
       ] do
         column('Показатель') { |row| row[0] }
+        column('Значение') { |row| row[1] }
+      end
+    end
+
+    panel 'Health' do
+      table_for [
+        ['Sentry', health[:sentry_enabled] ? 'enabled' : 'disabled'],
+        ['Stock events pending (high)', health[:stock_events_pending_high]],
+        ['Stock events pending (normal)', health[:stock_events_pending_normal]],
+        ['Stock events processing', health[:stock_events_processing]],
+        ['Stock events failed', health[:stock_events_failed]],
+        ['Stale InSales sync runs', health[:stale_insales_sync_runs]],
+        ['InSales failed jobs', health[:insales_failed_jobs]],
+        ['MoySklad failed jobs', health[:moysklad_failed_jobs]],
+        ['Failed jobs (24h)', health[:failed_jobs_last_24h]],
+        ['P95 InSales sync (sec)', health[:p95_insales_sync_seconds] || '—']
+      ] do
+        column('Метрика') { |row| row[0] }
         column('Значение') { |row| row[1] }
       end
     end
