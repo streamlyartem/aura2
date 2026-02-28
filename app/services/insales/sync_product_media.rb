@@ -305,8 +305,12 @@ module Insales
 
       http = Net::HTTP.new(uri.host, uri.port)
       http.use_ssl = uri.scheme == 'https'
-      http.open_timeout = 5
-      http.read_timeout = 10
+      ExternalHttpConfig.apply_net_http!(
+        http,
+        service: :insales,
+        open_timeout: 5,
+        read_timeout: 10
+      )
 
       request = Net::HTTP::Get.new(uri.request_uri)
       response = http.request(request)

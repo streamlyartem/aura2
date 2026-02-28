@@ -69,8 +69,12 @@ module Moysklad
         f.request :authorization, :basic, config.username, config.password if config.username && config.password
         f.response :logger, Rails.logger, bodies: ENV['MOYSKLAD_HTTP_DEBUG'].to_s == '1'
         f.response :json
-        f.options.open_timeout = DEFAULT_OPEN_TIMEOUT
-        f.options.timeout = DEFAULT_TIMEOUT
+        ExternalHttpConfig.apply_faraday!(
+          f.options,
+          service: :moysklad,
+          open_timeout: DEFAULT_OPEN_TIMEOUT,
+          read_timeout: DEFAULT_TIMEOUT
+        )
       end
     end
 
@@ -80,11 +84,11 @@ module Moysklad
       loop do
         attempts += 1
         response = yield
-        return response unless retryable_status?(response.status) && attempts < MAX_RETRIES
+        return response unless retryable_status?(response.status) && attempts < max_retries
 
         sleep retry_delay(attempts, response.status)
       rescue Faraday::TimeoutError, Faraday::ConnectionFailed, Net::ReadTimeout => e
-        raise e unless attempts < MAX_RETRIES
+        raise e unless attempts < max_retries
 
         Rails.logger.warn("[Moysklad] request retry=#{attempts} error=#{e.class}: #{e.message}")
         sleep retry_delay(attempts, nil)
@@ -93,6 +97,10 @@ module Moysklad
 
     def retryable_status?(status)
       RETRYABLE_STATUSES.include?(status.to_i)
+    end
+
+    def max_retries
+      ExternalHttpConfig.max_retries(:moysklad, default: MAX_RETRIES)
     end
 
     def retry_delay(attempt, status)

@@ -167,6 +167,12 @@ module Moysklad
       end
 
       Net::HTTP.start(uri.host, uri.port, use_ssl: true) do |http|
+        ExternalHttpConfig.apply_net_http!(
+          http,
+          service: :moysklad,
+          open_timeout: Moysklad::HttpClient::DEFAULT_OPEN_TIMEOUT,
+          read_timeout: Moysklad::HttpClient::DEFAULT_TIMEOUT
+        )
         http.request(request)
       end
     end

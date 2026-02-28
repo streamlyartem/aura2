@@ -88,6 +88,12 @@ module Insales
       request.body = body
 
       response = Net::HTTP.start(uri.host, uri.port, use_ssl: uri.scheme == 'https') do |http|
+        ExternalHttpConfig.apply_net_http!(
+          http,
+          service: :insales,
+          open_timeout: DEFAULT_OPEN_TIMEOUT,
+          read_timeout: DEFAULT_TIMEOUT
+        )
         http.request(request)
       end
 
@@ -101,8 +107,12 @@ module Insales
         f.request :authorization, :basic, login, password
         f.request :json
         f.response :json, content_type: /\bjson$/
-        f.options.open_timeout = DEFAULT_OPEN_TIMEOUT
-        f.options.timeout = DEFAULT_TIMEOUT
+        ExternalHttpConfig.apply_faraday!(
+          f.options,
+          service: :insales,
+          open_timeout: DEFAULT_OPEN_TIMEOUT,
+          read_timeout: DEFAULT_TIMEOUT
+        )
       end
     end
 
@@ -143,7 +153,7 @@ module Insales
 
         return response if (200..299).cover?(response.status)
 
-        if retryable_status?(response.status) && attempts < DEFAULT_MAX_RETRIES
+        if retryable_status?(response.status) && attempts < max_retries
           sleep retry_delay(attempts, response)
           next
         end
@@ -151,7 +161,7 @@ module Insales
         log_error(method, path, response)
         return response
       rescue Faraday::TimeoutError, Faraday::ConnectionFailed => e
-        if attempts < DEFAULT_MAX_RETRIES
+        if attempts < max_retries
           sleep retry_delay(attempts, nil)
           retry
         end
@@ -178,6 +188,10 @@ module Insales
 
     def retryable_status?(status)
       RETRY_STATUSES.include?(status) || RETRY_RANGE.cover?(status)
+    end
+
+    def max_retries
+      ExternalHttpConfig.max_retries(:insales, default: DEFAULT_MAX_RETRIES)
     end
 
     def retry_delay(attempt, response)
