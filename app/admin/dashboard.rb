@@ -4,25 +4,6 @@ ActiveAdmin.register_page 'Dashboard' do
   menu priority: 1, label: proc { I18n.t('active_admin.dashboard') },
        if: proc { current_admin_user&.can_access_admin_path?('/admin/dashboard') }
 
-  page_action :test_sentry, method: :post do
-    if ENV['SENTRY_DSN'].blank?
-      redirect_to admin_dashboard_path, alert: 'Sentry не настроен: отсутствует SENTRY_DSN.'
-      next
-    end
-
-    event_id = Sentry.capture_message(
-      'AURA admin Sentry check',
-      level: :info,
-      extra: {
-        source: 'admin_dashboard',
-        triggered_by_admin_user_id: current_admin_user&.id,
-        triggered_at: Time.current.iso8601
-      }
-    )
-
-    redirect_to admin_dashboard_path, notice: "Тестовое событие отправлено в Sentry#{event_id.present? ? " (event_id: #{event_id})" : ''}."
-  end
-
   page_action :stop_syncs, method: :post do
     now = Time.current
     stop_message = 'Stopped manually from dashboard'
@@ -85,13 +66,6 @@ ActiveAdmin.register_page 'Dashboard' do
         form action: admin_dashboard_stop_syncs_path, method: :post do
           input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
           input type: 'submit', value: 'Остановить синхронизации', class: 'button'
-        end
-      end
-
-      div class: 'mb-3' do
-        form action: admin_dashboard_test_sentry_path, method: :post do
-          input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-          input type: 'submit', value: 'Проверить Sentry', class: 'button'
         end
       end
 
