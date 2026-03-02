@@ -205,9 +205,17 @@ RSpec.describe Insales::SyncProductStocks do
     allow(verify_product).to receive(:call)
       .and_return(double(ok: true, message: nil))
 
-    sentry_scope = double('SentryScope', set_level: nil, set_tags: nil, set_extras: nil)
-    expect(Sentry).to receive(:with_scope).and_yield(sentry_scope)
-    expect(Sentry).to receive(:capture_message).with('InSales media verify warning')
+    expect(Monitoring::SentryReporter).to receive(:report_media_warning).with(
+      hash_including(
+        message: 'InSales media verify warning',
+        tags: hash_including(component: 'insales_media_verify'),
+        extras: hash_including(
+          product_id: product.id,
+          sku: 'SKU-7777',
+          media_error: 'processing: Admin images count 0 < expected 2'
+        )
+      )
+    )
 
     allow(Insales::ExportProducts).to receive(:call)
       .and_return(Insales::ExportProducts::Result.new(processed: 1, created: 0, updated: 1, errors: 0))

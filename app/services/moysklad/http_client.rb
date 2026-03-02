@@ -88,10 +88,21 @@ module Moysklad
 
         sleep retry_delay(attempts, response.status)
       rescue Faraday::TimeoutError, Faraday::ConnectionFailed, Net::ReadTimeout => e
-        raise e unless attempts < max_retries
+        if attempts < max_retries
+          Rails.logger.warn("[Moysklad] request retry=#{attempts} error=#{e.class}: #{e.message}")
+          sleep retry_delay(attempts, nil)
+          next
+        end
 
-        Rails.logger.warn("[Moysklad] request retry=#{attempts} error=#{e.class}: #{e.message}")
-        sleep retry_delay(attempts, nil)
+        Monitoring::SentryReporter.report_moysklad_api_error(
+          message: "Moysklad request failed after #{attempts} attempts",
+          exception: e,
+          tags: {
+            component: 'moysklad_http',
+            retryable: true
+          }
+        )
+        raise
       end
     end
 
@@ -112,6 +123,19 @@ module Moysklad
     def handle_response(response, raise_on_not_found: true)
       # Don't raise exceptions for successful responses
       return if (200..299).cover?(response.status)
+
+      Monitoring::SentryReporter.report_moysklad_api_error(
+        message: "Moysklad response #{response.status}",
+        tags: {
+          component: 'moysklad_http',
+          http_status: response.status,
+          retryable: retryable_status?(response.status)
+        },
+        extras: {
+          url: response.env.url.to_s,
+          response_body: response.body.to_s.byteslice(0, 500)
+        }
+      )
 
       case response.status
       when 401

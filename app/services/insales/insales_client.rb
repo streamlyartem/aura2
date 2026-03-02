@@ -167,6 +167,18 @@ module Insales
         end
 
         Rails.logger.error "[InSales] #{method.to_s.upcase} #{path} failed: #{e.class} - #{e.message}"
+        Monitoring::SentryReporter.report_insales_api_error(
+          message: "InSales #{method.to_s.upcase} #{path} failed: #{e.class}",
+          exception: e,
+          tags: {
+            component: 'insales_client',
+            http_method: method.to_s.upcase,
+            retryable: true
+          },
+          extras: {
+            path: path
+          }
+        )
         raise
       end
     end
@@ -216,8 +228,33 @@ module Insales
                  end
       body_str = body_str.byteslice(0, MAX_ERROR_BODY_BYTES)
       Rails.logger.warn("[InSales] #{method.to_s.upcase} #{path} -> #{response.status} #{body_str}")
+      Monitoring::SentryReporter.report_insales_api_error(
+        message: "InSales #{method.to_s.upcase} #{path} returned #{response.status}",
+        tags: {
+          component: 'insales_client',
+          http_method: method.to_s.upcase,
+          http_status: response.status,
+          retryable: retryable_status?(response.status)
+        },
+        extras: {
+          path: path,
+          response_body: body_str
+        }
+      )
     rescue StandardError
       Rails.logger.warn("[InSales] #{method.to_s.upcase} #{path} -> #{response.status}")
+      Monitoring::SentryReporter.report_insales_api_error(
+        message: "InSales #{method.to_s.upcase} #{path} returned #{response.status}",
+        tags: {
+          component: 'insales_client',
+          http_method: method.to_s.upcase,
+          http_status: response.status,
+          retryable: retryable_status?(response.status)
+        },
+        extras: {
+          path: path
+        }
+      )
     end
 
     def track_last_response(method, path, response)

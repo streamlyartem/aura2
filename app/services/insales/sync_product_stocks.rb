@@ -135,6 +135,19 @@ module Insales
         result.errors += 1
         result.last_error_message = "#{e.class}: #{e.message}"
         Rails.logger.error("[InSalesSync] Error for product #{product&.id}: #{e.class} - #{e.message}")
+        Monitoring::SentryReporter.report_stock_error(
+          message: 'InSales stock sync product processing failed',
+          exception: e,
+          tags: {
+            component: 'insales_stock_sync',
+            store_name: store_label
+          },
+          extras: {
+            product_id: product&.id,
+            sku: product&.sku,
+            last_error_message: result.last_error_message
+          }
+        )
       end
 
       result.variant_updates = update_variants_bulk(variants)
@@ -198,12 +211,13 @@ module Insales
     end
 
     def report_media_warning(product:, mapping:, media_result:)
-      return unless defined?(Sentry)
-
-      Sentry.with_scope do |scope|
-        scope.set_level(:warning)
-        scope.set_tags(component: 'insales_media_verify')
-        scope.set_extras(
+      Monitoring::SentryReporter.report_media_warning(
+        message: 'InSales media verify warning',
+        tags: {
+          component: 'insales_media_verify',
+          retryable: media_result.status == 'in_progress'
+        },
+        extras: {
           product_id: product.id,
           sku: product.sku,
           insales_product_id: mapping.insales_product_id,
@@ -213,11 +227,8 @@ module Insales
           verified_storefront: media_result.verified_storefront,
           media_status: media_result.status,
           media_error: media_result.last_error
-        )
-        Sentry.capture_message('InSales media verify warning')
-      end
-    rescue StandardError => e
-      Rails.logger.warn("[InSales][MEDIA] Failed to report warning to Sentry: #{e.class} - #{e.message}")
+        }
+      )
     end
   end
 end
