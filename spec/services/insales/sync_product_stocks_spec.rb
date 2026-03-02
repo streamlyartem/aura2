@@ -140,4 +140,83 @@ RSpec.describe Insales::SyncProductStocks do
     expect(result.created).to eq(0)
     expect(result.updated).to eq(0)
   end
+
+  it 'treats media verify issues as warnings and continues sync' do
+    product = create(:product, name: 'Media Warning', sku: 'SKU-7777', retail_price: 19.0)
+    create(:product_stock, product: product, stock: 2, store_name: 'Тест')
+    InsalesCatalogItem.create!(
+      product: product,
+      export_quantity: 1,
+      prices_cents: { 'retail' => 1900 },
+      status: 'ready',
+      prepared_at: Time.current
+    )
+    InsalesProductMapping.create!(
+      aura_product_id: product.id,
+      insales_product_id: 10,
+      insales_variant_id: 55
+    )
+
+    stub_request(:put, "#{base_url}/admin/products/10.json")
+      .to_return(status: 200, body: { product: { id: 10 } }.to_json, headers: { 'Content-Type' => 'application/json' })
+    stub_request(:put, "#{base_url}/admin/variants/55.json")
+      .to_return(status: 200, body: { variant: { id: 55 } }.to_json, headers: { 'Content-Type' => 'application/json' })
+    stub_request(:post, "#{base_url}/admin/collections/999/products.json")
+      .to_return(status: 200, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
+    stub_request(:put, "#{base_url}/admin/products/variants_group_update.json")
+      .to_return(status: 200, body: {}.to_json, headers: { 'Content-Type' => 'application/json' })
+    stub_request(:get, "#{base_url}/admin/products/10.json")
+      .to_return(
+        status: 200,
+        body: {
+          product: {
+            id: 10,
+            title: 'Media Warning',
+            category_id: 777,
+            collection_ids: [999],
+            variants: [{ id: 55, sku: 'SKU-7777' }]
+          }
+        }.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
+    stub_request(:get, "#{base_url}/admin/variants/55.json")
+      .to_return(
+        status: 200,
+        body: { variant: { id: 55, sku: 'SKU-7777', price: 19.0, quantity: 1 } }.to_json,
+        headers: { 'Content-Type' => 'application/json' }
+      )
+
+    allow_any_instance_of(Insales::SyncProductMedia).to receive(:call)
+      .and_return(
+        double(
+          status: 'in_progress',
+          last_error: 'processing: Admin images count 0 < expected 2',
+          photos_in_aura: 2,
+          photos_uploaded: 0,
+          photos_errors: 0,
+          photos_skipped: 0,
+          verified_admin: false,
+          verified_storefront: false
+        )
+      )
+
+    verify_product = instance_double(Insales::VerifyProduct)
+    allow(Insales::VerifyProduct).to receive(:new).and_return(verify_product)
+    allow(verify_product).to receive(:call)
+      .and_return(double(ok: true, message: nil))
+
+    sentry_scope = double('SentryScope', set_level: nil, set_tags: nil, set_extras: nil)
+    expect(Sentry).to receive(:with_scope).and_yield(sentry_scope)
+    expect(Sentry).to receive(:capture_message).with('InSales media verify warning')
+
+    allow(Insales::ExportProducts).to receive(:call)
+      .and_return(Insales::ExportProducts::Result.new(processed: 1, created: 0, updated: 1, errors: 0))
+
+    result = described_class.new.call(store_names: ['Тест'])
+
+    expect(result.processed).to eq(1)
+    expect(result.errors).to eq(0)
+    expect(result.verify_failures).to eq(1)
+    expect(result.last_error_message).to eq('processing: Admin images count 0 < expected 2')
+  end
 end

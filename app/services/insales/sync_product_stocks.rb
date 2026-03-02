@@ -94,10 +94,13 @@ module Insales
         if media_result.status == 'success'
           log_media("[InSales][MEDIA] Verify admin OK product=#{product.id}") if media_result.verified_admin
           log_media("[InSales][MEDIA] Verify storefront OK product=#{product.id}") if media_result.verified_storefront
+        elsif media_result.status == 'skipped'
+          log_media("[InSales][MEDIA] Skipped product=#{product.id} reason=#{media_result.last_error}")
         else
-          result.errors += 1
+          result.verify_failures += 1
           result.last_error_message = media_result.last_error
-          log_media("[InSales][MEDIA] Verify failed product=#{product.id} error=#{media_result.last_error}")
+          log_media("[InSales][MEDIA] Warning product=#{product.id} status=#{media_result.status} error=#{media_result.last_error}")
+          report_media_warning(product:, mapping:, media_result:)
         end
 
         variant_id = mapping.insales_variant_id || fetch_variant_id(mapping.insales_product_id)
@@ -192,6 +195,29 @@ module Insales
       return unless ENV['INSALES_HTTP_DEBUG'].to_s == '1'
 
       Rails.logger.info(message)
+    end
+
+    def report_media_warning(product:, mapping:, media_result:)
+      return unless defined?(Sentry)
+
+      Sentry.with_scope do |scope|
+        scope.set_level(:warning)
+        scope.set_tags(component: 'insales_media_verify')
+        scope.set_extras(
+          product_id: product.id,
+          sku: product.sku,
+          insales_product_id: mapping.insales_product_id,
+          expected_images: media_result.photos_in_aura,
+          uploaded_images: media_result.photos_uploaded,
+          verified_admin: media_result.verified_admin,
+          verified_storefront: media_result.verified_storefront,
+          media_status: media_result.status,
+          media_error: media_result.last_error
+        )
+        Sentry.capture_message('InSales media verify warning')
+      end
+    rescue StandardError => e
+      Rails.logger.warn("[InSales][MEDIA] Failed to report warning to Sentry: #{e.class} - #{e.message}")
     end
   end
 end

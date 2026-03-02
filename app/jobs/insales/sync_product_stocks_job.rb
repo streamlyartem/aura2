@@ -29,7 +29,7 @@ module Insales
         last_verified_at: Time.current,
         last_error: result.last_error_message,
         finished_at: Time.current,
-        status: result.errors.positive? ? 'error' : 'success'
+        status: final_status_for(result)
       )
       upsert_status(store_label, result)
       Rails.logger.info("[InSalesSync] Job finished stores=#{store_label} status=#{run.status}")
@@ -60,7 +60,7 @@ module Insales
         status.last_status = 'running'
       elsif result
         status.last_stock_sync_at = Time.current
-        status.last_status = result.errors.to_i.positive? ? 'failed' : 'success'
+        status.last_status = final_status_for(result) == 'error' ? 'failed' : final_status_for(result)
         status.processed = result.processed
         status.created = result.created
         status.updated = result.updated
@@ -89,6 +89,13 @@ module Insales
       names = names.map(&:to_s).map(&:strip).reject(&:blank?).uniq
       names = [MoyskladClient::TEST_STORE_NAME] if names.empty?
       names
+    end
+
+    def final_status_for(result)
+      return 'error' if result.errors.to_i.positive?
+      return 'partial_success' if result.verify_failures.to_i.positive?
+
+      'success'
     end
   end
 end
