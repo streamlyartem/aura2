@@ -79,6 +79,11 @@ module Insales
         )
       end
 
+      if response&.status.to_i == 404
+        remove_stale_mapping!(mapping, product_id: product.id)
+        return Result.new(status: 'success', action: 'unpublish', message: 'Stale mapping removed; product already absent in InSales')
+      end
+
       unless success?(response)
         return Result.new(status: 'error', action: 'unpublish', message: "HTTP #{response&.status}")
       end
@@ -92,6 +97,11 @@ module Insales
 
     def ensure_visible(insales_product_id)
       response = client.put("/admin/products/#{insales_product_id}.json", { product: { is_hidden: false } })
+      if response&.status.to_i == 404
+        remove_stale_mapping_by_insales_id!(insales_product_id)
+        return
+      end
+
       return if success?(response)
       return if hidden_field_rejected?(response)
 
@@ -107,6 +117,20 @@ module Insales
 
     def success?(response)
       response && (200..299).cover?(response.status)
+    end
+
+    def remove_stale_mapping!(mapping, product_id:)
+      Rails.logger.warn(
+        "[InSalesSync][Trigger] Removing stale mapping product=#{product_id} insales_product_id=#{mapping.insales_product_id}"
+      )
+      mapping.destroy!
+    end
+
+    def remove_stale_mapping_by_insales_id!(insales_product_id)
+      mapping = InsalesProductMapping.find_by(insales_product_id: insales_product_id)
+      return unless mapping
+
+      remove_stale_mapping!(mapping, product_id: mapping.aura_product_id)
     end
 
     def allowed_store_names

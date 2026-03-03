@@ -174,6 +174,21 @@ RSpec.describe Insales::SyncProductTrigger do
       )
     end
 
+    it 'removes stale mapping when unpublish returns 404' do
+      create(:product_stock, product: product, stock: 0, store_name: 'Тест')
+      mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 999, insales_variant_id: 888)
+
+      allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
+      allow(client).to receive(:put).and_return(double(status: 404, body: { message: 'Not found' }))
+
+      result = service.call(product_id: product.id, reason: 'stock_changed')
+
+      expect(result.status).to eq('success')
+      expect(result.action).to eq('unpublish')
+      expect(result.message).to eq('Stale mapping removed; product already absent in InSales')
+      expect(InsalesProductMapping.find_by(id: mapping.id)).to be_nil
+    end
+
     it 'returns error when unpublish export has errors' do
       create(:product_stock, product: product, stock: 0, store_name: 'Тест')
       mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 1001, insales_variant_id: 1002)
@@ -190,6 +205,21 @@ RSpec.describe Insales::SyncProductTrigger do
         "/admin/products/#{mapping.insales_product_id}.json",
         { product: { collection_ids: [], is_hidden: true } }
       )
+    end
+
+    it 'removes stale mapping when ensure_visible returns 404' do
+      create(:product_stock, product: product, stock: 2, store_name: 'Тест')
+      mapping = InsalesProductMapping.create!(aura_product_id: product.id, insales_product_id: 111, insales_variant_id: 222)
+
+      allow(Insales::ExportProducts).to receive(:call).and_return(double(errors: 0))
+      expect(Insales::SyncProductMedia).not_to receive(:new)
+      allow(client).to receive(:put).and_return(double(status: 404, body: { message: 'Not found' }))
+
+      result = service.call(product_id: product.id, reason: 'stock_changed')
+
+      expect(result.status).to eq('success')
+      expect(result.action).to eq('publish')
+      expect(InsalesProductMapping.find_by(id: mapping.id)).to be_nil
     end
   end
 end
