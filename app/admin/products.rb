@@ -17,6 +17,7 @@ ActiveAdmin.register Product do
 
   collection_action :check_sku, method: :get do
     product = Product.find_by_scanned_barcode(params[:sku])
+    product ||= Moysklad::FindAndImportProductByBarcode.call(raw_value: params[:sku])
 
     if product
       render json: { exists: true, id: product.id, edit_url: edit_admin_product_path(product) }
