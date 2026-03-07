@@ -31,4 +31,22 @@ RSpec.describe Insales::InsalesClient do
 
     expect(response.status).to eq(404)
   end
+
+  it 'does not report idempotent collects conflicts to SentryReporter' do
+    client = described_class.new(
+      base_url: 'https://example.myinsales.ru',
+      login: 'user',
+      password: 'pass'
+    )
+
+    stub_request(:post, 'https://example.myinsales.ru/admin/collects.json')
+      .with(basic_auth: %w[user pass])
+      .to_return(status: 422, body: { message: 'already linked' }.to_json, headers: { 'Content-Type' => 'application/json' })
+
+    expect(Monitoring::SentryReporter).not_to receive(:report_insales_api_error)
+
+    response = client.collect_create(product_id: 11, collection_id: 22)
+
+    expect(response.status).to eq(422)
+  end
 end

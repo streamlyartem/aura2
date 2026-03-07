@@ -220,6 +220,11 @@ module Insales
     end
 
     def log_error(method, path, response)
+      if idempotent_collect_conflict?(method, path, response)
+        Rails.logger.info("[InSales] #{method.to_s.upcase} #{path} -> #{response.status} (idempotent collect conflict)")
+        return
+      end
+
       body = response.body
       body_str = if body.is_a?(String)
                    body
@@ -255,6 +260,12 @@ module Insales
           path: path
         }
       )
+    end
+
+    def idempotent_collect_conflict?(method, path, response)
+      method.to_s.downcase == 'post' &&
+        path == '/admin/collects.json' &&
+        [409, 422].include?(response&.status.to_i)
     end
 
     def track_last_response(method, path, response)
