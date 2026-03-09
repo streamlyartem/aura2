@@ -61,7 +61,7 @@ group :development, :test do
 end
 
 gem 'activeadmin', '>= 4.0.0.beta16'
-gem 'activeadmin_assets', '~> 1.1'
+gem 'activeadmin_assets', '~> 1.2'
 gem 'devise'
 gem 'faraday'
 gem 'sentry-rails'
