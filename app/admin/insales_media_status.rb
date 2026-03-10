@@ -29,6 +29,7 @@ ActiveAdmin.register_page 'InSales Media Status' do
             ['SKU', product.sku],
             ['InSales product id', state&.insales_product_id || '—'],
             ['Photos in AURA', state&.photos_in_aura || product.images.select(&:image?).count],
+            ['Videos in AURA', product.images.select(&:video?).count],
             ['Photos uploaded', state&.photos_uploaded || '—'],
             ['Verified admin', state&.verified_admin || false],
             ['Verified storefront', state&.verified_storefront || false],
@@ -81,7 +82,7 @@ ActiveAdmin.register_page 'InSales Media Status' do
             column('Name') { |product| product.name }
             column('SKU') { |product| product.sku }
             column('Photos') { |product| product.images.select(&:image?).count }
-            column('Videos') { |_product| 0 }
+            column('Videos') { |product| product.images.select(&:video?).count }
             column('Status') { |product| states[product.id]&.status || '—' }
             column('View') do |product|
               link_to 'View', admin_insales_media_status_path(product_id: product.id)
