@@ -33,8 +33,12 @@ ActiveAdmin.register_page 'Dashboard' do
       'Insales::SyncProductStocksJob',
       'Moysklad::ImportProductsJob'
     ]
-    jobs_scope = SolidQueue::Job.where(class_name: stoppable_job_classes, finished_at: nil)
-    job_ids = jobs_scope.pluck(:id)
+    job_ids = (
+      SolidQueue::ReadyExecution.joins(:job).where(solid_queue_jobs: { class_name: stoppable_job_classes }).pluck(:job_id) +
+      SolidQueue::ScheduledExecution.joins(:job).where(solid_queue_jobs: { class_name: stoppable_job_classes }).pluck(:job_id) +
+      SolidQueue::ClaimedExecution.joins(:job).where(solid_queue_jobs: { class_name: stoppable_job_classes }).pluck(:job_id) +
+      SolidQueue::BlockedExecution.joins(:job).where(solid_queue_jobs: { class_name: stoppable_job_classes }).pluck(:job_id)
+    ).uniq
 
     if job_ids.any?
       SolidQueue::ClaimedExecution.where(job_id: job_ids).delete_all
@@ -51,12 +55,11 @@ ActiveAdmin.register_page 'Dashboard' do
     InsalesSyncRun.recover_stale_runs!
     health = Monitoring::HealthSnapshot.call
 
-    queue_scope = SolidQueue::Job.where(finished_at: nil)
-    queue_total = queue_scope.count
     queue_ready = SolidQueue::ReadyExecution.count
     queue_scheduled = SolidQueue::ScheduledExecution.count
     queue_claimed = SolidQueue::ClaimedExecution.count
     queue_blocked = SolidQueue::BlockedExecution.count
+    queue_total = queue_ready + queue_scheduled + queue_claimed + queue_blocked
 
     running_moysklad_imports = MoyskladSyncRun.imports.running.order(started_at: :asc).to_a
     running_insales_syncs = InsalesSyncRun.where(status: 'running').order(started_at: :asc).to_a
@@ -119,11 +122,20 @@ ActiveAdmin.register_page 'Dashboard' do
     end
 
     panel 'Очередь задач (по классам)' do
-      grouped = queue_scope.group(:class_name).order(Arel.sql('count_all DESC')).count
+      grouped = Hash.new(0)
+      [
+        SolidQueue::ReadyExecution.joins(:job),
+        SolidQueue::ScheduledExecution.joins(:job),
+        SolidQueue::ClaimedExecution.joins(:job),
+        SolidQueue::BlockedExecution.joins(:job)
+      ].each do |scope|
+        scope.group('solid_queue_jobs.class_name').count.each { |klass, count| grouped[klass] += count }
+      end
+      grouped = grouped.sort_by { |_klass, count| -count }
       if grouped.empty?
         para 'Очередь пустая.'
       else
-        table_for(grouped.to_a) do
+        table_for(grouped) do
           column('Класс job') { |row| row[0] }
           column('Кол-во') { |row| row[1] }
         end
@@ -136,7 +148,17 @@ ActiveAdmin.register_page 'Dashboard' do
       elsif queue_total > 40
         para "Сейчас в очереди #{queue_total} задач. Список скрыт (порог: 40), чтобы не перегружать страницу."
       else
-        rows = queue_scope.order(created_at: :asc).limit(40).pluck(:id, :class_name, :queue_name, :created_at, :scheduled_at)
+        rows = []
+        [
+          SolidQueue::ReadyExecution.joins(:job).select('solid_queue_jobs.id AS job_id, solid_queue_jobs.class_name, solid_queue_jobs.queue_name, solid_queue_jobs.created_at, solid_queue_jobs.scheduled_at'),
+          SolidQueue::ScheduledExecution.joins(:job).select('solid_queue_jobs.id AS job_id, solid_queue_jobs.class_name, solid_queue_jobs.queue_name, solid_queue_jobs.created_at, solid_queue_jobs.scheduled_at'),
+          SolidQueue::ClaimedExecution.joins(:job).select('solid_queue_jobs.id AS job_id, solid_queue_jobs.class_name, solid_queue_jobs.queue_name, solid_queue_jobs.created_at, solid_queue_jobs.scheduled_at'),
+          SolidQueue::BlockedExecution.joins(:job).select('solid_queue_jobs.id AS job_id, solid_queue_jobs.class_name, solid_queue_jobs.queue_name, solid_queue_jobs.created_at, solid_queue_jobs.scheduled_at')
+        ].each do |scope|
+          rows.concat(scope.map { |row| [row.job_id, row.class_name, row.queue_name, row.created_at, row.scheduled_at] })
+        end
+
+        rows = rows.uniq { |row| row[0] }.sort_by { |row| row[3] }.first(40)
         table_for(rows) do
           column('Job ID') { |row| row[0] }
           column('Класс') { |row| row[1] }
