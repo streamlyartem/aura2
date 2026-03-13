@@ -158,10 +158,9 @@ module Public
     end
 
     def product_type(product)
-      return 'Омбре' if product.ombre?
-
       path = product.path_name.to_s.downcase
       name = product.name.to_s.downcase
+      return 'Капсулы' if path.include?('капсул') || name.include?('капсул')
       return 'Ленты' if path.include?('лент') || name.include?('лент')
 
       'Срезы'
