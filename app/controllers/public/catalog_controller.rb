@@ -158,12 +158,10 @@ module Public
     end
 
     def product_type(product)
-      path = product.path_name.to_s.downcase
-      name = product.name.to_s.downcase
-      return 'Капсулы' if path.include?('капсул') || name.include?('капсул')
-      return 'Ленты' if path.include?('лент') || name.include?('лент')
+      first_word = product.name.to_s.strip.split(/\s+/).first.to_s
+      return 'Срезы' if first_word.blank?
 
-      'Срезы'
+      first_word
     end
 
     def product_description(product)
