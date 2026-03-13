@@ -38,8 +38,10 @@ module Public
       return nil if image_media.empty?
 
       video_media = media.select(&:video?)
-      image_urls = image_media.first(6).map { |image| media_url(image.id) }
-      video_url = (video_media.first && media_url(video_media.first.id)) || demo_video_url
+      image_urls = image_media.first(2).map { |image| media_url(image) }.compact
+      return nil if image_urls.empty?
+
+      video_url = (video_media.first && media_url(video_media.first)) || demo_video_url
 
       {
         id: product.id,
@@ -60,6 +62,16 @@ module Public
     end
 
     def media_url(image_id)
+      image = image_id.is_a?(Image) ? image_id : Image.find_by(id: image_id)
+      return nil unless image&.file&.attached?
+
+      # For storefront performance we prefer direct object-store URLs over Rails proxy streaming.
+      image.service_url
+    rescue StandardError
+      fallback_media_url(image&.id || image_id)
+    end
+
+    def fallback_media_url(image_id)
       "#{request.base_url}/public/images/#{image_id}"
     end
 
