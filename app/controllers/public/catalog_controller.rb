@@ -60,7 +60,7 @@ module Public
     end
 
     def media_url(image_id)
-      "#{request.base_url}#{public_images_path(image_id: image_id)}"
+      "#{request.base_url}/public/images/#{image_id}"
     end
 
     def product_price(product)
