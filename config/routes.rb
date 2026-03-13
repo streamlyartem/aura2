@@ -30,6 +30,7 @@ Rails.application.routes.draw do
   namespace :public do
     get 'images/:image_id', to: 'images#show'
     get 'catalog/products', to: 'catalog#products'
+    get 'catalog/products/:id', to: 'catalog#show'
   end
 
   # Defines the root path route ("/")
