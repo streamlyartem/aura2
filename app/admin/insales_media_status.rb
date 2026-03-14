@@ -71,28 +71,32 @@ ActiveAdmin.register_page 'InSales Media Status' do
       panel 'Media status by product' do
         div class: 'mb-4' do
           form action: admin_insales_media_status_path, method: :get do
-            div style: 'display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;' do
-              div style: 'min-width:280px; flex:1 1 280px;' do
-                label 'Склад'
-                select name: 'store_name' do
-                  store_names.each do |name|
-                    option name, value: name, selected: name == store_name
+            div style: 'display:flex; flex-direction:column; gap:12px;' do
+              div style: 'display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;' do
+                div style: 'min-width:320px; max-width:520px; flex:1 1 320px;' do
+                  label 'Склад'
+                  select name: 'store_name' do
+                    store_names.each do |name|
+                      option name, value: name, selected: name == store_name
+                    end
                   end
+                end
+
+                div style: 'display:flex; align-items:flex-end; height:42px;' do
+                  input type: 'submit', value: 'Показать', class: 'button'
                 end
               end
 
-              div style: 'min-width:240px; flex:1 1 240px;' do
-                label 'Товар'
-                input type: 'text', name: 'name', value: name_query
-              end
+              div style: 'display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;' do
+                div style: 'min-width:280px; flex:1 1 280px;' do
+                  label 'Товар'
+                  input type: 'text', name: 'name', value: name_query
+                end
 
-              div style: 'min-width:200px; flex:1 1 200px;' do
-                label 'SKU'
-                input type: 'text', name: 'sku', value: sku_query
-              end
-
-              div style: 'display:flex; align-items:flex-end; height:42px;' do
-                input type: 'submit', value: 'Показать', class: 'button'
+                div style: 'min-width:220px; flex:1 1 220px;' do
+                  label 'SKU'
+                  input type: 'text', name: 'sku', value: sku_query
+                end
               end
             end
           end
