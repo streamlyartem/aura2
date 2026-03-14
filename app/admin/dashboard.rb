@@ -79,6 +79,29 @@ ActiveAdmin.register_page 'Dashboard' do
       "#{hours} ч #{rem_minutes} мин"
     end
 
+    severity_for = lambda do |value, warning_from:, danger_from:|
+      return :ok if value.to_i < warning_from
+      return :warning if value.to_i < danger_from
+
+      :error
+    end
+
+    render_badge = lambda do |label, value, severity|
+      css_class = case severity
+                  when :error then 'red'
+                  when :warning then 'orange'
+                  else 'green'
+                  end
+
+      [label, status_tag(value, css_class)]
+    end
+
+    queue_severity = severity_for.call(queue_total, warning_from: 20, danger_from: 60)
+    failed_jobs_severity = severity_for.call(health[:failed_jobs_last_24h], warning_from: 1, danger_from: 10)
+    pending_high_severity = severity_for.call(health[:stock_events_pending_high], warning_from: 1, danger_from: 20)
+    stale_runs_severity = severity_for.call(health[:stale_insales_sync_runs], warning_from: 1, danger_from: 3)
+    stock_failed_severity = severity_for.call(health[:stock_events_failed], warning_from: 1, danger_from: 5)
+
     panel 'Оперативная сводка' do
       div class: 'mb-3' do
         form action: admin_dashboard_stop_syncs_path, method: :post do
@@ -92,11 +115,13 @@ ActiveAdmin.register_page 'Dashboard' do
       table_for [
         ['Активные импорты МойСклад', running_moysklad_imports.size],
         ['Активные синки InSales', running_insales_syncs.size],
-        ['Очередь задач: всего', queue_total],
+        render_badge.call('Очередь задач: всего', queue_total, queue_severity),
         ['Очередь: ready', queue_ready],
         ['Очередь: scheduled', queue_scheduled],
         ['Очередь: claimed (выполняется)', queue_claimed],
-        ['Очередь: blocked', queue_blocked]
+        ['Очередь: blocked', queue_blocked],
+        render_badge.call('Упавшие задачи за 24 часа', health[:failed_jobs_last_24h], failed_jobs_severity),
+        render_badge.call('События остатков: pending high', health[:stock_events_pending_high], pending_high_severity)
       ] do
         column('Показатель') { |row| row[0] }
         column('Значение') { |row| row[1] }
@@ -106,14 +131,14 @@ ActiveAdmin.register_page 'Dashboard' do
     panel 'Здоровье системы' do
       table_for [
         ['Sentry', health[:sentry_enabled] ? 'включен' : 'выключен'],
-        ['События остатков: pending high', health[:stock_events_pending_high]],
+        render_badge.call('События остатков: pending high', health[:stock_events_pending_high], pending_high_severity),
         ['События остатков: pending normal', health[:stock_events_pending_normal]],
         ['События остатков: processing', health[:stock_events_processing]],
-        ['События остатков: failed', health[:stock_events_failed]],
-        ['Подвисшие синки InSales', health[:stale_insales_sync_runs]],
+        render_badge.call('События остатков: failed', health[:stock_events_failed], stock_failed_severity),
+        render_badge.call('Подвисшие синки InSales', health[:stale_insales_sync_runs], stale_runs_severity),
         ['Упавшие задачи InSales', health[:insales_failed_jobs]],
         ['Упавшие задачи MoySklad', health[:moysklad_failed_jobs]],
-        ['Упавшие задачи за 24 часа', health[:failed_jobs_last_24h]],
+        render_badge.call('Упавшие задачи за 24 часа', health[:failed_jobs_last_24h], failed_jobs_severity),
         ['P95 синка InSales (сек)', health[:p95_insales_sync_seconds] || '—']
       ] do
         column('Метрика') { |row| row[0] }
