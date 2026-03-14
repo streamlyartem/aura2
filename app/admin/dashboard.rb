@@ -54,6 +54,7 @@ ActiveAdmin.register_page 'Dashboard' do
   content title: proc { I18n.t('active_admin.dashboard') } do
     InsalesSyncRun.recover_stale_runs!
     health = Monitoring::HealthSnapshot.call
+    now = Time.current
 
     queue_ready = SolidQueue::ReadyExecution.count
     queue_scheduled = SolidQueue::ScheduledExecution.count
@@ -64,21 +65,37 @@ ActiveAdmin.register_page 'Dashboard' do
     running_moysklad_imports = MoyskladSyncRun.imports.running.order(started_at: :asc).to_a
     running_insales_syncs = InsalesSyncRun.where(status: 'running').order(started_at: :asc).to_a
 
-    panel 'Состояние системы' do
+    format_duration = lambda do |started_at|
+      next '—' if started_at.blank?
+
+      seconds = (now - started_at).to_i
+      return "#{seconds} сек" if seconds < 60
+
+      minutes = seconds / 60
+      return "#{minutes} мин" if minutes < 60
+
+      hours = minutes / 60
+      rem_minutes = minutes % 60
+      "#{hours} ч #{rem_minutes} мин"
+    end
+
+    panel 'Оперативная сводка' do
       div class: 'mb-3' do
         form action: admin_dashboard_stop_syncs_path, method: :post do
           input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-          input type: 'submit', value: 'Остановить синхронизации', class: 'button'
+          input type: 'submit', value: 'Остановить все синхронизации', class: 'button',
+                data: { confirm: 'Остановить все активные синхронизации и импорты?' }
         end
+        para 'Останавливает активные импорты MoySklad и синхронизации InSales. Другие задачи не затрагиваются.'
       end
 
       table_for [
-        ['Импорт МойСклад (running)', running_moysklad_imports.size],
-        ['Синк InSales (running)', running_insales_syncs.size],
-        ['Очередь задач (всего)', queue_total],
+        ['Активные импорты МойСклад', running_moysklad_imports.size],
+        ['Активные синки InSales', running_insales_syncs.size],
+        ['Очередь задач: всего', queue_total],
         ['Очередь: ready', queue_ready],
         ['Очередь: scheduled', queue_scheduled],
-        ['Очередь: claimed (в работе)', queue_claimed],
+        ['Очередь: claimed (выполняется)', queue_claimed],
         ['Очередь: blocked', queue_blocked]
       ] do
         column('Показатель') { |row| row[0] }
@@ -86,18 +103,18 @@ ActiveAdmin.register_page 'Dashboard' do
       end
     end
 
-    panel 'Health' do
+    panel 'Здоровье системы' do
       table_for [
-        ['Sentry', health[:sentry_enabled] ? 'enabled' : 'disabled'],
-        ['Stock events pending (high)', health[:stock_events_pending_high]],
-        ['Stock events pending (normal)', health[:stock_events_pending_normal]],
-        ['Stock events processing', health[:stock_events_processing]],
-        ['Stock events failed', health[:stock_events_failed]],
-        ['Stale InSales sync runs', health[:stale_insales_sync_runs]],
-        ['InSales failed jobs', health[:insales_failed_jobs]],
-        ['MoySklad failed jobs', health[:moysklad_failed_jobs]],
-        ['Failed jobs (24h)', health[:failed_jobs_last_24h]],
-        ['P95 InSales sync (sec)', health[:p95_insales_sync_seconds] || '—']
+        ['Sentry', health[:sentry_enabled] ? 'включен' : 'выключен'],
+        ['События остатков: pending high', health[:stock_events_pending_high]],
+        ['События остатков: pending normal', health[:stock_events_pending_normal]],
+        ['События остатков: processing', health[:stock_events_processing]],
+        ['События остатков: failed', health[:stock_events_failed]],
+        ['Подвисшие синки InSales', health[:stale_insales_sync_runs]],
+        ['Упавшие задачи InSales', health[:insales_failed_jobs]],
+        ['Упавшие задачи MoySklad', health[:moysklad_failed_jobs]],
+        ['Упавшие задачи за 24 часа', health[:failed_jobs_last_24h]],
+        ['P95 синка InSales (сек)', health[:p95_insales_sync_seconds] || '—']
       ] do
         column('Метрика') { |row| row[0] }
         column('Значение') { |row| row[1] }
@@ -109,14 +126,16 @@ ActiveAdmin.register_page 'Dashboard' do
         para 'Сейчас активных процессов нет.'
       else
         table_for(
-          running_moysklad_imports.map { |run| ['MoySklad import', run.id, run.status, run.started_at, run.stop_requested_at] } +
-          running_insales_syncs.map { |run| ["InSales sync (#{run.store_name})", run.id, run.status, run.started_at, nil] }
+          running_moysklad_imports.map { |run| ['Импорт MoySklad', run.id, run.status, run.started_at, run.stop_requested_at, nil] } +
+          running_insales_syncs.map { |run| ["Синк InSales (#{run.store_name})", run.id, run.status, run.started_at, nil, run.updated_at] }
         ) do
           column('Процесс') { |row| row[0] }
           column('ID') { |row| row[1] }
           column('Статус') { |row| row[2] }
-          column('Запущен') { |row| row[3] }
-          column('Stop requested at') { |row| row[4] || '—' }
+          column('Запущен') { |row| row[3]&.strftime('%d.%m.%Y %H:%M:%S') || '—' }
+          column('Длительность') { |row| format_duration.call(row[3]) }
+          column('Запрошена остановка') { |row| row[4]&.strftime('%d.%m.%Y %H:%M:%S') || '—' }
+          column('Обновлён') { |row| row[5]&.strftime('%d.%m.%Y %H:%M:%S') || '—' }
         end
       end
     end
@@ -136,7 +155,7 @@ ActiveAdmin.register_page 'Dashboard' do
         para 'Очередь пустая.'
       else
         table_for(grouped) do
-          column('Класс job') { |row| row[0] }
+          column('Класс задачи') { |row| row[0] }
           column('Кол-во') { |row| row[1] }
         end
       end
@@ -160,7 +179,7 @@ ActiveAdmin.register_page 'Dashboard' do
 
         rows = rows.uniq { |row| row[0] }.sort_by { |row| row[3] }.first(40)
         table_for(rows) do
-          column('Job ID') { |row| row[0] }
+          column('ID задачи') { |row| row[0] }
           column('Класс') { |row| row[1] }
           column('Очередь') { |row| row[2] }
           column('Создано') { |row| row[3] }
