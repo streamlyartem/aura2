@@ -93,7 +93,7 @@ ActiveAdmin.register_page 'Dashboard' do
                   else 'green'
                   end
 
-      [label, status_tag(value, css_class)]
+      [label, status_tag(value, class: css_class)]
     end
 
     queue_severity = severity_for.call(queue_total, warning_from: 20, danger_from: 60)
