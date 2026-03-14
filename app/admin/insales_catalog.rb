@@ -81,7 +81,10 @@ ActiveAdmin.register InsalesCatalogItem do
     panel 'Остатки по подключенным складам' do
       stores = InsalesSetting.first&.allowed_store_names_list
       stores = [MoyskladClient::TEST_STORE_NAME] if stores.blank?
-      stock_rows = ProductStock.where(product_id: resource.product_id, store_name: stores).order(:store_name)
+      stock_rows = ProductStock
+                   .where(product_id: resource.product_id, store_name: stores)
+                   .select('DISTINCT ON (store_name) product_stocks.*')
+                   .order(Arel.sql('store_name, synced_at DESC NULLS LAST, updated_at DESC, id DESC'))
       if stock_rows.none?
         div 'Нет остатков по выбранным складам'
       else
