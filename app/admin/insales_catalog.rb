@@ -76,7 +76,8 @@ ActiveAdmin.register InsalesCatalogItem do
     end
 
     panel 'Остатки по подключенным складам' do
-      stores = selected_store_names
+      stores = InsalesSetting.first&.allowed_store_names_list
+      stores = [MoyskladClient::TEST_STORE_NAME] if stores.blank?
       stock_rows = ProductStock.where(product_id: resource.product_id, store_name: stores).order(:store_name)
       if stock_rows.none?
         div 'Нет остатков по выбранным складам'
@@ -102,10 +103,5 @@ ActiveAdmin.register InsalesCatalogItem do
       format('%.2f ₽', value)
     end
 
-    def selected_store_names
-      names = InsalesSetting.first&.allowed_store_names_list
-      names = [MoyskladClient::TEST_STORE_NAME] if names.blank?
-      names
-    end
   end
 end
