@@ -71,8 +71,8 @@ ActiveAdmin.register_page 'InSales Media Status' do
       panel 'Media status by product' do
         div class: 'mb-4' do
           form action: admin_insales_media_status_path, method: :get do
-            div style: 'display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;' do
-              div do
+            div style: 'display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;' do
+              div style: 'min-width:300px;' do
                 label 'Склад'
                 select name: 'store_name' do
                   store_names.each do |name|
@@ -81,18 +81,18 @@ ActiveAdmin.register_page 'InSales Media Status' do
                 end
               end
 
-              div do
+              div style: 'min-width:300px;' do
                 label 'Товар'
                 input type: 'text', name: 'name', value: name_query
               end
 
-              div do
+              div style: 'min-width:240px;' do
                 label 'SKU'
                 input type: 'text', name: 'sku', value: sku_query
               end
 
               div do
-                input type: 'submit', value: 'Показать', class: 'button'
+                button 'Показать', type: 'submit', class: 'button', style: 'height:42px; padding: 0 16px; margin-bottom: 1px;'
               end
             end
           end
