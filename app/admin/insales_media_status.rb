@@ -58,20 +58,42 @@ ActiveAdmin.register_page 'InSales Media Status' do
                       []
                     end
 
-      products = Product.where(id: product_ids).includes(:images).order(created_at: :desc).page(params[:page]).per(25)
+      name_query = params[:name].to_s.strip
+      sku_query = params[:sku].to_s.strip
+
+      products_scope = Product.where(id: product_ids).includes(:images)
+      products_scope = products_scope.where('products.name ILIKE ?', "%#{name_query}%") if name_query.present?
+      products_scope = products_scope.where('products.sku ILIKE ?', "%#{sku_query}%") if sku_query.present?
+
+      products = products_scope.order(created_at: :desc).page(params[:page]).per(25)
       states = InsalesMediaSyncState.where(product_id: products.map(&:id)).index_by(&:product_id)
 
       panel 'Media status by product' do
         div class: 'mb-4' do
           form action: admin_insales_media_status_path, method: :get do
-            label 'Склад'
-            select name: 'store_name' do
-              store_names.each do |name|
-                option name, value: name, selected: name == store_name
+            div style: 'display:flex; gap:8px; align-items:flex-end; flex-wrap:wrap;' do
+              div do
+                label 'Склад'
+                select name: 'store_name' do
+                  store_names.each do |name|
+                    option name, value: name, selected: name == store_name
+                  end
+                end
               end
-            end
-            div class: 'mt-3' do
-              input type: 'submit', value: 'Показать', class: 'button'
+
+              div do
+                label 'Товар'
+                input type: 'text', name: 'name', value: name_query
+              end
+
+              div do
+                label 'SKU'
+                input type: 'text', name: 'sku', value: sku_query
+              end
+
+              div do
+                input type: 'submit', value: 'Показать', class: 'button'
+              end
             end
           end
         end
