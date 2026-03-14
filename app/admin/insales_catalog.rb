@@ -6,7 +6,10 @@ ActiveAdmin.register InsalesCatalogItem do
 
   actions :index, :show
   includes :product
-  config.filters = false
+  config.filters = true
+
+  filter :product_name_cont, label: 'Товар'
+  filter :product_sku_cont, label: 'SKU'
 
   scope :ready, default: true
   scope :error
