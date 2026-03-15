@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 ActiveAdmin.register_page 'InSales Orders' do
-  menu parent: 'InSales', label: 'Заказы InSales', priority: 2,
+  menu parent: 'Заказы', label: 'Заказы InSales', priority: 51,
        if: proc { current_admin_user&.can_access_admin_path?('/admin/insales_orders') }
 
   content title: 'Заказы InSales' do
