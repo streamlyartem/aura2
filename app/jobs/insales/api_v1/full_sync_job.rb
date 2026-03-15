@@ -29,8 +29,10 @@ module Insales
           total_items: processed,
           unchanged_count: processed
         )
+        Monitoring::ThresholdAlerts.check_api_v1_runs!
       rescue StandardError => e
         run&.update!(status: 'failed', finished_at: Time.current, last_error: "#{e.class}: #{e.message}")
+        Monitoring::ThresholdAlerts.check_api_v1_runs!
         raise
       end
     end

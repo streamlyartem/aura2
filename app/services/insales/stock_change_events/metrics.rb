@@ -14,6 +14,7 @@ module Insales
           Rails.cache.write("insales:stock_change_events:pending_high", high, expires_in: 2.hours)
           Rails.cache.write("insales:stock_change_events:pending_normal", normal, expires_in: 2.hours)
           Rails.logger.info("[InSales][StockEvents][Metrics] pending_high=#{high} pending_normal=#{normal}")
+          Monitoring::ThresholdAlerts.check_stock_pipeline!(pending_high: high, pending_normal: normal)
         end
 
         def track_retry!

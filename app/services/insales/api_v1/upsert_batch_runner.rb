@@ -49,8 +49,10 @@ module Insales
           error_items: errors,
           last_error: errors.last&.dig(:message)
         )
+        Monitoring::ThresholdAlerts.check_api_v1_runs!
       rescue StandardError => e
         run.update!(status: 'failed', finished_at: Time.current, last_error: "#{e.class}: #{e.message}")
+        Monitoring::ThresholdAlerts.check_api_v1_runs!
         raise
       end
 

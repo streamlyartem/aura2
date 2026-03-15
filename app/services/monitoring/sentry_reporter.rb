@@ -50,6 +50,17 @@ module Monitoring
         )
       end
 
+      def report_operational_alert(message:, severity: :warning, tags: {}, extras: {})
+        report(
+          domain: 'operations',
+          component: tags[:component] || 'monitoring_alerts',
+          severity: severity,
+          message: message,
+          tags: tags,
+          extras: extras
+        )
+      end
+
       private
 
       def report(domain:, component:, severity:, message:, exception: nil, tags: {}, extras: {})
