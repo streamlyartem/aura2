@@ -27,6 +27,7 @@ class Image < ApplicationRecord
 
   before_validation :assign_uploaded_by_admin_user, on: :create
   after_commit :enqueue_insales_sync_trigger, on: %i[create destroy]
+  after_commit :publish_outbox_media_update, on: %i[create destroy]
 
   has_one_attached :file
 
@@ -63,5 +64,25 @@ class Image < ApplicationRecord
     return if object_id.blank?
 
     Insales::SyncProductTriggerJob.perform_later(product_id: object_id, reason: 'media_changed')
+  end
+
+  def publish_outbox_media_update
+    return unless object_type == 'Product'
+    return if object_id.blank?
+    return unless Insales::ApiV1::FeatureFlags.outbox_enabled?
+
+    product = Product.find_by(id: object_id)
+    return unless product
+
+    payload = Insales::ApiV1::ProductDtoSerializer.new(product).as_json
+    Insales::ApiV1::OutboxPublisher.publish!(
+      aggregate_type: 'Product',
+      aggregate_id: product.id,
+      event_type: 'media.updated',
+      payload: payload,
+      occurred_at: Time.current
+    )
+  rescue StandardError => e
+    Rails.logger.warn("[APIv1][Outbox] media_update product=#{object_id} failed: #{e.class} #{e.message}")
   end
 end

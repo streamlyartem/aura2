@@ -6,6 +6,8 @@ class Product < ApplicationRecord
   has_many :images, dependent: :destroy, as: :object
   has_many :product_stocks, dependent: :destroy
   after_commit :enqueue_insales_sync_trigger, on: %i[create update]
+  after_commit :publish_outbox_created, on: :create
+  after_commit :publish_outbox_updated, on: :update
 
   accepts_nested_attributes_for :images, allow_destroy: true
 
@@ -89,6 +91,31 @@ class Product < ApplicationRecord
     return if previous_changes.except('updated_at').blank?
 
     Insales::SyncProductTriggerJob.perform_later(product_id: id, reason: 'product_changed')
+  end
+
+  def publish_outbox_created
+    publish_outbox_event('product.created')
+  end
+
+  def publish_outbox_updated
+    return if previous_changes.except('updated_at').blank?
+
+    publish_outbox_event('product.updated')
+  end
+
+  def publish_outbox_event(event_type)
+    return unless Insales::ApiV1::FeatureFlags.outbox_enabled?
+
+    payload = Insales::ApiV1::ProductDtoSerializer.new(self).as_json
+    Insales::ApiV1::OutboxPublisher.publish!(
+      aggregate_type: self.class.name,
+      aggregate_id: id,
+      event_type: event_type,
+      payload: payload,
+      occurred_at: updated_at || Time.current
+    )
+  rescue StandardError => e
+    Rails.logger.warn("[APIv1][Outbox] product=#{id} event=#{event_type} failed: #{e.class} #{e.message}")
   end
 
   def sync_to_moysklad

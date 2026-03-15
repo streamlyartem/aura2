@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_27_235000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_15_171500) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -79,6 +79,32 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_27_235000) do
     t.bigint "uploaded_by_admin_user_id"
     t.index ["object_type", "object_id"], name: "index_images_on_object"
     t.index ["uploaded_by_admin_user_id"], name: "index_images_on_uploaded_by_admin_user_id"
+  end
+
+  create_table "insales_api_sync_runs", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "run_type", null: false
+    t.string "status", default: "queued", null: false
+    t.string "source"
+    t.string "batch_id"
+    t.string "idempotency_key"
+    t.integer "total_items", default: 0, null: false
+    t.integer "processed", default: 0, null: false
+    t.integer "created_count", default: 0, null: false
+    t.integer "updated_count", default: 0, null: false
+    t.integer "unchanged_count", default: 0, null: false
+    t.integer "skipped_count", default: 0, null: false
+    t.integer "failed_count", default: 0, null: false
+    t.jsonb "error_items", default: [], null: false
+    t.jsonb "meta", default: {}, null: false
+    t.datetime "started_at"
+    t.datetime "finished_at"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["batch_id"], name: "index_insales_api_sync_runs_on_batch_id"
+    t.index ["idempotency_key"], name: "index_insales_api_sync_runs_on_idempotency_key"
+    t.index ["run_type"], name: "index_insales_api_sync_runs_on_run_type"
+    t.index ["status"], name: "index_insales_api_sync_runs_on_status"
   end
 
   create_table "insales_catalog_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -514,6 +540,39 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_27_235000) do
     t.index ["priority", "status", "next_retry_at"], name: "index_stock_change_events_on_priority_status_retry"
     t.index ["product_id"], name: "index_stock_change_events_on_product_id", unique: true
     t.index ["status", "locked_at"], name: "index_stock_change_events_on_status_and_locked_at"
+  end
+
+  create_table "sync_idempotency_keys", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "idempotency_key", null: false
+    t.string "request_hash", null: false
+    t.integer "response_status"
+    t.jsonb "response_body", default: {}, null: false
+    t.datetime "expires_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["expires_at"], name: "index_sync_idempotency_keys_on_expires_at"
+    t.index ["idempotency_key"], name: "index_sync_idempotency_keys_on_idempotency_key", unique: true
+  end
+
+  create_table "sync_outbox_events", force: :cascade do |t|
+    t.uuid "event_id", default: -> { "gen_random_uuid()" }, null: false
+    t.string "aggregate_type", null: false
+    t.string "aggregate_id", null: false
+    t.string "event_type", null: false
+    t.jsonb "payload", default: {}, null: false
+    t.datetime "occurred_at", null: false
+    t.datetime "processed_at"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "next_retry_at"
+    t.text "last_error"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["aggregate_type", "aggregate_id"], name: "index_sync_outbox_events_on_aggregate"
+    t.index ["event_id"], name: "index_sync_outbox_events_on_event_id", unique: true
+    t.index ["event_type"], name: "index_sync_outbox_events_on_event_type"
+    t.index ["occurred_at"], name: "index_sync_outbox_events_on_occurred_at"
+    t.index ["processed_at", "next_retry_at"], name: "index_sync_outbox_events_for_delivery"
+    t.index ["processed_at"], name: "index_sync_outbox_events_on_processed_at"
   end
 
   create_table "variant_prices", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

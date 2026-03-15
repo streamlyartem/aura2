@@ -1,0 +1,144 @@
+API v1 — Runbook (операционные действия и rollback)
+Дата: 2026-03-15
+Система: AURA <-> InSales
+
+1) Цель runbook
+- Дать команде короткий и воспроизводимый порядок действий:
+  - запуск/остановка API v1,
+  - canary/full cutover,
+  - мониторинг,
+  - аварийный rollback.
+
+2) Предусловия
+- Миграции применены:
+  - sync_idempotency_keys
+  - sync_outbox_events
+  - insales_api_sync_runs
+- Настроены секреты/переменные окружения:
+  - INSALES_API_V1_TOKEN
+  - INSALES_API_V1_READ_ENABLED
+  - INSALES_API_V1_WRITE_ENABLED
+  - INSALES_OUTBOX_ENABLED
+  - INSALES_API_V1_FULL_SYNC_ENABLED
+- Настроены алерты и дашборд по метрикам (см. раздел 5).
+
+3) Feature flags: рекомендуемая матрица
+Этап A (подготовка):
+- INSALES_API_V1_READ_ENABLED=false
+- INSALES_API_V1_WRITE_ENABLED=false
+- INSALES_OUTBOX_ENABLED=false
+
+Этап B (shadow):
+- INSALES_API_V1_READ_ENABLED=true
+- INSALES_API_V1_WRITE_ENABLED=false
+- INSALES_OUTBOX_ENABLED=true
+
+Этап C (canary write):
+- INSALES_API_V1_READ_ENABLED=true
+- INSALES_API_V1_WRITE_ENABLED=true (только canary store(s))
+- INSALES_OUTBOX_ENABLED=true
+
+Этап D (full):
+- INSALES_API_V1_READ_ENABLED=true
+- INSALES_API_V1_WRITE_ENABLED=true
+- INSALES_OUTBOX_ENABLED=true
+
+Mapping ENV -> feature flag key:
+- INSALES_API_V1_READ_ENABLED -> insales_api_v1_read_enabled
+- INSALES_API_V1_WRITE_ENABLED -> insales_api_v1_write_enabled
+- INSALES_OUTBOX_ENABLED -> insales_outbox_enabled
+- INSALES_INBOUND_ORDERS_ENABLED -> insales_inbound_orders_enabled
+
+Auth matrix:
+- Internal endpoints (`/products/*`, `/sync/*`): Bearer обязателен.
+- Inbound `/inbound/orders/events`: HMAC подпись обязательна, bearer не обязателен.
+
+Время и replay:
+- Все timestamp в UTC.
+- Допустимый drift для inbound: ±300 секунд.
+- При превышении: отклонять запрос как replay/invalid timestamp.
+
+Лимиты upsert:
+- max items: 500
+- max body size: 5 MB
+- max concurrent upsert runs: 5
+
+4) Операционные сценарии
+4.1 Проверка состояния перед запуском
+- Проверить, что нет критичных pending/failed в очередях.
+- Проверить доступность InSales API и rate-limit headroom.
+- Проверить, что в Sentry нет активного всплеска 5xx/timeout по integration domain.
+
+4.2 Запуск canary
+- Включить write flag для canary.
+- Запустить тестовый upsert-batch (100–300 SKU).
+- Проверить run status:
+  - processed
+  - created/updated/unchanged
+  - failed
+- Проверить витрину canary (цены, остатки, карточки).
+
+4.3 Полный запуск
+- Расширить canary до всех store.
+- Запустить incremental pipeline.
+- Full sync запускать только вне пиковых часов.
+
+4.4 Работа с инцидентом (короткий путь)
+- Если ошибка массовая (рост failed / 5xx / timeout):
+  1) Поставить INSALES_API_V1_WRITE_ENABLED=false.
+  2) Убедиться, что legacy path включен (если используется).
+  3) Не удалять outbox-события; только пауза consumer.
+  4) Зафиксировать время инцидента и trace_id диапазон.
+
+5) Контрольные метрики и пороги
+- p95 incremental sync latency <= 120s
+- error rate (5xx + timeout) < 1%
+- mismatch price/qty <= 0.1%
+- retry share <= 5%
+- pending high backlog <= 200
+
+Аварийные пороги (trigger rollback):
+- p95 > 180s два окна подряд
+- error rate >= 3% в течение 15 минут
+- mismatch > 0.5%
+- pending high > 500 и растет
+
+6) Rollback (без деплоя)
+6.1 Мгновенный rollback
+- INSALES_API_V1_WRITE_ENABLED=false
+- legacy_write_enabled=true (если применимо)
+- Пауза v1 consumer/job, чтобы не сжигать лимиты API
+
+6.2 Пост-rollback действия
+- Проверить, что новых write-run v1 нет.
+- Проверить, что legacy синк работает стабильно.
+- Снять snapshot ошибок и метрик за инцидент.
+- Открыть task-list на root cause + remediation.
+
+7) Ручные проверки после восстановления
+- 20 SKU случайной выборки:
+  - цена в AURA == цена в InSales
+  - остаток в AURA == остаток в InSales
+  - категория/видимость товара корректны
+- 5 SKU из проблемного сегмента инцидента.
+
+8) Политика повторного включения
+- Повторно включать v1 write только после:
+  - устранения root cause,
+  - прохождения canary 24 часа,
+  - подписанного Go/No-Go.
+
+9) Контакты и ответственность (RACI)
+- Product owner (A): решение о переходе/rollback на этапах cutover.
+- Backend lead (R): переключение флагов, техрешения.
+- Ops/SRE (R): алерты, capacity, инциденты.
+- QA lead (R): smoke/regression, контроль качества.
+- Store operations (C): проверка витрины и бизнес-валидность.
+- Stakeholders (I): уведомления о статусе.
+
+10) Чеклист перед архивированием инцидента
+- [ ] Write flag безопасно выключен/включен по плану.
+- [ ] Очереди стабилизированы.
+- [ ] Ошибки классифицированы и задокументированы.
+- [ ] Добавлены/обновлены тест-кейсы на повторение бага.
+- [ ] Обновлены спеки в `spec - API` при изменении поведения.

@@ -5,6 +5,7 @@ class ProductStock < ApplicationRecord
 
   belongs_to :product
   after_commit :buffer_insales_stock_change, on: %i[create update destroy]
+  after_commit :publish_outbox_stock_update, on: %i[create update destroy]
 
   validates :store_name, presence: true
 
@@ -38,5 +39,24 @@ class ProductStock < ApplicationRecord
     return if Current.skip_stock_change_processor_enqueue?
 
     Insales::StockChangeEvents::ProcessJob.perform_later
+  end
+
+  def publish_outbox_stock_update
+    return if product_id.blank?
+    return unless Insales::ApiV1::FeatureFlags.outbox_enabled?
+
+    product = Product.find_by(id: product_id)
+    return unless product
+
+    payload = Insales::ApiV1::ProductDtoSerializer.new(product).as_json
+    Insales::ApiV1::OutboxPublisher.publish!(
+      aggregate_type: 'Product',
+      aggregate_id: product.id,
+      event_type: 'stock.updated',
+      payload: payload,
+      occurred_at: updated_at || Time.current
+    )
+  rescue StandardError => e
+    Rails.logger.warn("[APIv1][Outbox] stock_update product=#{product_id} failed: #{e.class} #{e.message}")
   end
 end

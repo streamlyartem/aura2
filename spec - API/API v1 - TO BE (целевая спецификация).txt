@@ -1,0 +1,221 @@
+API v1 — TO BE (целевая спецификация)
+Дата: 2026-03-15
+База пути: /api/v1/insales
+
+0) Принципы
+- Backward-compatible rollout через feature flags.
+- Минимум риска: dual-run, canary, fallback.
+- Идемпотентность обязательна для write-path и inbound событий заказов.
+- Никаких "в лоб" синхронных батчей на тысячи товаров.
+
+0.1) Аутентификация и безопасность v1 (обязательно)
+- Outbound API (клиент InSales -> AURA): Bearer token (`Authorization: Bearer <token>`).
+- Токен хранится в секретах окружения, без хранения в коде/логах.
+- Ротация: поддержка `active + next` токена в окне 24 часа.
+- TTL токена: 90 дней (операционный), обязательная плановая ротация.
+- Inbound webhook (InSales -> AURA): HMAC-SHA256 подпись тела запроса.
+- Заголовки inbound: `X-Signature`, `X-Timestamp`, `X-Request-Id`.
+- Anti-replay: окно 5 минут по `X-Timestamp` + дедуп по `X-Request-Id`.
+- При нарушении подписи/окна: 401/403 без повторной обработки.
+
+0.1.1) Auth matrix по endpoint
+- Internal-only (Bearer обязателен):
+  - GET /products/:external_id
+  - GET /products/changes
+  - POST /sync/upsert
+  - POST /sync/full
+  - GET /sync/runs/:run_id
+  - DELETE /products/:external_id
+- Inbound webhook:
+  - POST /inbound/orders/events
+  - Bearer не обязателен, HMAC подпись обязательна.
+
+0.2) Политика версионирования контракта
+- Поле `schema_version` обязательно в каждом DTO и event payload.
+- MAJOR.MINOR:
+  - MAJOR меняется при breaking changes.
+  - MINOR при backward-compatible расширениях.
+- Deprecation window: минимум 90 дней для удаления/изменения полей.
+- Валидация:
+  - producer валидирует схему перед отправкой,
+  - consumer валидирует вход и возвращает `VALIDATION_ERROR` с `details`.
+
+1) Контракты API v1
+1.1 GET /products/:external_id
+- Назначение: snapshot одного товара.
+- Поиск: by=external_id|sku.
+- Ответ: Product DTO v1 (schema_version обязателен).
+
+1.2 GET /products/changes
+- Назначение: инкрементальная выгрузка.
+- Пагинация: cursor pagination (opaque cursor).
+- Источник: outbox sequence (не только updated_at).
+- Ответ: items + next_cursor + has_more + cursor_acked_upto.
+
+1.3 POST /sync/upsert
+- Назначение: idempotent bulk upsert.
+- Заголовок: Idempotency-Key.
+- Режим: ASYNC (202 Accepted + run_id).
+- Детальные результаты: GET /sync/runs/:run_id.
+
+1.4 POST /sync/full
+- Запуск full sync job (batch processing, limit).
+- Ответ: 202 + run_id.
+
+1.5 GET /sync/runs/:run_id
+- Статус выполнения + stats + ошибки + длительность.
+
+1.6 DELETE /products/:external_id
+- Только soft-archive/tombstone, без hard delete.
+
+1.7 Inbound events (обратная связь)
+- Namespace: /api/v1/insales/inbound
+- POST /orders/events
+- События: order.created / order.paid / order.cancelled / order.fulfilled
+- Идемпотентность по source_event_id (уникальный ключ).
+- Триггер в pipeline отгрузки/резерва в MoySklad.
+
+2) DTO (Product v1)
+- Обязательные поля:
+  - schema_version
+  - external_id
+  - sku
+  - updated_at
+  - price_minor (integer, minor units)
+  - currency
+  - stock_qty (integer)
+- Медиа в типизированном массиве:
+  - media: [{url,type,checksum,position}]
+- Атрибуты: whitelist + строгая валидация/нормализация.
+
+2.1) Каноника денег и остатков
+- `price_minor`: integer в копейках, currency=`RUB`.
+- Округление цены: банковское/математическое должно быть единообразно в одном сервисе.
+- `stock_qty`: integer доступного остатка на витрине (available, не reserved).
+- `reserved_qty` (если нужен отдельно) передается отдельным полем.
+- Политика отрицательных остатков:
+  - в DTO наружу отдаём `stock_qty = max(available, 0)`,
+  - исходный отрицательный остаток сохраняется во внутреннем аудите.
+
+3) Идемпотентность
+3.1 Таблица sync_idempotency_keys
+- key, request_hash, response_status, response_body, created_at, expires_at.
+- Повтор с тем же hash -> вернуть кешированный ответ.
+- Повтор с другим hash -> 409 IDEMPOTENCY_CONFLICT.
+
+3.2 Item-level dedup
+- external_id + payload_hash (или external_id + aura_updated_at).
+- Защита от повторной обработки внутри batch/retry.
+
+4) Outbox
+4.1 Таблица sync_outbox_events
+- sequence_id (монотонный), event_id, aggregate_type, aggregate_id,
+  event_type, payload, occurred_at, processed_at,
+  attempts, next_retry_at, last_error.
+
+4.2 События
+- product.created
+- product.updated
+- product.deleted/archived
+- stock.updated
+- media.updated
+
+4.3 Worker
+- at-least-once delivery + retry/backoff.
+- Consumer должен быть идемпотентен.
+
+4.4) Cursor contract (жестко фиксируем)
+- Порядок: строго по `sequence_id` (монотонно возрастающий PK outbox).
+- `next_cursor` всегда указывает на последний отданный `sequence_id`.
+- Гарантии:
+  - no gaps/no duplicates при корректном использовании курсора.
+  - события с меньшим sequence_id не переиздаются.
+- TTL курсора: 30 дней.
+- Если курсор старее retention (purge): `CURSOR_EXPIRED` + требование full resync.
+
+4.5) Источник времени
+- Все timestamp в UTC (ISO8601, суффикс `Z`).
+- Источник системного времени: сервер AURA (не клиент).
+- Допустимый drift для inbound replay-check: ±300 секунд.
+- При drift > 300 секунд: `INVALID_TIMESTAMP` (401/403).
+
+5) Ошибки
+- Единый envelope:
+  - code
+  - message
+  - details
+  - trace_id
+  - retryable (true/false)
+
+6) Наблюдаемость и SLO
+6.1 Метрики
+- sync_processed_total
+- sync_failed_total
+- sync_latency_ms (p50/p95)
+- sync_queue_depth
+- sync_retry_total
+- outbox_lag_seconds
+- mismatch_price_total
+- mismatch_stock_total
+
+6.2 SLO (рекомендуемые стартовые)
+- P95 incremental sync < 120s
+- error rate < 1%
+- mismatch (price/qty) < 0.1%
+
+6.3 Таймауты, лимиты, retry budget
+- Batch size:
+  - default 100, max 500.
+- HTTP timeouts:
+  - connect 3s, read 15s, write 15s.
+- Retry:
+  - max_retries=6,
+  - exponential backoff с cap 15 минут.
+- Circuit breaker:
+  - open при 5xx/timeout rate > 30% за 5 минут,
+  - half-open через 2 минуты.
+- Rate-limit budget:
+  - не превышать 80% лимитов InSales (оставить headroom).
+
+6.5) Лимиты POST /sync/upsert
+- max items per request: 500.
+- max request body size: 5 MB.
+- max concurrent upsert runs: 5.
+- При превышении:
+  - `PAYLOAD_TOO_LARGE` (413),
+  - `RATE_LIMITED` (429) для concurrent limit.
+
+6.4 Retention/архивация техтаблиц
+- `sync_outbox_events`:
+  - hot: 30 дней,
+  - cold aggregate: до 180 дней (daily summary),
+  - purge старше retention.
+- `sync_idempotency_keys`: 7 дней.
+- `insales_api_sync_runs`: 90 дней.
+- Архивация выполняется плановой nightly job.
+
+7) Feature flags
+- insales_api_v1_read_enabled
+- insales_api_v1_write_enabled
+- insales_outbox_enabled
+- insales_inbound_orders_enabled
+- insales_v1_canary_store_names (список)
+
+7.1) Mapping ENV -> feature flag key
+- `INSALES_API_V1_READ_ENABLED` -> `insales_api_v1_read_enabled`
+- `INSALES_API_V1_WRITE_ENABLED` -> `insales_api_v1_write_enabled`
+- `INSALES_OUTBOX_ENABLED` -> `insales_outbox_enabled`
+- `INSALES_INBOUND_ORDERS_ENABLED` -> `insales_inbound_orders_enabled`
+
+8) Acceptance criteria (целевые)
+- 3000+ товаров батчами без таймаутов API.
+- Повтор батча не создаёт дублей.
+- Full + incremental sync стабильно работают.
+- Есть админ-видимость run/error/retry.
+- Request/service/integration тесты покрывают критические сценарии.
+
+9) Known limitations / Phase 2
+- Видео в текущем InSales pipeline ограничено:
+  - экспорт видео не считается частью обязательного v1 MVP.
+  - медиа v1 (MVP): изображения + checksums + порядок.
+- Полная поддержка video delivery/verify переносится в Phase 2.

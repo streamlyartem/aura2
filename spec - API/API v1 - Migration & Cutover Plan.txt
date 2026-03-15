@@ -1,0 +1,97 @@
+API v1 — Migration & Cutover Plan
+Дата: 2026-03-15
+
+Цель
+- Перейти на API v1 без простоя, без потери данных и с быстрым rollback.
+
+Этап 0. Подготовка (без влияния на текущий прод)
+- Деплой новых таблиц:
+  - sync_idempotency_keys
+  - sync_outbox_events
+  - insales_api_sync_runs (каноническое имя)
+- Деплой endpoints v1, но доступ отключен feature flags.
+- Все feature flags OFF.
+
+Этап 1. Shadow mode
+- Включить insales_outbox_enabled только на запись outbox.
+- Новый pipeline считает результаты, но не пишет в InSales.
+- Делать сверки old vs new по:
+  - price
+  - quantity
+  - media
+  - статусам runs/errors.
+
+Этап 2. Canary write
+- Включить insales_api_v1_write_enabled только для 1 тестового склада/сегмента.
+- Мониторить 24–48ч:
+  - mismatch rate
+  - retry count
+  - p95 latency
+  - failed jobs.
+
+Go/No-Go пороги (обязательно численно)
+- Go:
+  - p95 incremental latency <= 120s
+  - API error rate (5xx + timeout) < 1%
+  - mismatch price/qty <= 0.1%
+  - retry share <= 5% от событий
+  - backlog pending high <= 200 и не растет 3 окна подряд
+- No-Go / rollback:
+  - p95 > 180s два окна подряд
+  - error rate >= 3% в течение 15 мин
+  - mismatch > 0.5%
+  - рост pending high > 500
+
+Этап 3. Dual-run
+- Основной write path = v1.
+- Legacy path остается в fallback (через флаг).
+- При деградации v1 -> быстрый rollback на legacy без деплоя.
+
+Этап 4. Inbound orders canary
+- Подключить /api/v1/insales/inbound/orders/events в логирующем режиме (no-op).
+- Проверить идемпотентность по source_event_id.
+- Затем включить реальную логику резерв/отгрузка в MoySklad для canary.
+
+Безопасность inbound на этапе canary
+- Проверка HMAC подписи тела.
+- Проверка anti-replay окна (5 минут).
+- Дедуп request_id/source_event_id.
+
+Этап 5. Full cutover
+- Включить v1 для всех stores.
+- Legacy перевести в read-only/paused режим на 1–2 недели.
+- Ежедневная автоматическая reconciliation-проверка.
+
+Этап 6. Decommission legacy
+- После окна стабилизации выключить legacy jobs/endpoints.
+- Удаления/чистка только отдельной задачей после подтверждения.
+
+Rollback план (обязательный)
+- Флаги:
+  - insales_api_v1_write_enabled = OFF
+  - legacy_write_enabled = ON
+- Очереди v1 остановить через админ/ops runbook.
+- Outbox не терять, только паузить consumers.
+
+Контрольные проверки перед каждым этапом
+- Ошибки 5xx/4xx в норме.
+- Нет роста pending high.
+- Нет значимого роста failed jobs.
+- Нет расхождений price/qty за последние N часов.
+
+RACI / ownership
+- Product owner (A): утверждает переход этапов 2/3/5.
+- Backend lead (R): включает/отключает feature flags, подтверждает rollback readiness.
+- Ops/SRE (R): мониторинг, алерты, capacity, incident response.
+- QA lead (R): прогон smoke/regression и подписание Go/No-Go.
+- Store operations (C): проверка витрины/категорий/медиа на canary.
+- Stakeholders (I): уведомление о старте/завершении этапов.
+
+Минимальные тестовые сценарии для go/no-go
+1) Bulk upsert retry с тем же Idempotency-Key.
+2) Bulk upsert retry с тем же key, но другим hash -> 409.
+3) Incremental cursor без пропусков/дублей.
+4) Outbox retry/backoff для transient ошибок.
+5) Inbound order duplicate event -> no-op.
+6) Продажа в InSales -> корректный pipeline в MoySklad.
+7) Ручной rollback по флагам без деплоя.

@@ -1,0 +1,68 @@
+API v1 — AS IS (текущее состояние)
+Дата: 2026-03-15
+Система: AURA (staging/prod), интеграция с InSales и MoySklad
+
+1) Границы ответственности (текущий факт)
+- Source of truth для каталога/остатков/цен: AURA (данные приходят из MoySklad и внутренних процессов AURA).
+- Витрина InSales получает:
+  - товарные карточки,
+  - цены,
+  - остатки,
+  - медиа,
+  - категории/связи.
+- Обратная синхронизация продаж InSales -> MoySklad пока не оформлена как стабильный versioned API-контракт.
+
+2) Текущие ключевые компоненты в коде
+- Экспорт в InSales:
+  - app/services/insales/export_products.rb
+  - app/services/insales/sync_product_stocks.rb
+  - app/jobs/insales/sync_product_stocks_job.rb
+  - app/jobs/insales/sync_product_trigger_job.rb
+- Подготовка каталога под экспорт:
+  - app/services/insales/catalog/prepare.rb
+  - app/models/insales_catalog_item.rb
+- Клиент InSales:
+  - app/services/insales/insales_client.rb
+- Буфер событий остатков:
+  - app/models/stock_change_event.rb
+  - app/services/insales/stock_change_events/processor.rb
+- Мэппинги и статусы:
+  - insales_product_mappings
+  - insales_media_sync_states
+  - insales_sync_runs
+  - insales_stock_sync_states
+
+3) Текущий рабочий поток (упрощенно)
+- MoySklad -> AURA:
+  - импорт/вебхуки обновляют Product/ProductStock/цены/атрибуты.
+- AURA -> InSales:
+  - готовится InsalesCatalogItem (цены/qty/status),
+  - триггерится sync по товару/батчу,
+  - InSales обновляется через REST API.
+
+4) Текущие сильные стороны
+- Есть рабочий прод/стейдж pipeline.
+- Есть буферизация событий (stock_change_events), что уже снижает взрыв очередей.
+- Есть статусные таблицы и админ-видимость процесса.
+- Есть базовая идемпотентность на уровне логики апдейтов и мэппингов.
+
+5) Текущие ограничения и риски
+- Нет единого versioned публичного API-контракта для интеграции (в стиле /api/v1/insales).
+- Нет формальной схемы DTO с schema_version и строгой валидацией на вход/выход.
+- Нет канонического incremental API с cursor-стабильностью (sequence-based).
+- Нет formalized idempotency storage для внешних batch-запросов (idempotency key + request hash + cached response).
+- Обратный поток продаж (InSales order events -> MoySklad shipment/reserve) не формализован контрактом v1.
+- Наблюдаемость есть, но без целевых SLO/SLA и стандартизированных integration-метрик по v1.
+- По медиа есть важное ограничение:
+  - изображения синкаются,
+  - видео в InSales-потоке не является гарантированно поддержанным каналом (ограничение текущей реализации).
+
+6) Что уже подтверждено операционно (стейдж)
+- Сверка AURA vs InSales по price/qty возможна и выполнялась точечно.
+- Точечный ресинк SKU исправляет расхождения.
+- Дашборд показывает очередь, активные процессы, health-метрики.
+
+7) Вывод AS IS
+- Текущая система работоспособна операционно,
+  но не стандартизована как долговременный API-контракт для внешнего/внутреннего расширения.
+- Нужен v1 API слой с контрактом, идемпотентностью, outbox и формальным migration/cutover-планом.

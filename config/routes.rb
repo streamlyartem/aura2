@@ -22,6 +22,18 @@ Rails.application.routes.draw do
   end
 
   namespace :api do
+    namespace :v1 do
+      namespace :insales do
+        get 'products/changes', to: 'products#changes'
+        get 'products/:external_id', to: 'products#show'
+        delete 'products/:external_id', to: 'products#destroy'
+
+        post 'sync/upsert', to: 'sync#upsert'
+        post 'sync/full', to: 'sync#full'
+        get 'sync/runs/:run_id', to: 'sync#show_run'
+      end
+    end
+
     namespace :moysklad do
       resources :webhooks, only: :create
     end
