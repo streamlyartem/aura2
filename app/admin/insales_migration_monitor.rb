@@ -94,8 +94,11 @@ ActiveAdmin.register_page 'InSales API v1 Monitor' do
       div class: 'mb-3' do
         form action: admin_insales_api_v1_monitor_stop_syncs_path, method: :post do
           input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-          button 'Остановить все синхронизации', type: 'submit', class: 'button',
-                                               data: { confirm: 'Остановить активные синхронизации и импорты?' }
+          input type: 'submit',
+                value: 'Остановить все синхронизации',
+                class: 'button',
+                data: { confirm: 'Остановить активные синхронизации и импорты?' },
+                style: 'display:inline-block;padding:10px 16px;border-radius:6px;cursor:pointer;'
         end
       end
     end
