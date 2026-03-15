@@ -77,6 +77,10 @@ module Insales
       get('/admin/collects.json', { product_id: product_id })
     end
 
+    def orders(page: 1, per_page: 50)
+      get('/admin/orders.json', { page: page, per_page: per_page })
+    end
+
     def post_multipart(path, fields:, file_field_name:, filename:, content_type:, file_bytes:)
       uri = build_uri(path)
       boundary = "----RubyMultipart#{SecureRandom.hex(12)}"
