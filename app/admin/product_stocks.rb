@@ -20,11 +20,17 @@ ActiveAdmin.register ProductStock do
 
   member_action :write_off, method: %i[get post] do
     @product_stock = ProductStock.find(params[:id])
+    available_for_write_off = @product_stock.free_stock.to_f
 
     if request.post?
       stock = params.dig(:product_stock, :stock).to_f
 
-      if stock <= 0 || stock > @product_stock.stock.to_f
+      if available_for_write_off <= 0
+        redirect_to resource_path(@product_stock), alert: I18n.t('admin.product_stocks.errors.no_available_stock')
+        return
+      end
+
+      if stock <= 0 || stock > available_for_write_off
         redirect_to resource_path(@product_stock), alert: I18n.t('admin.product_stocks.errors.invalid_quantity')
         return
       end

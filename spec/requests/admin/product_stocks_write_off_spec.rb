@@ -23,4 +23,17 @@ RSpec.describe 'Admin ProductStocks write_off', type: :request do
     expect(response).to have_http_status(:found)
     expect(response).to redirect_to("/admin/product_stocks/#{stock.id}")
   end
+
+  it 'does not call MoySklad when free stock is zero' do
+    product = create(:product, ms_id: SecureRandom.uuid)
+    stock = create(:product_stock, product: product, stock: 10, free_stock: 0, reserve: 0, store_name: 'Тест')
+
+    expect(MoyskladClient).not_to receive(:new)
+
+    post "/admin/product_stocks/#{stock.id}/write_off",
+         params: { product_stock: { stock: '1' } }
+
+    expect(response).to have_http_status(:found)
+    expect(response).to redirect_to("/admin/product_stocks/#{stock.id}")
+  end
 end

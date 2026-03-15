@@ -12,6 +12,7 @@ ru:
     product_stocks:
       errors:
         invalid_quantity: "Неверное количество для списания"
+        no_available_stock: "Нет свободного остатка для списания (free stock = 0)"
       notices:
         demand_created: "Отгрузка успешно создана в МойСклад"
         demand_failed: "Ошибка при создании отгрузки (код: %{status})"
@@ -19,6 +20,7 @@ ru:
         title: "Списание товара"
         product_label: "Товар: %{name}"
         current_stock: "Текущий остаток: %{stock}"
+        available_stock: "Доступно к списанию (free stock): %{stock}"
         stock_label: "Количество для списания"
         submit: "Списать"
         cancel: "Отмена"
