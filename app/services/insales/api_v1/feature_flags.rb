@@ -25,6 +25,22 @@ module Insales
         ENV['INSALES_API_V1_TOKEN'].to_s
       end
 
+      def inbound_orders_enabled?
+        enabled_env?('INSALES_INBOUND_ORDERS_ENABLED', default: false)
+      end
+
+      def inbound_orders_processing_enabled?
+        enabled_env?('INSALES_INBOUND_ORDERS_PROCESSING_ENABLED', default: false)
+      end
+
+      def order_fulfillment_enabled?
+        enabled_env?('INSALES_ORDER_FULFILLMENT_ENABLED', default: false)
+      end
+
+      def inbound_orders_secret
+        ENV['INSALES_INBOUND_ORDERS_SECRET'].to_s
+      end
+
       def enabled_env?(key, default:)
         raw = ENV[key]
         return default if raw.nil?

@@ -106,7 +106,7 @@ class MoyskladClient
   end
 
   # Business logic method - creates a demand for a product write-off
-  def create_demand(product, stock)
+  def create_demand(product, stock, description: nil)
     Rails.logger.debug { "[MoyskladClient] Create demand for #{product.name} in amount #{stock}" }
 
     position = {
@@ -126,7 +126,8 @@ class MoyskladClient
       organization_meta: config.default_org_meta,
       agent_meta: config.default_agent_meta,
       store_meta: config.default_store_meta,
-      positions: [position]
+      positions: [position],
+      description: description.presence || 'Списание из Aura'
     )
   end
 

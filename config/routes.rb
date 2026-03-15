@@ -31,6 +31,7 @@ Rails.application.routes.draw do
         post 'sync/upsert', to: 'sync#upsert'
         post 'sync/full', to: 'sync#full'
         get 'sync/runs/:run_id', to: 'sync#show_run'
+        post 'inbound/orders/events', to: 'inbound/orders#create'
       end
     end
 
