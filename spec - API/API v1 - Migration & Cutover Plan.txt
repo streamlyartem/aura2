@@ -1,12 +1,13 @@
 API v1 — Migration & Cutover Plan
 Дата: 2026-03-15
 
-Статус выполнения (обновлено: 2026-03-16)
+Статус выполнения (обновлено: 2026-03-16, 15:20 MSK)
 - Этап 0 (подготовка): выполнен на staging.
 - Этап 1 (shadow): выполнен на staging.
-- Этап 2 (canary write): выполнен на staging, батчи 50/200/200/500 без ошибок.
+- Этап 2 (canary write): выполнен на staging, батчи 50/200/200/500/100/500/500 без ошибок.
 - Этап 3 (dual-run): подтвержден на staging (failed=0, backlog high=0 в окне наблюдения).
-- Переход в эксплуатацию: начат (готовность к prod cutover, по runbook).
+- Этап 4 (staging full mode): включен read+write+outbox на staging, инкрементальные прогоны стабильны.
+- Переход в эксплуатацию: подготовка к prod cutover продолжается (по runbook).
 
 Цель
 - Перейти на API v1 без простоя, без потери данных и с быстрым rollback.
@@ -53,6 +54,14 @@ Go/No-Go пороги (обязательно численно)
 - Основной write path = v1.
 - Legacy path остается в fallback (через флаг).
 - При деградации v1 -> быстрый rollback на legacy без деплоя.
+
+Фактическое состояние staging после этапа 3
+- INSALES_API_V1_READ_ENABLED=true
+- INSALES_API_V1_WRITE_ENABLED=true
+- INSALES_OUTBOX_ENABLED=true
+- INSALES_API_V1_FULL_SYNC_ENABLED=false
+- Контрольный прогон: run_id af0753e9-1ba6-4e60-9002-eb8ecb5012b5, processed=1000, failed=0.
+- Доп. прогон после повторного включения write: run_id 24ff9c65-8c43-433b-a1a9-efd7ccda894b (100), run_id e98ad926-42e2-4130-9e3e-e5b92d173a3c (500), run_id e879eda8-bc1d-43c7-b44c-d00f1e866f48 (500), failed=0.
 
 Этап 4. Inbound orders canary
 - Подключить /api/v1/insales/inbound/orders/events в логирующем режиме (no-op).
