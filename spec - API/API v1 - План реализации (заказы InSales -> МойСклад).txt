@@ -1,0 +1,178 @@
+API v1 — План реализации (заказы InSales -> МойСклад)
+Дата: 2026-03-16
+
+Общий подход
+- Реализуем по этапам, каждый этап с feature flags и rollback без деплоя.
+- Сначала надежный прием и хранение событий (без списаний), затем включаем авто-списания paid.
+
+Этап 0. Подготовка
+Что делаем
+1) Добавляем таблицы:
+- external_orders
+- external_order_items
+- external_order_events
+- external_fulfillment_operations
+
+2) Добавляем flags:
+- INSALES_INBOUND_ORDERS_ENABLED=false
+- INSALES_INBOUND_ORDERS_PROCESSING_ENABLED=false
+- INSALES_ORDER_FULFILLMENT_ENABLED=false
+
+3) Добавляем базовую метрику и логгер домена order_ingestion.
+
+Проверка
+- Миграции применились.
+- Дашборд/метрики видят нулевые значения без ошибок.
+
+Rollback
+- Не требуется (функционал выключен).
+
+---
+
+Этап 1. Inbound ingestion (no-op)
+Что делаем
+1) Endpoint: POST /api/v1/insales/inbound/orders/events
+- Проверка HMAC подписи.
+- Проверка anti-replay 300 сек.
+- Запись external_order_events.
+- Дедуп по unique(source, source_event_id).
+
+2) Нормализация заказа в external_orders + external_order_items.
+3) Никаких списаний в МС.
+
+Проверка
+- Повтор одного события -> replay=true, новых записей нет.
+- Неверная подпись -> 401.
+- Событие появляется в таблицах и в админке.
+
+Rollback
+- INSALES_INBOUND_ORDERS_ENABLED=false
+
+---
+
+Этап 2. Процессинг paid без write-off (dry-run)
+Что делаем
+1) Фоновая обработка событий:
+- transitions статусов заказа,
+- определение paid transition.
+
+2) При paid:
+- создаем external_fulfillment_operations(status=queued),
+- но write-off не выполняем (dry-run), только логируем "would write-off".
+
+Проверка
+- Paid заказ создает queued operation.
+- Неоплаченный заказ operation не создает.
+- Повтор paid не создает второй operation.
+
+Rollback
+- INSALES_INBOUND_ORDERS_PROCESSING_ENABLED=false
+
+---
+
+Этап 3. Авто-списание в МС для paid (canary)
+Что делаем
+1) Включаем write-off только для canary набора (1 магазин/ограниченный сегмент).
+2) Исполняем existing AURA write-off flow программно.
+3) Комментарий документа:
+- "Продажа в InSales — заказ <номер>"
+4) Идемпотентность write-off:
+- unique idempotency_key в external_fulfillment_operations.
+
+Проверка
+- На 20 paid заказах:
+  - успешные списания = 20,
+  - дублей = 0,
+  - корректный комментарий в МС.
+- Ошибки МС уходят в retry с backoff.
+
+Rollback
+- INSALES_ORDER_FULFILLMENT_ENABLED=false
+
+---
+
+Этап 4. Полный запуск paid->write-off
+Что делаем
+- Расширяем canary на весь staging.
+- Включаем алерты по failed/retry backlog.
+
+Порог go/no-go
+- fulfillment_failed_rate < 1%
+- duplicate write-off = 0
+- p95 order_to_fulfillment <= 120s
+
+Rollback
+- выключаем только INSALES_ORDER_FULFILLMENT_ENABLED
+- ingestion оставляем включенным, события не теряем
+
+---
+
+Этап 5. Админ-сверка и операционные сценарии
+Что делаем
+1) Дорабатываем /admin/insales_orders:
+- источник = external_orders,
+- колонка "Списание в МС" (status + ms_document_id),
+- фильтр по processing status,
+- action "Повторить обработку" для failed_terminal.
+
+2) Отчет сверки:
+- заказов paid,
+- списаний succeeded,
+- failed/retry due,
+- расхождений.
+
+Проверка
+- Оператор может найти любой заказ и видеть полный путь обработки.
+
+---
+
+Этап 6. Phase 2 — резервы (для multi-channel)
+Что делаем
+- Вводим reservation lifecycle:
+  - reserve on pending/authorized,
+  - commit on paid,
+  - release on cancelled/expired.
+- TTL резервов.
+
+Проверка
+- Нет oversell при двух витринах.
+
+---
+
+Тест-план (обязательный)
+Unit
+1) HMAC validation + anti-replay.
+2) Idempotency (duplicate source_event_id).
+3) Paid transition detector.
+4) Fulfillment idempotency key.
+
+Integration
+5) End-to-end: inbound paid -> write-off succeeded.
+6) Duplicate webhook -> one write-off.
+7) MoySklad timeout -> retry then success.
+8) Non-retryable error -> failed_terminal + visible in admin.
+
+Load
+9) 1000 inbound events burst:
+- no data loss,
+- dedup works,
+- backlog drains.
+
+---
+
+Операционные правила
+1) Любой этап включается только флагом.
+2) При инциденте:
+- выключаем только fulfillment flag,
+- ingestion не выключаем (не теряем события).
+3) Ручные доработки данных запрещены без аудита в external_order_events.
+
+---
+
+Готовность к prod
+Минимум перед prod:
+- 7 дней стабильности на staging,
+- duplicate write-off = 0,
+- retry backlog не растет,
+- все интеграционные тесты green,
+- runbook обновлен и принят.

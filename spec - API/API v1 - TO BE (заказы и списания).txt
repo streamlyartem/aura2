@@ -1,0 +1,186 @@
+API v1 — TO BE (заказы и списания)
+Дата: 2026-03-16
+Контур: staging -> prod
+
+Цель
+- Ввести единый и идемпотентный pipeline обработки заказов из витрин (InSales и будущие каналы).
+- Автоматически списывать остатки в МойСклад только для оплаченных заказов.
+- Хранить в AURA полный след: входящее событие, состояние заказа, результат списания, ошибки и ретраи.
+
+Принципы
+1) Source-of-truth по событиям заказа = витрина (InSales).
+2) Source-of-truth по остаткам = МойСклад.
+3) AURA = оркестратор и журнал факта обработки.
+4) Exactly-once на уровне бизнес-действия достигается через idempotency + unique constraints.
+
+Бизнес-правила
+1) Оплаченный заказ
+- При событии перехода в paid:
+  - создать/обновить заказ в AURA,
+  - запустить авто-списание в МС,
+  - комментарий в write-off: "Продажа в InSales — заказ <номер>".
+- Повтор такого же события не должен повторно списывать.
+
+2) Неоплаченный заказ / корзина
+- На v1 не делаем финальное списание.
+- Для масштаба на другие витрины вводим слой резервов (phase 2):
+  - reserve on pending/authorized,
+  - commit on paid,
+  - release on cancelled/expired,
+  - TTL для резервов.
+
+3) Частичная недоступность
+- Если МС недоступен/ошибка транзитная -> retry с backoff.
+- Если ошибка бизнес-валидации -> failed, ручная переработка из админки.
+
+Событийный контракт (inbound)
+Endpoint: POST /api/v1/insales/inbound/orders/events
+Auth:
+- HMAC подпись обязательна.
+- Anti-replay окно: 300 секунд.
+
+Минимальный payload (нормализуемый)
+- source_event_id (обяз.)
+- source: "insales"
+- order.id, order.number
+- order.status
+- order.payment_status
+- order.updated_at
+- order.items[]: sku, quantity, price_minor, currency
+- raw payload сохраняем целиком
+
+Статусы (каноника)
+Order lifecycle:
+- received
+- normalized
+- awaiting_payment
+- paid
+- processing_fulfillment
+- fulfilled
+- failed
+
+Fulfillment lifecycle:
+- queued
+- processing
+- succeeded
+- failed_retryable
+- failed_terminal
+
+Хранение данных (TO BE)
+1) external_orders
+- id (uuid)
+- source (insales/shopify/...)
+- external_order_id (string)
+- external_order_number (string)
+- status (string)
+- payment_status (string)
+- total_minor (bigint)
+- currency (string)
+- payload_raw (jsonb)
+- last_event_at (datetime)
+- processed_at (datetime)
+- created_at / updated_at
+Индексы:
+- unique(source, external_order_id)
+- index(status, payment_status)
+- index(last_event_at)
+
+2) external_order_items
+- id
+- external_order_id (fk)
+- sku
+- product_id (nullable fk)
+- quantity (decimal)
+- unit_price_minor (bigint)
+- currency
+- meta (jsonb)
+Индексы:
+- index(external_order_id)
+- index(sku)
+
+3) external_order_events
+- id
+- source
+- source_event_id
+- external_order_id (nullable)
+- event_type
+- event_at
+- payload_raw (jsonb)
+- processing_status (received/processed/failed)
+- processing_error (text)
+- processed_at
+Индексы:
+- unique(source, source_event_id)
+- index(processing_status, created_at)
+
+4) external_fulfillment_operations
+- id
+- external_order_id (fk)
+- operation_type (write_off)
+- status (queued/processing/succeeded/failed_*)
+- ms_document_id (nullable)
+- comment
+- attempts
+- next_retry_at
+- last_error
+- idempotency_key
+- created_at / updated_at
+Индексы:
+- unique(idempotency_key)
+- index(status, next_retry_at)
+
+Идемпотентность
+1) Входящее событие
+- unique(source, source_event_id)
+- duplicate -> HTTP 200 + marker replay=true
+
+2) Списание
+- idempotency_key: "<source>:<external_order_id>:<payment_transition_version>"
+- unique ключ в external_fulfillment_operations
+- повторный запуск не создает второе списание
+
+Интеграция с текущим write-off
+- Используем существующий механизм списания из AURA (тот, что вызывается с /admin/product_stocks/:id/write_off).
+- Добавляем сервис-обертку для пакетного списания из заказа.
+- Для каждой строки заказа:
+  - SKU -> Product
+  - выбор склада по правилам канала (в v1: configured selling stores)
+  - списать количество
+- В write-off комментарий: "Продажа в InSales — заказ <номер>".
+
+Наблюдаемость
+Метрики:
+- inbound_events_received_total
+- inbound_events_replayed_total
+- orders_paid_total
+- fulfillment_success_total
+- fulfillment_failed_total
+- fulfillment_retry_total
+- p95 order_to_fulfillment_seconds
+
+Логи:
+- trace_id
+- source_event_id
+- external_order_id
+- status transition
+- attempts
+- ms_document_id
+
+Админка (TO BE)
+Раздел: Заказы InSales
+- таблица заказов: номер, статус, оплата, сумма, updated_at
+- статус обработки в AURA: awaiting_payment/fulfilled/failed
+- колонка "Списание в МС": succeeded/failed + ссылка на документ/ID
+- фильтры: номер, SKU, статус, период
+- действие: "Повторить обработку" для failed_terminal
+
+Known limitations (явно)
+- v1 не обрабатывает резервы корзины (phase 2).
+- v1 ориентирован на paid-триггер списания.
+- multi-channel conflict resolution (одновременные продажи в разных каналах) — отдельный этап.
+
+Критерии приемки v1
+1) Оплаченный заказ из InSales приводит к одному и только одному списанию в МС.
+2) Повтор webhook не создает дублей списания.
+3) Ошибки МС не теряют заказ: есть retry/failed + видимость в админке.
+4) В админке можно сверить заказ -> факт списания.
