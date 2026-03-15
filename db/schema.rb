@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_15_174500) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_16_124000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -69,6 +69,73 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_15_174500) do
     t.jsonb "allowed_admin_paths", default: [], null: false
     t.index ["email"], name: "index_admin_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_admin_users_on_reset_password_token", unique: true
+  end
+
+  create_table "external_fulfillment_operations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "external_order_id", null: false
+    t.string "operation_type", default: "write_off", null: false
+    t.string "status", default: "queued", null: false
+    t.string "ms_document_id"
+    t.string "comment"
+    t.integer "attempts", default: 0, null: false
+    t.datetime "next_retry_at"
+    t.text "last_error"
+    t.string "idempotency_key", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["external_order_id"], name: "index_external_fulfillment_operations_on_external_order_id"
+    t.index ["idempotency_key"], name: "index_external_fulfillment_operations_on_idempotency_key", unique: true
+    t.index ["status", "next_retry_at"], name: "idx_external_fulfillment_status_retry"
+  end
+
+  create_table "external_order_events", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "source", null: false
+    t.string "source_event_id", null: false
+    t.uuid "external_order_id"
+    t.string "event_type"
+    t.datetime "event_at"
+    t.jsonb "payload_raw", default: {}, null: false
+    t.string "processing_status", default: "received", null: false
+    t.text "processing_error"
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["external_order_id"], name: "index_external_order_events_on_external_order_id"
+    t.index ["processing_status", "created_at"], name: "idx_external_order_events_processing"
+    t.index ["source", "source_event_id"], name: "idx_external_order_events_source_event", unique: true
+  end
+
+  create_table "external_order_items", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.uuid "external_order_id", null: false
+    t.string "sku", null: false
+    t.uuid "product_id"
+    t.decimal "quantity", precision: 12, scale: 3, default: "0.0", null: false
+    t.bigint "unit_price_minor"
+    t.string "currency", default: "RUB", null: false
+    t.jsonb "meta", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["external_order_id"], name: "index_external_order_items_on_external_order_id"
+    t.index ["product_id"], name: "index_external_order_items_on_product_id"
+    t.index ["sku"], name: "index_external_order_items_on_sku"
+  end
+
+  create_table "external_orders", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "source", null: false
+    t.string "external_order_id", null: false
+    t.string "external_order_number"
+    t.string "status", default: "received", null: false
+    t.string "payment_status"
+    t.bigint "total_minor"
+    t.string "currency", default: "RUB", null: false
+    t.jsonb "payload_raw", default: {}, null: false
+    t.datetime "last_event_at"
+    t.datetime "processed_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["last_event_at"], name: "index_external_orders_on_last_event_at"
+    t.index ["source", "external_order_id"], name: "idx_external_orders_source_order", unique: true
+    t.index ["status", "payment_status"], name: "index_external_orders_on_status_and_payment_status"
   end
 
   create_table "images", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
@@ -588,6 +655,10 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_15_174500) do
 
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "external_fulfillment_operations", "external_orders"
+  add_foreign_key "external_order_events", "external_orders"
+  add_foreign_key "external_order_items", "external_orders"
+  add_foreign_key "external_order_items", "products"
   add_foreign_key "images", "admin_users", column: "uploaded_by_admin_user_id"
   add_foreign_key "insales_image_mappings", "images", column: "aura_image_id"
   add_foreign_key "insales_product_mappings", "products", column: "aura_product_id"
