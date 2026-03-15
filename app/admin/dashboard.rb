@@ -103,13 +103,15 @@ ActiveAdmin.register_page 'Dashboard' do
     stock_failed_severity = severity_for.call(health[:stock_events_failed], warning_from: 1, danger_from: 5)
 
     panel 'Оперативная сводка' do
+      stop_button_style = 'display:inline-block;padding:10px 14px;border-radius:6px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;border:1px solid #1d4ed8;line-height:1.2;cursor:pointer;'
       div class: 'mb-3' do
-        text_node link_to(
-          'Остановить все синхронизации',
-          admin_dashboard_stop_syncs_path,
-          class: 'button',
-          data: { confirm: 'Остановить все активные синхронизации и импорты?' }
-        )
+        form action: admin_dashboard_stop_syncs_path, method: :post, style: 'display:inline-block;' do
+          input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
+          button 'Остановить все синхронизации',
+                 type: 'submit',
+                 style: stop_button_style,
+                 onclick: "return confirm('Остановить все активные синхронизации и импорты?')"
+        end
         para 'Останавливает активные импорты MoySklad и синхронизации InSales. Другие задачи не затрагиваются.'
       end
 

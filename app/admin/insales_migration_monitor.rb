@@ -89,15 +89,17 @@ ActiveAdmin.register_page 'InSales API v1 Monitor' do
     runs_success = runs_24h.where(status: 'success').count
 
     panel 'Обновление' do
+      stop_button_style = 'display:inline-block;padding:10px 14px;border-radius:6px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;border:1px solid #1d4ed8;line-height:1.2;cursor:pointer;'
       para 'Страница обновляется автоматически каждые 15 секунд.'
       para "Последнее обновление: #{now.strftime('%d.%m.%Y %H:%M:%S')}"
       div class: 'mb-3' do
-        text_node link_to(
-          'Остановить все синхронизации',
-          admin_insales_api_v1_monitor_stop_syncs_path,
-          class: 'button',
-          data: { confirm: 'Остановить активные синхронизации и импорты?' }
-        )
+        form action: admin_insales_api_v1_monitor_stop_syncs_path, method: :post, style: 'display:inline-block;' do
+          input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
+          button 'Остановить все синхронизации',
+                 type: 'submit',
+                 style: stop_button_style,
+                 onclick: "return confirm('Остановить активные синхронизации и импорты?')"
+        end
       end
     end
 
