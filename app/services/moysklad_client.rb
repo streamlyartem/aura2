@@ -53,12 +53,16 @@ class MoyskladClient
     rows = stocks.for_store(store_href)
 
     products_data = rows.map do |row|
+      stock_value = row['stock'].to_f
+      reserve_value = row['reserve'].to_f
+      free_stock_value = row.key?('freeStock') && !row['freeStock'].nil? ? row['freeStock'].to_f : [stock_value - reserve_value, 0].max
+
       {
         code: row['code'],
         article: row['article'],
-        stock: row['stock'],
-        free_stock: row['freeStock'],
-        reserve: row['reserve'],
+        stock: stock_value,
+        free_stock: free_stock_value,
+        reserve: reserve_value,
         product_meta: row['meta'],
         store_name: store_name
       }

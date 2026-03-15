@@ -64,12 +64,16 @@ RSpec.describe MoyskladClient do
     it 'returns stocks for the store' do
       expect(service.stocks_for_store).to eq(stock_rows.map do |row|
         product_meta = row['meta']
+        stock = row['stock'].to_f
+        reserve = row['reserve'].to_f
+        free_stock = row.key?('freeStock') && !row['freeStock'].nil? ? row['freeStock'].to_f : [stock - reserve, 0].max
+
         {
           code: row['code'],
           article: row['article'],
-          stock: row['stock'],
-          free_stock: row['freeStock'],
-          reserve: row['reserve'],
+          stock: stock,
+          free_stock: free_stock,
+          reserve: reserve,
           product_meta: product_meta,
           store_name: MoyskladClient::TEST_STORE_NAME
         }
@@ -109,6 +113,34 @@ RSpec.describe MoyskladClient do
       result = service.stocks_for_store
       expect(result.size).to eq(2)
       expect(result.map { |row| row[:code] }).to contain_exactly('1', '2')
+    end
+
+    it 'falls back to stock - reserve when freeStock is missing' do
+      page = {
+        'meta' => { 'size' => 1, 'limit' => 1000, 'offset' => 0 },
+        'rows' => [
+          {
+            'meta' => { 'href' => 'https://api.moysklad.ru/api/remap/1.2/entity/product/p-1' },
+            'code' => '1',
+            'article' => '1',
+            'stock' => 116,
+            'reserve' => 0
+          }
+        ]
+      }
+
+      stub_request(:get, "#{MoyskladClient::BASE_URL}/report/stock/all")
+        .with(query: hash_including(
+          'filter' => "store=#{MoyskladClient::TEST_NAMES_HREF[MoyskladClient::TEST_STORE_NAME]}",
+          'limit' => '1000',
+          'offset' => '0'
+        ))
+        .to_return(status: 200, body: page.to_json, headers: { 'Content-Type' => 'application/json' })
+
+      row = service.stocks_for_store.first
+      expect(row[:stock]).to eq(116.0)
+      expect(row[:reserve]).to eq(0.0)
+      expect(row[:free_stock]).to eq(116.0)
     end
   end
 
