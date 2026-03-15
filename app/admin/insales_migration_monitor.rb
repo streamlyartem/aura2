@@ -4,7 +4,7 @@ ActiveAdmin.register_page 'InSales API v1 Monitor' do
   menu parent: 'InSales', label: 'Мониторинг миграции API v1', priority: 99,
        if: proc { current_admin_user&.can_access_admin_path?('/admin/insales_api_v1_monitor') }
 
-  page_action :stop_syncs, method: :post do
+  page_action :stop_syncs, method: %i[get post] do
     now = Time.current
     stop_message = 'Stopped manually from API v1 monitor'
 
@@ -92,14 +92,12 @@ ActiveAdmin.register_page 'InSales API v1 Monitor' do
       para 'Страница обновляется автоматически каждые 15 секунд.'
       para "Последнее обновление: #{now.strftime('%d.%m.%Y %H:%M:%S')}"
       div class: 'mb-3' do
-        form action: admin_insales_api_v1_monitor_stop_syncs_path, method: :post do
-          input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-          input type: 'submit',
-                value: 'Остановить все синхронизации',
-                class: 'button',
-                data: { confirm: 'Остановить активные синхронизации и импорты?' },
-                style: 'display:inline-block;padding:10px 16px;border-radius:6px;cursor:pointer;background:#2563eb;color:#fff;border:1px solid #1d4ed8;font-weight:600;-webkit-appearance:none;appearance:none;'
-        end
+        text_node link_to(
+          'Остановить все синхронизации',
+          admin_insales_api_v1_monitor_stop_syncs_path,
+          class: 'button',
+          data: { confirm: 'Остановить активные синхронизации и импорты?' }
+        )
       end
     end
 
