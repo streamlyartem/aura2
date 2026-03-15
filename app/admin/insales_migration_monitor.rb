@@ -94,14 +94,14 @@ ActiveAdmin.register_page 'InSales API v1 Monitor' do
       div class: 'mb-3' do
         form action: admin_insales_api_v1_monitor_stop_syncs_path, method: :post do
           input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-          input type: 'submit', value: 'Остановить все синхронизации', class: 'button',
-                data: { confirm: 'Остановить активные синхронизации и импорты?' }
+          button 'Остановить все синхронизации', type: 'submit', class: 'button',
+                                               data: { confirm: 'Остановить активные синхронизации и импорты?' }
         end
       end
     end
 
     panel 'Флаги API v1' do
-      table_for(api_v1_flags) do
+      table_for(api_v1_flags.to_a) do
         column('Переменная') { |row| row[0] }
         column('Значение') { |row| status_tag(row[1].to_s, class: (row[1].to_s == 'true' ? 'green' : 'orange')) }
       end
