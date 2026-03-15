@@ -20,7 +20,7 @@ ActiveAdmin.register ProductStock do
 
   member_action :write_off, method: %i[get post] do
     @product_stock = ProductStock.find(params[:id])
-    available_for_write_off = @product_stock.free_stock.to_f
+    available_for_write_off = @product_stock.available_for_write_off
 
     if request.post?
       stock = params.dig(:product_stock, :stock).to_f

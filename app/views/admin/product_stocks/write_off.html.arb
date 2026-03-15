@@ -1,13 +1,15 @@
 panel I18n.t('admin.product_stocks.panel.title') do
+  available_stock = resource.available_for_write_off
+
   para I18n.t('admin.product_stocks.panel.product_label', name: resource.product.name)
   para I18n.t('admin.product_stocks.panel.current_stock', stock: resource.stock)
-  para I18n.t('admin.product_stocks.panel.available_stock', stock: resource.free_stock)
+  para I18n.t('admin.product_stocks.panel.available_stock', stock: available_stock)
 
   active_admin_form_for [:admin, resource], url: write_off_admin_product_stock_path(resource), method: :post do |f|
     f.inputs do
       f.input :stock,
               label: I18n.t('admin.product_stocks.panel.stock_label'),
-              input_html: { max: resource.free_stock, min: 1, step: 1 }
+              input_html: { max: available_stock, min: 1, step: 1 }
     end
     f.actions do
       f.action :submit, label: I18n.t('admin.product_stocks.panel.submit')

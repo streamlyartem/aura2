@@ -25,6 +25,15 @@ class ProductStock < ApplicationRecord
     save!
   end
 
+  # We treat available stock as free_stock when it is present in MS report.
+  # If free_stock is missing/zero while reserve is zero, fallback to stock.
+  def available_for_write_off
+    free = free_stock.to_f
+    return free if free.positive?
+
+    [stock.to_f - reserve.to_f, 0.0].max
+  end
+
   private
 
   def buffer_insales_stock_change
