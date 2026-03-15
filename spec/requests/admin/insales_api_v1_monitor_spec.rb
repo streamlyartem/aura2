@@ -14,7 +14,7 @@ RSpec.describe 'Admin InSales API v1 Monitor', type: :request do
 
     expect(response).to have_http_status(:ok)
     expect(response.body).to include('Мониторинг миграции API v1')
-    expect(response.body).to include('Outbox pending')
+    expect(response.body).to include('Outbox событий всего')
   end
 
   it 'handles stop action' do

@@ -101,15 +101,17 @@ ActiveAdmin.register_page 'Dashboard' do
     pending_high_severity = severity_for.call(health[:stock_events_pending_high], warning_from: 1, danger_from: 20)
     stale_runs_severity = severity_for.call(health[:stale_insales_sync_runs], warning_from: 1, danger_from: 3)
     stock_failed_severity = severity_for.call(health[:stock_events_failed], warning_from: 1, danger_from: 5)
+    retry_due_severity = severity_for.call(health[:stock_events_retry_due], warning_from: 10, danger_from: 50)
+    api_v1_failed_1h_severity = severity_for.call(health[:api_v1_runs_failed_last_hour], warning_from: 1, danger_from: 5)
+    api_v1_429_24h_severity = severity_for.call(health[:stock_events_http_429_24h], warning_from: 5, danger_from: 20)
 
     panel 'Оперативная сводка' do
-      stop_button_style = 'display:inline-block;padding:10px 14px;border-radius:6px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;border:1px solid #1d4ed8;line-height:1.2;cursor:pointer;'
       div class: 'mb-3' do
-        form action: admin_dashboard_stop_syncs_path, method: :post, style: 'display:inline-block;' do
+        form action: admin_dashboard_stop_syncs_path, method: :post, class: 'input_action', style: 'display:inline-block;' do
           input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
           button 'Остановить все синхронизации',
                  type: 'submit',
-                 style: stop_button_style,
+                 class: 'button primary',
                  onclick: "return confirm('Остановить все активные синхронизации и импорты?')"
         end
         para 'Останавливает активные импорты MoySklad и синхронизации InSales. Другие задачи не затрагиваются.'
@@ -124,7 +126,11 @@ ActiveAdmin.register_page 'Dashboard' do
         ['Очередь: claimed (выполняется)', queue_claimed],
         ['Очередь: blocked', queue_blocked],
         render_badge.call('Упавшие задачи за 24 часа', health[:failed_jobs_last_24h], failed_jobs_severity),
-        render_badge.call('События остатков: pending high', health[:stock_events_pending_high], pending_high_severity)
+        render_badge.call('События остатков: pending high', health[:stock_events_pending_high], pending_high_severity),
+        render_badge.call('События остатков: retry due', health[:stock_events_retry_due], retry_due_severity),
+        ['Outbox событий всего', health[:outbox_events_total]],
+        ['Outbox событий за 1 час', health[:outbox_events_last_hour]],
+        render_badge.call('API v1 failed за 1 час', health[:api_v1_runs_failed_last_hour], api_v1_failed_1h_severity)
       ] do
         column('Показатель') { |row| row[0] }
         column('Значение') { |row| row[1] }
@@ -137,12 +143,20 @@ ActiveAdmin.register_page 'Dashboard' do
         render_badge.call('События остатков: pending high', health[:stock_events_pending_high], pending_high_severity),
         ['События остатков: pending normal', health[:stock_events_pending_normal]],
         ['События остатков: processing', health[:stock_events_processing]],
+        ['События остатков: stale processing', health[:stock_events_stale_processing]],
+        ['События остатков: retries за 24ч', health[:stock_events_retries_24h]],
+        ['События остатков: stale skips за 24ч', health[:stock_events_stale_skips_24h]],
+        render_badge.call('События остатков: HTTP 429 за 24ч', health[:stock_events_http_429_24h], api_v1_429_24h_severity),
         render_badge.call('События остатков: failed', health[:stock_events_failed], stock_failed_severity),
         render_badge.call('Подвисшие синки InSales', health[:stale_insales_sync_runs], stale_runs_severity),
         ['Упавшие задачи InSales', health[:insales_failed_jobs]],
         ['Упавшие задачи MoySklad', health[:moysklad_failed_jobs]],
         render_badge.call('Упавшие задачи за 24 часа', health[:failed_jobs_last_24h], failed_jobs_severity),
-        ['P95 синка InSales (сек)', health[:p95_insales_sync_seconds] || '—']
+        ['P95 синка InSales (сек)', health[:p95_insales_sync_seconds] || '—'],
+        ['P95 e2e stock events (сек)', health[:stock_events_p95_seconds] || '—'],
+        ['API v1 runs за 1 час', health[:api_v1_runs_last_hour]],
+        render_badge.call('API v1 failed за 1 час', health[:api_v1_runs_failed_last_hour], api_v1_failed_1h_severity),
+        ['Outbox last sequence_id', health[:outbox_last_sequence_id] || '—']
       ] do
         column('Метрика') { |row| row[0] }
         column('Значение') { |row| row[1] }

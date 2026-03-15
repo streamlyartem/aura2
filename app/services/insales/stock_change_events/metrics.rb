@@ -20,6 +20,10 @@ module Insales
           increment_counter!("insales:stock_change_events:retries")
         end
 
+        def track_http_429!
+          increment_counter!("insales:stock_change_events:http_429")
+        end
+
         def track_stale_skip!
           increment_counter!("insales:stock_change_events:stale_skips")
         end

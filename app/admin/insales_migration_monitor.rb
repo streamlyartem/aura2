@@ -56,6 +56,7 @@ ActiveAdmin.register_page 'InSales API v1 Monitor' do
 
   content title: 'Мониторинг миграции API v1' do
     now = Time.current
+    health = Monitoring::HealthSnapshot.call
 
     api_v1_flags = {
       'INSALES_API_V1_READ_ENABLED' => ENV['INSALES_API_V1_READ_ENABLED'],
@@ -75,10 +76,6 @@ ActiveAdmin.register_page 'InSales API v1 Monitor' do
     api_jobs_in_queue = queue_scopes.sum do |scope|
       scope.where(solid_queue_jobs: { class_name: api_job_classes }).count
     end
-
-    outbox_pending = SyncOutboxEvent.where(processed_at: nil).count
-    outbox_processed_1h = SyncOutboxEvent.where.not(processed_at: nil).where('processed_at >= ?', 1.hour.ago).count
-    outbox_retry_due = SyncOutboxEvent.where(processed_at: nil).where('next_retry_at <= ?', now).count
 
     idempotency_24h = SyncIdempotencyKey.where('created_at >= ?', 24.hours.ago).count
     idempotency_replayed = SyncIdempotencyKey.where.not(response_status: nil).where('created_at >= ?', 24.hours.ago).count
@@ -113,14 +110,21 @@ ActiveAdmin.register_page 'InSales API v1 Monitor' do
     panel 'Ключевые метрики миграции' do
       table_for([
                   ['Очередь API v1 jobs', api_jobs_in_queue],
-                  ['Outbox pending', outbox_pending],
-                  ['Outbox processed за 1 час', outbox_processed_1h],
-                  ['Outbox retry due', outbox_retry_due],
+                  ['Outbox событий всего', health[:outbox_events_total]],
+                  ['Outbox событий за 1 час', health[:outbox_events_last_hour]],
+                  ['Outbox last sequence_id', health[:outbox_last_sequence_id] || '—'],
                   ['Idempotency keys за 24ч', idempotency_24h],
                   ['Idempotency replay за 24ч', idempotency_replayed],
+                  ['Stock events pending high', health[:stock_events_pending_high]],
+                  ['Stock events pending normal', health[:stock_events_pending_normal]],
+                  ['Stock events retry due', health[:stock_events_retry_due]],
+                  ['Stock events HTTP 429 за 24ч', health[:stock_events_http_429_24h]],
+                  ['Stock events stale skips за 24ч', health[:stock_events_stale_skips_24h]],
+                  ['Stock events p95 latency (сек)', health[:stock_events_p95_seconds] || '—'],
                   ['Runs API v1 running (24ч)', runs_running],
                   ['Runs API v1 success (24ч)', runs_success],
-                  ['Runs API v1 failed (24ч)', runs_failed]
+                  ['Runs API v1 failed (24ч)', runs_failed],
+                  ['Runs API v1 failed (1ч)', health[:api_v1_runs_failed_last_hour]]
                 ]) do
         column('Метрика') { |row| row[0] }
         column('Значение') { |row| row[1] }

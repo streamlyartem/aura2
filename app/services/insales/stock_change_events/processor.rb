@@ -159,6 +159,9 @@ module Insales
       end
 
       def handle_failure(event:, message:, retryable:)
+        status_code = extract_http_status_code(message)
+        Metrics.track_http_429! if status_code == 429
+
         if retryable
           attempts = event.attempts.to_i + 1
           event.update!(
@@ -191,14 +194,20 @@ module Insales
         text = message.to_s
         return true if text.match?(/Timeout|ConnectionFailed|Net::ReadTimeout/i)
 
-        if (match = text.match(/HTTP\s+(\d{3})/))
-          code = match[1].to_i
+        if (code = extract_http_status_code(text))
           return true if code == 429 || code >= 500
 
           return false
         end
 
         false
+      end
+
+      def extract_http_status_code(message)
+        match = message.to_s.match(/HTTP\s+(\d{3})/)
+        return nil unless match
+
+        match[1].to_i
       end
 
       def backoff_for(attempt)
