@@ -29,15 +29,21 @@ ActiveAdmin.register ProductStock do
         return
       end
 
-      client = MoyskladClient.new
-      response = client.create_demand(@product_stock.product, stock)
+      begin
+        client = MoyskladClient.new
+        response = client.create_demand(@product_stock.product, stock)
 
-      if [200, 201].include?(response&.status)
-        @product_stock.withdraw_stock(stock)
-        redirect_to resource_path(@product_stock), notice: I18n.t('admin.product_stocks.notices.demand_created')
-      else
+        if [200, 201].include?(response&.status)
+          @product_stock.withdraw_stock(stock)
+          redirect_to resource_path(@product_stock), notice: I18n.t('admin.product_stocks.notices.demand_created')
+        else
+          redirect_to resource_path(@product_stock),
+                      alert: I18n.t('admin.product_stocks.notices.demand_failed', status: response&.status)
+        end
+      rescue Moysklad::HttpClient::RequestError => e
+        Rails.logger.warn("[ProductStock][WriteOff] failed id=#{@product_stock.id} error=#{e.class} #{e.message}")
         redirect_to resource_path(@product_stock),
-                    alert: I18n.t('admin.product_stocks.notices.demand_failed', status: response&.status)
+                    alert: I18n.t('admin.product_stocks.notices.demand_failed', status: 412)
       end
     end
   end
