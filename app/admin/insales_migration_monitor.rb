@@ -98,7 +98,7 @@ ActiveAdmin.register_page 'InSales API v1 Monitor' do
                 value: 'Остановить все синхронизации',
                 class: 'button',
                 data: { confirm: 'Остановить активные синхронизации и импорты?' },
-                style: 'display:inline-block;padding:10px 16px;border-radius:6px;cursor:pointer;'
+                style: 'display:inline-block;padding:10px 16px;border-radius:6px;cursor:pointer;background:#2563eb;color:#fff;border:1px solid #1d4ed8;font-weight:600;-webkit-appearance:none;appearance:none;'
         end
       end
     end
