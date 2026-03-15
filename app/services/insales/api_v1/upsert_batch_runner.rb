@@ -14,7 +14,8 @@ module Insales
         created = updated = unchanged = skipped = failed = 0
 
         items.each do |raw_item|
-          validation = contract.validate(raw_item)
+          item_payload = normalized_item_payload(raw_item)
+          validation = contract.validate(item_payload)
           unless validation[:valid]
             skipped += 1
             errors << build_error(validation[:item], 'VALIDATION_ERROR', 'Invalid payload', validation[:errors])
@@ -128,6 +129,24 @@ module Insales
           message: message,
           details: details
         }
+      end
+
+      def normalized_item_payload(raw_item)
+        item = raw_item.respond_to?(:to_h) ? raw_item.to_h : raw_item
+        return item unless item.is_a?(Hash)
+
+        deep = item.deep_stringify_keys
+        product_payload = deep['product']
+
+        if product_payload.is_a?(Hash) &&
+           (deep['external_id'].blank? || deep['sku'].blank?) &&
+           (product_payload['external_id'].present? || product_payload['sku'].present?)
+          product_payload
+        else
+          deep
+        end
+      rescue StandardError
+        raw_item
       end
     end
   end

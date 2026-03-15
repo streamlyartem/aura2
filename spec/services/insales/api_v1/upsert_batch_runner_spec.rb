@@ -57,5 +57,32 @@ RSpec.describe Insales::ApiV1::UpsertBatchRunner do
       run.reload
       expect(run.unchanged_count).to eq(1)
     end
+
+    it 'accepts changes-feed envelope with nested product payload' do
+      external_id = SecureRandom.uuid
+      item = {
+        event_id: SecureRandom.uuid,
+        sequence_id: 10,
+        event_type: 'product.updated',
+        occurred_at: Time.current.iso8601,
+        product: {
+          external_id: external_id,
+          sku: 'SKU-NESTED-1',
+          name: 'Nested product',
+          updated_at: Time.current.iso8601,
+          currency: 'RUB',
+          price_minor: 19_900,
+          stock_qty: 7
+        }
+      }
+
+      described_class.new.call(run: run, items: [item])
+
+      run.reload
+      expect(run.status).to eq('success')
+      expect(run.created_count).to eq(1)
+      expect(run.skipped_count).to eq(0)
+      expect(Product.find_by(sku: 'SKU-NESTED-1')).to be_present
+    end
   end
 end
