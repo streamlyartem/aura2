@@ -15,6 +15,7 @@ class AdminUser < ApplicationRecord
     'InSales Media' => '/admin/insales_media',
     'InSales Media Status' => '/admin/insales_media_status',
     'InSales Category Status' => '/admin/insales_category_status',
+    'Мониторинг миграции API v1' => '/admin/insales_api_v1_monitor',
     'Склады МС' => '/admin/moysklad_stores',
     'Admin Users' => '/admin/admin_users',
     'User Actions' => '/admin/user_actions'
