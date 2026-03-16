@@ -44,10 +44,10 @@ class MoyskladSync
     { processed: count, stopped: stopped }
   end
 
-  def import_stocks
+  def import_stocks(store_names: nil)
     changed_product_ids = []
 
-    store_rows = build_store_rows
+    store_rows = build_store_rows(store_names: store_names)
 
     Current.set(skip_stock_change_processor_enqueue: true) do
       store_rows.each do |row|
@@ -104,11 +104,12 @@ class MoyskladSync
       product_stock.reserve.to_f != reserve
   end
 
-  def build_store_rows
+  def build_store_rows(store_names: nil)
     store_rows = []
-    store_names = @client.store_names
+    selected_store_names = normalize_store_names(store_names)
+    selected_store_names = @client.store_names if selected_store_names.empty?
 
-    store_names.each do |store_name|
+    selected_store_names.each do |store_name|
       @client.stocks_for_store(store_name: store_name).each do |row|
         store_rows << row
       end

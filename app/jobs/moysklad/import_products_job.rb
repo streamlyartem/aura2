@@ -89,11 +89,18 @@ module Moysklad
         )
         Rails.logger.info('[Moysklad] Import products job started')
 
-        result = MoyskladSync.new.import_products(
+        sync_service = MoyskladSync.new
+
+        result = sync_service.import_products(
           stop_requested: stop_requested_checker(run.id),
           store_names: selected_store_names,
           full_import: full_import
         )
+        changed_products = if result[:stopped]
+                             []
+                           else
+                             sync_service.import_stocks(store_names: selected_store_names)
+                           end
 
         run.update!(
           processed: result[:processed],
@@ -102,7 +109,12 @@ module Moysklad
           error_count: 0,
           finished_at: Time.current,
           status: result[:stopped] ? 'stopped' : 'success',
-          last_error: result[:stopped] ? 'Stopped by user' : nil
+          last_error: result[:stopped] ? 'Stopped by user' : nil,
+          meta: run.meta.to_h.merge(
+            store_names: selected_store_names,
+            full_import: full_import,
+            stock_changed_products: changed_products.size
+          )
         )
         Rails.logger.info('[Moysklad] Import products job finished')
       rescue StandardError => e

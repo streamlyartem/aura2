@@ -148,5 +148,47 @@ RSpec.describe MoyskladSync do
         expect { import_products }.not_to change(ProductStock, :count)
       end
     end
+
+    context 'when importing stocks only for selected stores' do
+      let(:client) { instance_double(MoyskladClient) }
+      let(:service) { described_class.new(client) }
+      let(:ms_id) { '11111111-2222-3333-4444-555555555555' }
+      let!(:product) { create(:product, ms_id: ms_id, weight: 100.0, retail_price: 200.0) }
+
+      before do
+        allow(client).to receive(:store_names).and_return(['Тест', 'Москва Бауманская'])
+        allow(client).to receive(:stocks_for_store).with(store_name: 'Тест').and_return(
+          [
+            {
+              product_meta: { 'href' => "#{MoyskladClient::BASE_URL}/entity/product/#{ms_id}" },
+              store_name: 'Тест',
+              stock: 7,
+              free_stock: 7,
+              reserve: 0
+            }
+          ]
+        )
+        allow(client).to receive(:stocks_for_store).with(store_name: 'Москва Бауманская').and_return(
+          [
+            {
+              product_meta: { 'href' => "#{MoyskladClient::BASE_URL}/entity/product/#{ms_id}" },
+              store_name: 'Москва Бауманская',
+              stock: 11,
+              free_stock: 11,
+              reserve: 0
+            }
+          ]
+        )
+      end
+
+      it 'processes only selected stores' do
+        service.import_stocks(store_names: ['Тест'])
+
+        expect(client).to have_received(:stocks_for_store).with(store_name: 'Тест')
+        expect(client).not_to have_received(:stocks_for_store).with(store_name: 'Москва Бауманская')
+        expect(ProductStock.find_by(product: product, store_name: 'Тест')&.stock).to eq(7.0)
+        expect(ProductStock.find_by(product: product, store_name: 'Москва Бауманская')).to be_nil
+      end
+    end
   end
 end

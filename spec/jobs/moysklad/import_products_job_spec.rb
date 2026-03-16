@@ -4,7 +4,13 @@ require 'rails_helper'
 
 RSpec.describe Moysklad::ImportProductsJob, type: :job do
   describe '#perform' do
-    let(:sync) { instance_double(MoyskladSync, import_products: { processed: 42, stopped: false }) }
+    let(:sync) do
+      instance_double(
+        MoyskladSync,
+        import_products: { processed: 42, stopped: false },
+        import_stocks: %w[p1 p2]
+      )
+    end
 
     before do
       allow(MoyskladSync).to receive(:new).and_return(sync)
@@ -21,11 +27,13 @@ RSpec.describe Moysklad::ImportProductsJob, type: :job do
           store_names: []
         )
       )
+      expect(sync).to have_received(:import_stocks).with(store_names: [])
       expect(MoyskladSyncRun.order(:created_at).last).to have_attributes(
         run_type: 'import_products',
         status: 'success',
         processed: 42
       )
+      expect(MoyskladSyncRun.order(:created_at).last.meta['stock_changed_products']).to eq(2)
     end
 
     it 'marks run as stopped when stop requested' do
@@ -40,6 +48,7 @@ RSpec.describe Moysklad::ImportProductsJob, type: :job do
         processed: 10,
         last_error: 'Stopped by user'
       )
+      expect(sync).not_to have_received(:import_stocks)
     end
 
     it 'skips import when lock is not acquired' do
