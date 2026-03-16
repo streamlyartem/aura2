@@ -55,7 +55,15 @@ class MoyskladClient
     products_data = rows.map do |row|
       stock_value = row['stock'].to_f
       reserve_value = row['reserve'].to_f
-      free_stock_value = row.key?('freeStock') && !row['freeStock'].nil? ? row['freeStock'].to_f : [stock_value - reserve_value, 0].max
+      # In stock report "quantity" is the canonical available amount for sale.
+      free_stock_value =
+        if row.key?('quantity') && !row['quantity'].nil?
+          row['quantity'].to_f
+        elsif row.key?('freeStock') && !row['freeStock'].nil?
+          row['freeStock'].to_f
+        else
+          [stock_value - reserve_value, 0].max
+        end
 
       {
         code: row['code'],
