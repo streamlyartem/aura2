@@ -53,6 +53,13 @@ ActiveAdmin.register_page 'MoySklad Stores' do
         column('Показатель') { |row| row.first }
         column('Значение') { |row| row.last }
       end
+
+      div class: 'mt-2 text-sm text-gray-600' do
+        span 'Товаров всего — включает остатки > 0, = 0 и < 0 из текущего отчёта МойСклад.'
+      end
+      div class: 'text-sm text-gray-600' do
+        span 'Товаров с ненулевым остатком — это только позиции с остатком строго больше 0.'
+      end
     end
 
     form action: url_for(action: :apply_selection), method: :post do
