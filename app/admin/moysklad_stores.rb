@@ -4,6 +4,13 @@ ActiveAdmin.register_page 'MoySklad Stores' do
   menu label: 'Склады МС', parent: 'МойСклад', priority: 3,
        if: proc { current_admin_user&.can_access_admin_path?('/admin/moysklad_stores') }
 
+  action_item :refresh_stores, only: :index do
+    button_to '↻ Обновить список',
+              admin_moysklad_stores_refresh_path,
+              method: :post,
+              class: 'button'
+  end
+
   page_action :refresh, method: :post do
     names = MoyskladStore.refresh_from_moysklad!
     MoyskladStore.enqueue_stock_counts_refresh!(store_names: names)
@@ -30,15 +37,6 @@ ActiveAdmin.register_page 'MoySklad Stores' do
     nonzero_products = stores_with_counts.sum(&:nonzero_products_count)
     zero_or_negative_products = total_products - nonzero_products
     last_stock_stats_update = stores_with_counts.map(&:stock_stats_synced_at).compact.max
-
-    div class: 'mb-4' do
-      form action: url_for(action: :refresh), method: :post do
-        input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-        button type: 'submit', class: 'button' do
-          text_node '↻ Обновить список'
-        end
-      end
-    end
 
     div class: 'mb-4' do
       span "Всего складов: #{stores.size}. Выбрано для импорта: #{selected_count}."
