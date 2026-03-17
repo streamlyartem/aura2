@@ -20,6 +20,9 @@ class AdminUser < ApplicationRecord
     'Статусы заказов' => '/admin/order_statuses',
     'Списания заказов' => '/admin/order_write_offs',
     'Склады МС' => '/admin/moysklad_stores',
+    'Статус по товарам' => '/admin/aura_products_status',
+    'Типы товаров' => '/admin/aura_product_types',
+    'Источники товаров' => '/admin/aura_product_sources',
     'Admin Users' => '/admin/admin_users',
     'User Actions' => '/admin/user_actions'
   }.freeze

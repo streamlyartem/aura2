@@ -60,6 +60,7 @@ module Insales
           :id,
           :sku,
           :code,
+          :path_name,
           :unit_type,
           :weight,
           :retail_price,
@@ -79,7 +80,7 @@ module Insales
         skip_reason = nil
         last_error = nil
         export_quantity = resolve_export_quantity(product, stock_total)
-        prices_cents = resolve_prices_cents(product)
+        prices_cents = resolve_prices_cents(product, stock_total)
 
         if skip_without_sku? && sku_value.blank?
           status = 'skipped'
@@ -115,19 +116,19 @@ module Insales
         end
       end
 
-      def resolve_prices_cents(product)
+      def resolve_prices_cents(product, stock_total)
         PRICE_TYPE_COLUMNS.each_with_object({}) do |(price_type, column), memo|
           price_rub = product.public_send(column)
-          cents = price_to_item_cents(product, price_rub)
+          cents = price_to_item_cents(product, price_rub, stock_total)
           memo[price_type] = cents if cents.present?
         end
       end
 
-      def price_to_item_cents(product, price_rub)
+      def price_to_item_cents(product, price_rub, stock_total)
         return nil if price_rub.blank?
 
         if product.unit_type == 'weight'
-          weight_g = product.weight.to_d
+          weight_g = effective_weight_g(product, stock_total)
           return nil if weight_g <= 0
 
           (price_rub.to_d * 100 * weight_g).round.to_i
@@ -154,6 +155,20 @@ module Insales
 
       def skip_nonpositive_stock?
         setting&.skip_products_with_nonpositive_stock
+      end
+
+      def effective_weight_g(product, stock_total)
+        matched_type = product_type_resolver.resolve(product)
+        return product.weight.to_d unless matched_type&.weight_from_stock?
+
+        stock_value = stock_total.to_d
+        return stock_value if stock_value.positive?
+
+        product.weight.to_d
+      end
+
+      def product_type_resolver
+        @product_type_resolver ||= AuraProducts::TypeResolver.new
       end
     end
   end

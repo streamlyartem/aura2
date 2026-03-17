@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_17_092053) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_17_141000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -69,6 +69,35 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_092053) do
     t.jsonb "allowed_admin_paths", default: [], null: false
     t.index ["email"], name: "index_admin_users_on_email", unique: true
     t.index ["reset_password_token"], name: "index_admin_users_on_reset_password_token", unique: true
+  end
+
+  create_table "aura_product_sources", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "code", null: false
+    t.string "name", null: false
+    t.string "source_kind", default: "moysklad", null: false
+    t.boolean "active", default: true, null: false
+    t.integer "priority", default: 100, null: false
+    t.boolean "authoritative", default: false, null: false
+    t.jsonb "settings", default: {}, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active", "priority"], name: "index_aura_product_sources_on_active_and_priority"
+    t.index ["code"], name: "index_aura_product_sources_on_code", unique: true
+  end
+
+  create_table "aura_product_types", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|
+    t.string "code", null: false
+    t.string "name", null: false
+    t.text "description"
+    t.string "matcher_path_prefix"
+    t.string "matcher_unit_type"
+    t.boolean "weight_from_stock", default: false, null: false
+    t.boolean "active", default: true, null: false
+    t.integer "priority", default: 100, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["active", "priority"], name: "index_aura_product_types_on_active_and_priority"
+    t.index ["code"], name: "index_aura_product_types_on_code", unique: true
   end
 
   create_table "external_fulfillment_operations", id: :uuid, default: -> { "gen_random_uuid()" }, force: :cascade do |t|

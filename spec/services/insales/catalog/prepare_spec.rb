@@ -39,6 +39,31 @@ RSpec.describe Insales::Catalog::Prepare do
       expect(item.prices_cents['small_wholesale']).to eq(1_727_800)
     end
 
+    it 'uses stock as weight for matched type with weight_from_stock enabled' do
+      create(
+        :aura_product_type,
+        code: 'srezy',
+        name: 'Срезы',
+        matcher_unit_type: 'weight',
+        matcher_path_prefix: 'Срезы/',
+        weight_from_stock: true,
+        priority: 1
+      )
+      product = create(
+        :product,
+        unit_type: 'weight',
+        path_name: 'Срезы/Светлый/55',
+        weight: 106,
+        retail_price: 175.0
+      )
+      create(:product_stock, product: product, store_name: 'Тест', stock: 99)
+
+      described_class.call
+      item = InsalesCatalogItem.find_by!(product_id: product.id)
+
+      expect(item.prices_cents['retail']).to eq(1_732_500) # 175 * 99 * 100
+    end
+
     it 'sets export_quantity for weight products to 1 only when stock is positive' do
       positive = create(:product, unit_type: 'weight', weight: 100, retail_price: 100, sku: 'POS')
       zero = create(:product, unit_type: 'weight', weight: 100, retail_price: 100, sku: 'ZERO')
