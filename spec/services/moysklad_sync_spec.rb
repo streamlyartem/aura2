@@ -190,5 +190,34 @@ RSpec.describe MoyskladSync do
         expect(ProductStock.find_by(product: product, store_name: 'Москва Бауманская')).to be_nil
       end
     end
+
+    context 'when stock row disappeared from MoySklad report' do
+      let(:client) { instance_double(MoyskladClient) }
+      let(:service) { described_class.new(client) }
+      let!(:product) { create(:product, ms_id: '11111111-2222-3333-4444-555555555555') }
+      let!(:stale_stock) do
+        create(
+          :product_stock,
+          product: product,
+          store_name: 'Тест',
+          stock: 15,
+          free_stock: 10,
+          reserve: 5
+        )
+      end
+
+      before do
+        allow(client).to receive(:store_names).and_return(['Тест'])
+        allow(client).to receive(:stocks_for_store).with(store_name: 'Тест').and_return([])
+      end
+
+      it 'sets stale stock row to zero for selected stores' do
+        service.import_stocks(store_names: ['Тест'])
+
+        expect(stale_stock.reload.stock.to_f).to eq(0.0)
+        expect(stale_stock.reload.free_stock.to_f).to eq(0.0)
+        expect(stale_stock.reload.reserve.to_f).to eq(0.0)
+      end
+    end
   end
 end

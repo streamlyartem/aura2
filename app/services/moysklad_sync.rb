@@ -46,8 +46,11 @@ class MoyskladSync
 
   def import_stocks(store_names: nil)
     changed_product_ids = []
+    touched_keys = Set.new
 
     store_rows = build_store_rows(store_names: store_names)
+    selected_store_names = normalize_store_names(store_names)
+    selected_store_names = @client.store_names if selected_store_names.empty?
 
     Current.set(skip_stock_change_processor_enqueue: true) do
       store_rows.each do |row|
@@ -57,6 +60,8 @@ class MoyskladSync
 
         product = Product.find_by(ms_id: ms_product_uuid)
         next unless product
+
+        touched_keys << [row[:store_name], product.id]
 
         product_stock = ProductStock.find_or_initialize_by(product_id: product.id, store_name: row[:store_name])
         new_stock = row[:stock].to_f
@@ -73,6 +78,12 @@ class MoyskladSync
         product_stock.save!
         changed_product_ids << product.id
       end
+
+      reconcile_missing_stock_rows!(
+        selected_store_names: selected_store_names,
+        touched_keys: touched_keys,
+        changed_product_ids: changed_product_ids
+      )
     end
 
     if changed_product_ids.any?
@@ -116,6 +127,21 @@ class MoyskladSync
     end
 
     store_rows
+  end
+
+  def reconcile_missing_stock_rows!(selected_store_names:, touched_keys:, changed_product_ids:)
+    ProductStock.where(store_name: selected_store_names).find_each(batch_size: 1000) do |product_stock|
+      next if touched_keys.include?([product_stock.store_name, product_stock.product_id])
+      next if product_stock.stock.to_f.zero? && product_stock.free_stock.to_f.zero? && product_stock.reserve.to_f.zero?
+
+      product_stock.update!(
+        stock: 0,
+        free_stock: 0,
+        reserve: 0,
+        synced_at: Time.current
+      )
+      changed_product_ids << product_stock.product_id
+    end
   end
 
   def each_product_payload(full_import:, store_names:)
