@@ -25,16 +25,36 @@ ActiveAdmin.register_page 'MoySklad Stores' do
   content title: 'Склады МС' do
     stores = MoyskladStore.order(:name).to_a
     selected_count = stores.count(&:selected_for_import?)
+    stores_with_counts = stores.select { |store| store.total_products_count.present? && store.nonzero_products_count.present? }
+    total_products = stores_with_counts.sum(&:total_products_count)
+    nonzero_products = stores_with_counts.sum(&:nonzero_products_count)
+    zero_or_negative_products = total_products - nonzero_products
+    last_stock_stats_update = stores_with_counts.map(&:stock_stats_synced_at).compact.max
 
     div class: 'mb-4' do
       form action: url_for(action: :refresh), method: :post do
         input type: 'hidden', name: 'authenticity_token', value: form_authenticity_token
-        input type: 'submit', value: 'Обновить список', class: 'button'
+        button type: 'submit', class: 'button' do
+          text_node '↻ Обновить список'
+        end
       end
     end
 
     div class: 'mb-4' do
       span "Всего складов: #{stores.size}. Выбрано для импорта: #{selected_count}."
+    end
+
+    panel 'Сводка по остаткам' do
+      table_for(
+        [
+          ['Всего товаров по складам', total_products],
+          ['Всего товаров с нулевыми остатками', zero_or_negative_products],
+          ['Последнее обновление', last_stock_stats_update || '—']
+        ]
+      ) do
+        column('Показатель') { |row| row.first }
+        column('Значение') { |row| row.last }
+      end
     end
 
     form action: url_for(action: :apply_selection), method: :post do
@@ -60,7 +80,9 @@ ActiveAdmin.register_page 'MoySklad Stores' do
       end
 
       div class: 'mt-4' do
-        input type: 'submit', value: 'Применить', class: 'button'
+        button type: 'submit', class: 'button primary' do
+          text_node 'Применить'
+        end
       end
     end
   end
