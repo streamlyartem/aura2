@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_17_141000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_17_153000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -489,6 +489,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_141000) do
     t.decimal "unit_weight_g", precision: 10, scale: 3
     t.integer "ms_stock_g"
     t.integer "ms_stock_qty"
+    t.uuid "aura_product_type_id"
+    t.index ["aura_product_type_id"], name: "index_products_on_aura_product_type_id"
   end
 
   create_table "solid_cache_entries", force: :cascade do |t|
@@ -696,6 +698,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_17_141000) do
   add_foreign_key "insales_product_mappings", "products", column: "aura_product_id"
   add_foreign_key "pricing_tiers", "pricing_rulesets"
   add_foreign_key "product_stocks", "products"
+  add_foreign_key "products", "aura_product_types"
   add_foreign_key "solid_queue_blocked_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_claimed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade
   add_foreign_key "solid_queue_failed_executions", "solid_queue_jobs", column: "job_id", on_delete: :cascade

@@ -5,6 +5,7 @@ require 'rails_helper'
 
 RSpec.describe Product do
   it { is_expected.to have_many(:images).dependent(:destroy) }
+  it { is_expected.to belong_to(:aura_product_type).optional }
 
   it_behaves_like 'sets implicit order column', :created_at
 
@@ -57,6 +58,15 @@ RSpec.describe Product do
       found = described_class.find_by_scanned_barcode('0001805327132')
 
       expect(found).to eq(product)
+    end
+  end
+
+  describe 'type assignment' do
+    it 'assigns aura_product_type from configured matcher' do
+      type = create(:aura_product_type, matcher_unit_type: 'weight', matcher_path_prefix: 'Срезы/')
+      product = create(:product, unit_type: 'weight', path_name: 'Срезы/Темный/60')
+
+      expect(product.aura_product_type_id).to eq(type.id)
     end
   end
 end

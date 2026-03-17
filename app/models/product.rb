@@ -5,6 +5,8 @@ class Product < ApplicationRecord
 
   has_many :images, dependent: :destroy, as: :object
   has_many :product_stocks, dependent: :destroy
+  belongs_to :aura_product_type, optional: true
+  before_validation :assign_aura_product_type
   after_commit :enqueue_insales_sync_trigger, on: %i[create update]
   after_commit :publish_outbox_created, on: :create
   after_commit :publish_outbox_updated, on: :update
@@ -14,11 +16,11 @@ class Product < ApplicationRecord
   # after_commit :sync_to_moysklad, on: %i[create update]
 
   def self.ransackable_attributes(_auth_object = nil)
-    %w[id name sku created_at updated_at]
+    %w[id ms_id aura_product_type_id name sku created_at updated_at]
   end
 
   def self.ransackable_associations(_auth_object = nil)
-    []
+    %w[aura_product_type]
   end
 
   def self.find_by_scanned_barcode(raw_value)
@@ -84,6 +86,11 @@ class Product < ApplicationRecord
   end
 
   private
+
+  def assign_aura_product_type
+    resolver = AuraProducts::TypeResolver.new
+    self.aura_product_type = resolver.resolve(self)
+  end
 
   def enqueue_insales_sync_trigger
     return if id.blank?

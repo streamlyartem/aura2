@@ -8,6 +8,15 @@ ActiveAdmin.register_page 'Aura Products Status' do
     link_to '↻ Обновить статус', admin_aura_products_status_path(refresh: 1), class: 'button'
   end
 
+  action_item :assign_types, only: :index do
+    link_to 'Переразметить типы', admin_aura_products_status_assign_types_path, method: :post, class: 'button'
+  end
+
+  page_action :assign_types, method: :post do
+    AuraProducts::AssignTypesJob.perform_later
+    redirect_to admin_aura_products_status_path, notice: 'Запущена фоновая переразметка типов товаров.'
+  end
+
   content title: 'Статус по товарам' do
     snapshot = AuraProducts::StatusSnapshot.call(force: params[:refresh].present?)
 

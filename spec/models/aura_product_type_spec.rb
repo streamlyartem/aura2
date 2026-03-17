@@ -4,6 +4,13 @@ require 'rails_helper'
 
 RSpec.describe AuraProductType, type: :model do
   describe '#matches?' do
+    it 'does not match when type has no matcher rules' do
+      type = create(:aura_product_type, matcher_unit_type: nil, matcher_path_prefix: nil)
+      product = create(:product, unit_type: 'weight', path_name: 'Срезы/Светлый/55')
+
+      expect(type.matches?(product)).to eq(false)
+    end
+
     it 'matches by unit_type and path prefix' do
       type = create(:aura_product_type, matcher_unit_type: 'weight', matcher_path_prefix: 'Срезы/')
       product = create(:product, unit_type: 'weight', path_name: 'Срезы/Светлый/55')

@@ -32,6 +32,7 @@ ActiveAdmin.register Product do
   # Add or remove filters to toggle their visibility
   filter :id
   filter :ms_id
+  filter :aura_product_type, label: 'Тип товара'
   filter :name
   filter :sku
   filter :created_at
@@ -41,6 +42,7 @@ ActiveAdmin.register Product do
   index do
     selectable_column
     id_column
+    column('Тип товара') { |product| product.aura_product_type&.name || '—' }
     column :name
     column :sku
     column :created_at
@@ -53,6 +55,7 @@ ActiveAdmin.register Product do
     attributes_table_for(resource) do
       row :id
       row :ms_id
+      row('Тип товара') { |product| product.aura_product_type&.name || '—' }
       row :name
       row :sku
       row :batch_number

@@ -22,6 +22,7 @@ class AuraProductType < ApplicationRecord
 
   def matches?(product)
     return false if product.blank?
+    return false if matcher_unit_type.blank? && matcher_path_prefix.blank?
     return false if matcher_unit_type.present? && product.unit_type.to_s != matcher_unit_type
 
     if matcher_path_prefix.present?
