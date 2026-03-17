@@ -5,10 +5,10 @@ ActiveAdmin.register_page 'MoySklad Stores' do
        if: proc { current_admin_user&.can_access_admin_path?('/admin/moysklad_stores') }
 
   action_item :refresh_stores, only: :index do
-    button_to '↻ Обновить список',
-              admin_moysklad_stores_refresh_path,
-              method: :post,
-              class: 'button'
+    link_to '↻ Обновить список',
+            admin_moysklad_stores_refresh_path,
+            method: :post,
+            class: 'button'
   end
 
   page_action :refresh, method: :post do
@@ -78,7 +78,9 @@ ActiveAdmin.register_page 'MoySklad Stores' do
       end
 
       div class: 'mt-4' do
-        button type: 'submit', class: 'button primary' do
+        a href: '#',
+          class: 'button primary',
+          onclick: 'this.closest("form").submit(); return false;' do
           text_node 'Применить'
         end
       end
