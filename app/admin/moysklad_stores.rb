@@ -6,7 +6,9 @@ ActiveAdmin.register_page 'MoySklad Stores' do
 
   page_action :refresh, method: :post do
     names = MoyskladStore.refresh_from_moysklad!
-    redirect_to admin_moysklad_stores_path, notice: "Список складов обновлён: #{names.size}"
+    MoyskladStore.enqueue_stock_counts_refresh!(store_names: names)
+    redirect_to admin_moysklad_stores_path,
+                notice: "Список складов обновлён: #{names.size}. Пересчёт остатков запущен в фоне."
   rescue StandardError => e
     redirect_to admin_moysklad_stores_path, alert: "Не удалось обновить список складов: #{e.class} - #{e.message}"
   end
@@ -54,7 +56,7 @@ ActiveAdmin.register_page 'MoySklad Stores' do
         column('Склад') { |store| store.name }
         column('Товаров всего') { |store| store.total_products_count || '—' }
         column('Товаров с ненулевым остатком') { |store| store.nonzero_products_count || '—' }
-        column('Обновлён') { |store| store.updated_at }
+        column('Обновлено по остаткам') { |store| store.stock_stats_synced_at || '—' }
       end
 
       div class: 'mt-4' do

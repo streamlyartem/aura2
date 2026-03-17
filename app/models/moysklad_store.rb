@@ -10,16 +10,24 @@ class MoyskladStore < ApplicationRecord
     now = Time.current
 
     names.each do |name|
-      counts = fetch_store_counts(client: client, store_name: name)
       record = find_or_initialize_by(name: name)
       record.last_seen_at = now
-      record.total_products_count = counts[:total_products_count]
-      record.nonzero_products_count = counts[:nonzero_products_count]
-      record.stock_stats_synced_at = now
       record.save!
     end
 
     names
+  end
+
+  def self.enqueue_stock_counts_refresh!(store_names: nil)
+    relation = if store_names.present?
+                 where(name: store_names)
+               else
+                 all
+               end
+
+    relation.find_each do |store|
+      Moysklad::RefreshStoreStockCountsJob.perform_later(store.id)
+    end
   end
 
   def self.fetch_store_counts(client:, store_name:)
@@ -36,6 +44,16 @@ class MoyskladStore < ApplicationRecord
       total_products_count: nil,
       nonzero_products_count: nil
     }
+  end
+
+  def refresh_stock_counts!(client: MoyskladClient.new)
+    counts = self.class.fetch_store_counts(client: client, store_name: name)
+
+    update!(
+      total_products_count: counts[:total_products_count],
+      nonzero_products_count: counts[:nonzero_products_count],
+      stock_stats_synced_at: Time.current
+    )
   end
 
   def self.selected_names

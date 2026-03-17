@@ -3,10 +3,15 @@
 require 'rails_helper'
 
 RSpec.describe 'Admin MoySklad Stores', type: :request do
+  include ActiveJob::TestHelper
+
   let(:admin_user) { create(:admin_user) }
 
   before do
     sign_in admin_user, scope: :admin_user
+    ActiveJob::Base.queue_adapter = :test
+    clear_enqueued_jobs
+    clear_performed_jobs
   end
 
   it 'renders stores page' do
@@ -28,10 +33,12 @@ RSpec.describe 'Admin MoySklad Stores', type: :request do
 
     expect(response).to have_http_status(:found)
     expect(MoyskladStore.order(:name).pluck(:name)).to eq(['Москва Бауманская', 'Тест'])
-    expect(MoyskladStore.find_by(name: 'Тест')).to have_attributes(
-      total_products_count: 2,
-      nonzero_products_count: 1
-    )
+    expect(enqueued_jobs.map { |job| job[:job] }).to include(Moysklad::RefreshStoreStockCountsJob)
+
+    perform_enqueued_jobs
+
+    expect(MoyskladStore.find_by(name: 'Тест')).to have_attributes(total_products_count: 2, nonzero_products_count: 1)
+    expect(MoyskladStore.find_by(name: 'Москва Бауманская')).to have_attributes(total_products_count: 3, nonzero_products_count: 2)
   end
 
   it 'applies checkbox selection after submit' do
