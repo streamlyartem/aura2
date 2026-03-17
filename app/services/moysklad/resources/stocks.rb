@@ -10,7 +10,7 @@ module Moysklad
         'report/stock/all'
       end
 
-      def for_store(store_href, limit: default_page_limit)
+      def for_store(store_href, limit: default_page_limit, positive_only: true)
         offset = 0
         rows = []
 
@@ -26,6 +26,8 @@ module Moysklad
           total = body.dig('meta', 'size').to_i
           break if total.positive? && offset >= total
         end
+
+        return rows unless positive_only
 
         rows.select { |row| row['stock'].to_f.positive? }
       end

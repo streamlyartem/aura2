@@ -52,6 +52,8 @@ ActiveAdmin.register_page 'MoySklad Stores' do
           end
         end
         column('Склад') { |store| store.name }
+        column('Товаров всего') { |store| store.total_products_count || '—' }
+        column('Товаров с ненулевым остатком') { |store| store.nonzero_products_count || '—' }
         column('Обновлён') { |store| store.updated_at }
       end
 

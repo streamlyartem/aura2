@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_03_16_124000) do
+ActiveRecord::Schema[8.0].define(version: 2026_03_17_092053) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
   enable_extension "pgcrypto"
@@ -366,6 +366,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_03_16_124000) do
     t.datetime "last_seen_at"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.integer "total_products_count"
+    t.integer "nonzero_products_count"
+    t.datetime "stock_stats_synced_at"
     t.index ["name"], name: "index_moysklad_stores_on_name", unique: true
     t.index ["selected_for_import"], name: "index_moysklad_stores_on_selected_for_import"
   end

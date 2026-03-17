@@ -17,11 +17,21 @@ RSpec.describe 'Admin MoySklad Stores', type: :request do
 
   it 'refreshes stores list' do
     allow_any_instance_of(MoyskladClient).to receive(:store_names).and_return(['Тест', 'Москва Бауманская'])
+    allow_any_instance_of(MoyskladClient).to receive(:stocks_for_store).with(store_name: 'Тест', positive_only: false).and_return(
+      [{ stock: 2.0 }, { stock: 0.0 }]
+    )
+    allow_any_instance_of(MoyskladClient).to receive(:stocks_for_store).with(store_name: 'Москва Бауманская', positive_only: false).and_return(
+      [{ stock: 3.0 }, { stock: 1.0 }, { stock: 0.0 }]
+    )
 
     post '/admin/moysklad_stores/refresh'
 
     expect(response).to have_http_status(:found)
     expect(MoyskladStore.order(:name).pluck(:name)).to eq(['Москва Бауманская', 'Тест'])
+    expect(MoyskladStore.find_by(name: 'Тест')).to have_attributes(
+      total_products_count: 2,
+      nonzero_products_count: 1
+    )
   end
 
   it 'applies checkbox selection after submit' do

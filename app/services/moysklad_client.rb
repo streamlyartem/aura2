@@ -46,11 +46,11 @@ class MoyskladClient
   end
 
   # Business logic method - transforms stock data into a more usable format
-  def stocks_for_store(store_name: TEST_STORE_NAME)
+  def stocks_for_store(store_name: TEST_STORE_NAME, positive_only: true)
     store_href = store_href_map[store_name]
     raise ArgumentError, "Unknown store: #{store_name}" unless store_href
 
-    rows = stocks.for_store(store_href)
+    rows = stocks.for_store(store_href, positive_only: positive_only)
 
     products_data = rows.map do |row|
       stock_value = row['stock'].to_f

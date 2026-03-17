@@ -10,12 +10,32 @@ class MoyskladStore < ApplicationRecord
     now = Time.current
 
     names.each do |name|
+      counts = fetch_store_counts(client: client, store_name: name)
       record = find_or_initialize_by(name: name)
       record.last_seen_at = now
+      record.total_products_count = counts[:total_products_count]
+      record.nonzero_products_count = counts[:nonzero_products_count]
+      record.stock_stats_synced_at = now
       record.save!
     end
 
     names
+  end
+
+  def self.fetch_store_counts(client:, store_name:)
+    rows = client.stocks_for_store(store_name: store_name, positive_only: false)
+
+    {
+      total_products_count: rows.size,
+      nonzero_products_count: rows.count { |row| row[:stock].to_f.positive? }
+    }
+  rescue StandardError => e
+    Rails.logger.warn("[MoyskladStore] Failed to refresh counts for store=#{store_name}: #{e.class} - #{e.message}")
+
+    {
+      total_products_count: nil,
+      nonzero_products_count: nil
+    }
   end
 
   def self.selected_names
@@ -27,7 +47,7 @@ class MoyskladStore < ApplicationRecord
   end
 
   def self.ransackable_attributes(_auth_object = nil)
-    %w[created_at id last_seen_at name selected_for_import updated_at]
+    %w[created_at id last_seen_at name nonzero_products_count selected_for_import stock_stats_synced_at total_products_count updated_at]
   end
 
   def self.ransackable_associations(_auth_object = nil)
