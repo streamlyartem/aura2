@@ -219,5 +219,38 @@ RSpec.describe MoyskladSync do
         expect(stale_stock.reload.reserve.to_f).to eq(0.0)
       end
     end
+
+    context 'when duplicate stock rows exist for one product and store' do
+      let(:client) { instance_double(MoyskladClient) }
+      let(:service) { described_class.new(client) }
+      let!(:product) { create(:product, ms_id: '11111111-2222-3333-4444-555555555555') }
+
+      before do
+        create(:product_stock, product: product, store_name: 'Тест', stock: 15, free_stock: 15, reserve: 0)
+        create(:product_stock, product: product, store_name: 'Тест', stock: 11, free_stock: 11, reserve: 0)
+
+        allow(client).to receive(:store_names).and_return(['Тест'])
+        allow(client).to receive(:stocks_for_store).with(store_name: 'Тест').and_return(
+          [
+            {
+              product_meta: { 'href' => "#{MoyskladClient::BASE_URL}/entity/product/#{product.ms_id}" },
+              store_name: 'Тест',
+              stock: 7,
+              free_stock: 7,
+              reserve: 0
+            }
+          ]
+        )
+      end
+
+      it 'keeps only one row and updates it' do
+        service.import_stocks(store_names: ['Тест'])
+
+        rows = ProductStock.where(product: product, store_name: 'Тест')
+        expect(rows.count).to eq(1)
+        expect(rows.first.stock.to_f).to eq(7.0)
+        expect(rows.first.free_stock.to_f).to eq(7.0)
+      end
+    end
   end
 end

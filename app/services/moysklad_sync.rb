@@ -53,6 +53,8 @@ class MoyskladSync
     selected_store_names = @client.store_names if selected_store_names.empty?
 
     Current.set(skip_stock_change_processor_enqueue: true) do
+      changed_product_ids.concat(cleanup_duplicate_rows!(selected_store_names: selected_store_names))
+
       store_rows.each do |row|
         ms_product_uuid = extract_uuid(row[:product_meta]['href'])
 
@@ -142,6 +144,29 @@ class MoyskladSync
       )
       changed_product_ids << product_stock.product_id
     end
+  end
+
+  def cleanup_duplicate_rows!(selected_store_names:)
+    duplicate_ids = []
+    seen_keys = Set.new
+
+    ProductStock.where(store_name: selected_store_names)
+                .order(:product_id, :store_name, updated_at: :desc, id: :desc)
+                .pluck(:id, :product_id, :store_name).each do |id, product_id, store_name|
+      key = [product_id, store_name]
+      if seen_keys.include?(key)
+        duplicate_ids << id
+        next
+      end
+
+      seen_keys << key
+    end
+
+    return [] if duplicate_ids.empty?
+
+    product_ids = ProductStock.where(id: duplicate_ids).distinct.pluck(:product_id)
+    ProductStock.where(id: duplicate_ids).delete_all
+    product_ids
   end
 
   def each_product_payload(full_import:, store_names:)
